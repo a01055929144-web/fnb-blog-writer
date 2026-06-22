@@ -198,7 +198,8 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
   <span style="white-space:nowrap;font-weight:600">Claude API Key</span>
   <input type="password" id="apiKey" placeholder="sk-ant-api03-...">
   <button class="api-save" onclick="saveApiKey()">저장</button>
-  <span class="api-ok" id="apiOk">✅ 연결됨</span>
+  <span class="api-ok" id="apiOk" style="display:none">✅ 연결됨</span>
+  <span style="margin-left:auto;font-size:11px;color:#166534;font-weight:600;background:#DCFCE7;padding:3px 10px;border-radius:12px">⚡ 구글 시트 자동 저장 연결됨</span>
 </div>
 
 <div class="layout">
@@ -342,6 +343,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 const KAKAO='https://open.kakao.com/o/shEOWEth';
 const BLOG='https://blog.naver.com/yeong44';
 const SHEET_ID='1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU';
+const SHEET_ENDPOINT='https://script.google.com/macros/s/AKfycbyx7SlskzGdFuXNAEElEgkZQpndH8bgSEIpYH0xEY33n1UVQMZCfx2OWwgT2unel0nq/exec';
 
 /* ── 수도권 상권 특성 데이터 (시+군구 전체) ── */
 const AREA_DATA = {
@@ -1013,7 +1015,21 @@ async function autoSaveSheet(id, kw, region, type, title, body, tags){
   const btn = document.getElementById('sv'+id);
   if(btn){ btn.textContent='저장 중...'; btn.disabled=true; }
   try{
-    await callClaude(`구글 스프레드시트 ID: ${SHEET_ID}\n시트1 다음 빈 행에 추가:\n날짜:${new Date().toLocaleDateString('ko-KR')}\n지역:${region}\n키워드:${kw}\n업종:${industry}\n타입:${type}\n제목:${title}\n본문:${body.substring(0,300)}\n해시태그:${(tags||[]).join(' ')}\n글자수:${body.length}\n상태:자동저장`);
+    const row = {
+      date: new Date().toLocaleDateString('ko-KR'),
+      sheetId: SHEET_ID,
+      region, keyword: kw, industry, type, title,
+      body: (body||'').substring(0,300),
+      hashtags: (tags||[]).join(' '),
+      chars: (body||'').length,
+      status: '자동저장'
+    };
+    const res = await fetch(SHEET_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(row)
+    });
+    if(!res.ok) throw new Error('저장 실패');
     if(btn){ btn.className='rcb sv saved'; btn.textContent='✅ 자동저장됨'; }
   }catch(e){
     if(btn){ btn.textContent='저장 실패'; btn.disabled=false; }
@@ -1038,7 +1054,21 @@ async function saveSheet(id,kw,region,type){
   btn.textContent='저장 중...'; btn.disabled=true;
 
   try{
-    await callClaude(`구글 스프레드시트 ID: ${SHEET_ID}\n시트1 다음 빈 행에 추가:\n날짜:${new Date().toLocaleDateString('ko-KR')}\n지역:${region}\n키워드:${kw}\n업종:${industry}\n타입:${type}\n제목:${title}\n본문:${body.substring(0,300)}\n해시태그:${tags}\n글자수:${body.length}\n상태:작성완료`);
+    const row = {
+      date: new Date().toLocaleDateString('ko-KR'),
+      sheetId: SHEET_ID,
+      region, keyword: kw, industry, type, title,
+      body: body.substring(0,300),
+      hashtags: tags,
+      chars: body.length,
+      status: '작성완료'
+    };
+    const res = await fetch(SHEET_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(row)
+    });
+    if(!res.ok) throw new Error('저장 실패');
     btn.className='rcb sv saved'; btn.textContent='✅ 저장됨';
     showToast('시트에 저장됐어요!');
   }catch(e){
