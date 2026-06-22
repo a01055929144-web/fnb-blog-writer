@@ -32,6 +32,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 .api-banner input:focus{border-color:var(--amber)}
 .api-save{padding:6px 12px;background:var(--amber);color:#fff;border:none;border-radius:var(--rs);font-size:11px;font-weight:700;cursor:pointer}
 .api-ok{color:var(--g);font-weight:700;display:none}
+.api-note{font-size:10px;opacity:.75;white-space:nowrap}
 
 .layout{display:grid;grid-template-columns:260px 1fr 360px;min-height:calc(100vh - 90px)}
 
@@ -190,6 +191,16 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     </a>
     <div class="hd-badge">지역 특화 SEO</div>
   </div>
+</div>
+
+<div class="api-banner">
+  <strong>API 설정</strong>
+  <input type="password" id="apiKey" placeholder="Anthropic API 키를 입력하세요">
+  <button class="api-save" onclick="saveApiKey()">키 저장</button>
+  <input type="url" id="sheetEndpoint" placeholder="Google Apps Script Web App URL">
+  <button class="api-save" onclick="saveSheetEndpoint()">시트 URL 저장</button>
+  <span class="api-ok" id="apiOk">저장됨</span>
+  <span class="api-note">공개 저장소에는 키를 넣지 마세요</span>
 </div>
 
 <div class="layout">
@@ -612,13 +623,34 @@ let selDistricts = []; // {region, district, key}
 let selItems = [];
 let selKws = [];
 let resCount = 0;
+const resultStore = {};
 let phone = localStorage.getItem('fnb_ph') || '';
-let apiKey = ['sk-ant-api03-Y69uFXH','oaejl07l30pWxpaSUrs-','lYJCVbgzYmvUBZUb3Ya68_CSd4Bh94raaXBTe0Q8ZKfsU7Ie22U8iA_kMRg-1seErQAA'].join('');
+let apiKey = localStorage.getItem('fnb_api') || '';
+let sheetEndpoint = localStorage.getItem('fnb_sheet_endpoint') || '';
 
 let useGeneral = true;   // 일반 데이터 사용 여부
 let useLocal = true;     // 지역 특성 데이터 사용 여부
 
 if(phone){ document.getElementById('phone').value=phone; document.getElementById('ph-ok').style.display='block'; }
+if(apiKey){ document.getElementById('apiKey').value=apiKey; document.getElementById('apiOk').style.display='inline'; }
+if(sheetEndpoint){ document.getElementById('sheetEndpoint').value=sheetEndpoint; }
+
+function esc(v){
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
+
+function setChildren(el, children){
+  el.replaceChildren(...children.filter(Boolean));
+}
+
+function makeEl(tag, className, text){
+  const el=document.createElement(tag);
+  if(className) el.className=className;
+  if(text!==undefined) el.textContent=text;
+  return el;
+}
 
 /* ── API 키 ── */
 function saveApiKey(){
@@ -628,6 +660,15 @@ function saveApiKey(){
   localStorage.setItem('fnb_api',k);
   document.getElementById('apiOk').style.display='inline';
   showToast('API 키 저장됐어요!');
+}
+
+function saveSheetEndpoint(){
+  const url=document.getElementById('sheetEndpoint').value.trim();
+  if(!url){showToast('시트 저장용 Web App URL을 입력해주세요');return;}
+  sheetEndpoint=url;
+  localStorage.setItem('fnb_sheet_endpoint',url);
+  document.getElementById('apiOk').style.display='inline';
+  showToast('시트 저장 URL이 저장됐어요!');
 }
 
 function savePhone(){
@@ -645,20 +686,20 @@ function renderDistricts(){
     const info=AREA_DATA[curRegion][name]||{};
     const isOn=selDistricts.find(x=>x.district===name);
     return `<div class="dist-card${isOn?' on':''}" onclick="togDist('${name}')">
-      <div class="dc-name">${name}</div>
-      <div class="dc-tag">${(info.tags||'').split(',').slice(0,2).join('·')}</div>
+      <div class="dc-name">${esc(name)}</div>
+      <div class="dc-tag">${esc((info.tags||'').split(',').slice(0,2).join('·'))}</div>
     </div>`;
   }).join('');
 }
 
 function renderItems(){
   document.getElementById('itemGrid').innerHTML=(ITEMS[industry]||[]).map(it=>`
-    <div class="item-btn${selItems.includes(it)?' on':''}" onclick="togItem('${it}')">${it}</div>`).join('');
+    <div class="item-btn${selItems.includes(it)?' on':''}" onclick="togItem('${it}')">${esc(it)}</div>`).join('');
 }
 
 function renderSelRegions(){
   document.getElementById('selRegions').innerHTML=selDistricts.map(d=>`
-    <div class="r-tag">${d.region} ${d.district}<span onclick="rmDist('${d.district}')">×</span></div>`).join('');
+    <div class="r-tag">${esc(d.region)} ${esc(d.district)}<span onclick="rmDist('${d.district}')">×</span></div>`).join('');
 }
 
 /* ── 이벤트 ── */
@@ -674,7 +715,7 @@ function togDist(name){
   const idx=selDistricts.findIndex(x=>x.district===name);
   if(idx>-1){ selDistricts.splice(idx,1); }
   else{
-    if(selDistricts.length>=6){showToast('지역은 최대 6개까지 선택 가능해요');return;}
+    if(selDistricts.length>=5){showToast('지역은 최대 5개까지 선택 가능해요');return;}
     selDistricts.push({region:curRegion,district:name,key:name});
   }
   renderDistricts(); renderSelRegions();
@@ -715,18 +756,22 @@ async function genKeywords(){
 
   const regionSummary=selDistricts.map(d=>{
     const info=AREA_DATA[d.region]?.[d.district]||{};
-    return `${d.region} ${d.district}: ${info.tags||''}`;
+    return useLocal
+      ? `${d.region} ${d.district}: ${info.tags||''}`
+      : `${d.region} ${d.district}`;
   }).join('\n');
 
   const prompt=`F&B 식자재 중개 블로그를 위한 네이버 SEO 롱테일 키워드를 추출해주세요.
 
 [업종]: ${industry}
-[선택 지역과 상권 특성]:
+[선택 지역${useLocal?'과 상권 특성':''}]:
 ${regionSummary}
 [품목]: ${selItems.join(', ')}
+[데이터 반영]: ${useGeneral?'일반 식자재 데이터 사용':'일반 식자재 데이터 제외'} / ${useLocal?'지역 상권 데이터 사용':'지역 상권 데이터 제외'}
 
-각 지역의 상권 특성을 반영하여 지역별로 다른 키워드를 생성해주세요.
-단순히 지역명만 바꾸는 것이 아니라 그 지역 특성이 반영된 진짜 다른 키워드여야 합니다.
+${useLocal
+  ? '각 지역의 상권 특성을 반영하여 지역별로 다른 키워드를 생성해주세요. 단순히 지역명만 바꾸는 것이 아니라 그 지역 특성이 반영된 진짜 다른 키워드여야 합니다.'
+  : '지역명과 품목 조합을 중심으로 키워드를 생성하되, 별도 상권 특성 추론은 하지 마세요.'}
 
 JSON만 반환 (설명 없이, 마크다운 코드블록 없이):
 {
@@ -760,9 +805,17 @@ intent: 구매/탐색/비교/창업`;
 }
 
 function renderKeywords(kws){
+  kwData=(Array.isArray(kws)?kws:[]).map(k=>({
+    keyword:String(k.keyword||'').trim(),
+    region:String(k.region||'').trim(),
+    intent:String(k.intent||'').trim(),
+    difficulty:['low','mid','high'].includes(k.difficulty) ? k.difficulty : 'mid',
+    why:String(k.why||'').trim()
+  })).filter(k=>k.keyword&&k.region);
+
   // 난이도별 그룹
   const groups={low:[],mid:[],high:[]};
-  kws.forEach(k=>{ if(groups[k.difficulty]) groups[k.difficulty].push(k); });
+  kwData.forEach((k,index)=>{ groups[k.difficulty].push({...k,index}); });
 
   const labels={low:'🎯 경쟁 낮음 (최우선 공략)',mid:'📊 경쟁 보통',high:'🔍 틈새 키워드'};
 
@@ -779,10 +832,10 @@ function renderKeywords(kws){
       <div class="kw-g-ttl">${labels[diff]}<span class="kw-cnt">${list.length}개</span></div>
       <div class="kw-list">
         ${list.map((kw,i)=>`
-          <div class="kwi" id="kwi-${diff}-${i}" onclick="togKw('${diff}',${i},'${kw.keyword.replace(/'/g,"\\'")}','${kw.region}')">
+          <div class="kwi" id="kwi-${kw.index}" onclick="togKw(${kw.index})">
             <div class="kwi-chk"></div>
-            <div class="kwi-txt">${kw.keyword}</div>
-            <span class="kwi-region">${kw.region}</span>
+            <div class="kwi-txt">${esc(kw.keyword)}</div>
+            <span class="kwi-region">${esc(kw.region)}</span>
             <span class="diff d-${diff==='low'?'lo':diff==='mid'?'mi':'hi'}">
               ${diff==='low'?'낮음':diff==='mid'?'보통':'높음'}
             </span>
@@ -796,8 +849,11 @@ function renderKeywords(kws){
 }
 
 let kwData=[];
-function togKw(diff,idx,kw,region){
-  const el=document.getElementById(`kwi-${diff}-${idx}`);
+function togKw(index){
+  const item=kwData[index];
+  if(!item)return;
+  const {keyword:kw,region}=item;
+  const el=document.getElementById(`kwi-${index}`);
   const exists=selKws.find(x=>x.kw===kw);
   if(exists){
     selKws=selKws.filter(x=>x.kw!==kw);
@@ -844,19 +900,32 @@ function buildPostPrompt(kwObj, type){
   const regKey = parts[0];
   const distKey = parts.slice(1).join(' ');
   const areaInfo = (AREA_DATA[regKey]||{})[distKey] || {};
+  const generalInfo = GENERAL_DATA[industry] || {};
   const ph = phone || '상담 문의';
   const month = new Date().getMonth()+1;
-
-  return `당신은 F&B 식자재 중개 영업 전문 네이버 블로그 작성자입니다.
-
-[핵심 키워드]: "${kw}" ← 이 키워드로 네이버 1페이지 노출 목표
-[타겟 지역]: ${region}
+  const localBlock = useLocal ? `
 [지역 상권 특성]:
 - 상권 특징: ${areaInfo.tags||''}
 - 주요 식재료 수요: ${areaInfo.food||''}
 - 가격 수준: ${areaInfo.price||''}
 - 주요 타겟 업종: ${areaInfo.target||''}
-- 영업 팁: ${areaInfo.tip||''}
+- 영업 팁: ${areaInfo.tip||''}` : `
+[지역 상권 특성]: 사용 안 함. 지역명 이상의 상권 특성은 추론하지 마세요.`;
+  const generalBlock = useGeneral ? `
+[일반 식자재 데이터]:
+- ${month}월 시즌 정보: ${(generalInfo.season||{})[String(month)]||''}
+- 트렌드: ${generalInfo.trend||''}
+- 원가 절감 팁: ${generalInfo.cost_tip||''}
+- 납품 팁: ${generalInfo.supply_tip||''}
+- 품목별 단가 정보: ${generalInfo.items_detail||''}` : `
+[일반 식자재 데이터]: 사용 안 함. 계절 시세, 트렌드, 원가 정보는 추론하지 마세요.`;
+
+  return `당신은 F&B 식자재 중개 영업 전문 네이버 블로그 작성자입니다.
+
+[핵심 키워드]: "${kw}" ← 이 키워드로 네이버 1페이지 노출 목표
+[타겟 지역]: ${region}
+${localBlock}
+${generalBlock}
 
 [업종]: ${industry}
 [콘텐츠 타입]: ${type}
@@ -866,8 +935,9 @@ function buildPostPrompt(kwObj, type){
 - 네이버 블로그: ${BLOG}
 - 전화: ${ph}
 
-⚠️ 중요: 이 글은 "${region}" 지역 특성에 완전히 맞춤화되어야 합니다.
-단순히 지역명만 넣는 것이 아니라, 위 상권 특성을 본문에 자연스럽게 녹여야 합니다.
+⚠️ 중요: ${useLocal
+  ? `이 글은 "${region}" 지역 특성에 완전히 맞춤화되어야 합니다. 단순히 지역명만 넣는 것이 아니라, 위 상권 특성을 본문에 자연스럽게 녹여야 합니다.`
+  : `이 글은 "${region}" 지역명과 선택 키워드 중심으로 작성하되, 상권 특성 데이터는 사용하지 마세요.`}
 
 **제목**: "${kw}" 키워드 포함 + ${region} 지역 식당 사장님 클릭 유도 제목 (이모지 포함)
 
@@ -875,20 +945,20 @@ function buildPostPrompt(kwObj, type){
 
 [도입부 150-200자]
 ${region} 지역 식당 사장님의 실제 고민으로 시작.
-${areaInfo.target||'식당'} 운영하시는 분들이 공감할 내용.
-${month}월 계절 특성 반영.
+${useLocal ? `${areaInfo.target||'식당'} 운영하시는 분들이 공감할 내용.` : '식당 운영자들이 공감할 내용.'}
+${useGeneral ? `${month}월 계절 특성 반영.` : '계절 시세나 트렌드는 언급하지 않음.'}
 
 [본론1 — ${region} 지역 특화 정보 450-550자]
 제목: 소제목 포함
-- ${region} 상권 특성과 식자재 수요 관계
+- ${useLocal ? `${region} 상권 특성과 식자재 수요 관계` : `${region} 지역 식당 운영자 관점의 식자재 선택 기준`}
 - "${kw}" 관련 실질적 정보
-- ${areaInfo.food||'해당 식재료'} 납품 시 고려할 점
+- ${useLocal ? `${areaInfo.food||'해당 식재료'} 납품 시 고려할 점` : '해당 식재료 납품 시 고려할 점'}
 - 구체적 수치·사례 포함
 
 [본론2 — 원가/납품 실전 정보 400-500자]
 제목: 소제목 포함
 - ${region} 지역 납품처 선택 기준
-- ${areaInfo.price||'단가'} 관련 절감 방법
+- ${useGeneral ? `${areaInfo.price||'단가'} 관련 절감 방법` : '납품 안정성과 품질 확인 방법'}
 - 실제 납품 프로세스 설명
 - 무료 상담으로 해결 가능하다는 흐름 자연스럽게
 
@@ -930,7 +1000,7 @@ async function generateAll(){
   pl.innerHTML=jobs.map((j,i)=>`
     <div class="pi wait" id="pi${i}">
       <span style="width:14px;text-align:center">⏳</span>
-      <span>${j.kwObj.kw} · ${j.type}</span>
+      <span>${esc(j.kwObj.kw)} · ${esc(j.type)}</span>
     </div>`).join('');
   document.getElementById('progFill').style.width='0%';
 
@@ -969,6 +1039,7 @@ function addResult(text,kwObj,type){
   let body=text.replace(/\*\*제목\*\*.*\n?/,'').replace(/\*\*해시태그\*\*[\s\S]*$/,'').replace(/\*\*본문\*\*[:\s]*/,'').replace(/\*\*/g,'').trim();
   const chars=body.length;
   const id='r'+Date.now()+Math.random().toString(36).slice(2,5);
+  resultStore[id]={kw:kwObj.kw,region:kwObj.region,type,title,body,tags};
 
   resCount++;
   document.getElementById('resCnt').textContent=resCount+'개';
@@ -978,33 +1049,67 @@ function addResult(text,kwObj,type){
   card.id=id;
   card.innerHTML=`
     <div class="rc-top">
-      <div class="rc-region-tag">📍 ${kwObj.region}</div>
-      <div class="rc-kw">🔑 ${kwObj.kw}</div>
-      <div class="rc-meta">${type} · ${chars.toLocaleString()}자 · 태그 ${tags.length}개</div>
+      <div class="rc-region-tag">📍 ${esc(kwObj.region)}</div>
+      <div class="rc-kw">🔑 ${esc(kwObj.kw)}</div>
+      <div class="rc-meta">${esc(type)} · ${chars.toLocaleString()}자 · 태그 ${tags.length}개</div>
       <div class="rc-btns">
         <button class="rcb cp" onclick="copyRes('${id}')"><i class="ti ti-copy" style="font-size:9px"></i> 복사</button>
-        <button class="rcb sv" id="sv${id}" onclick="saveSheet('${id}','${kwObj.kw.replace(/'/g,"\\'")}','${kwObj.region}','${type}')">
+        <button class="rcb sv" id="sv${id}" onclick="saveSheet('${id}')">
           <i class="ti ti-table" style="font-size:9px"></i> 시트 저장
         </button>
       </div>
     </div>
     <div class="rc-body">
-      <div class="rc-title">${title}</div>
-      <div class="rc-content" data-body="${encodeURIComponent(body)}">${body}</div>
+      <div class="rc-title">${esc(title)}</div>
+      <div class="rc-content" data-body="${encodeURIComponent(body)}">${esc(body)}</div>
       <div class="rc-chars">${chars.toLocaleString()}자 / 목표 1500-2000자</div>
-      <div class="mini-cta">💬 카카오: ${KAKAO}<br>📝 블로그: ${BLOG}<br>📱 전화: ${phone||'번호 저장 필요'}</div>
-      <div class="rc-tags">${tags.slice(0,15).map(t=>`<span class="rc-tag">${t}</span>`).join('')}</div>
+      <div class="mini-cta">💬 카카오: ${esc(KAKAO)}<br>📝 블로그: ${esc(BLOG)}<br>📱 전화: ${esc(phone||'번호 저장 필요')}</div>
+      <div class="rc-tags">${tags.slice(0,15).map(t=>`<span class="rc-tag">${esc(t)}</span>`).join('')}</div>
     </div>`;
   con.insertBefore(card,con.firstChild);
-  // 생성 즉시 구글 시트 자동 저장
-  autoSaveSheet(id, kwObj.kw, kwObj.region, type, title, body, tags);
+  if(sheetEndpoint) autoSaveSheet(id);
 }
 
-async function autoSaveSheet(id, kw, region, type, title, body, tags){
+async function postSheetRow(row){
+  const endpoint=sheetEndpoint || localStorage.getItem('fnb_sheet_endpoint');
+  if(!endpoint) throw new Error('시트 저장 URL 없음');
+  const res=await fetch(endpoint,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(row)
+  });
+  if(!res.ok) throw new Error(`시트 저장 오류: ${res.status}`);
+  const text=await res.text();
+  if(text){
+    let data=null;
+    try{
+      data=JSON.parse(text);
+    }catch(e){
+      data=null;
+    }
+    if(data?.success===false) throw new Error(data.message||'시트 저장 실패');
+  }
+}
+
+async function autoSaveSheet(id){
   const btn = document.getElementById('sv'+id);
+  const item=resultStore[id];
+  if(!item)return;
   if(btn){ btn.textContent='저장 중...'; btn.disabled=true; }
   try{
-    await callClaude(`구글 스프레드시트 ID: ${SHEET_ID}\n시트1 다음 빈 행에 추가:\n날짜:${new Date().toLocaleDateString('ko-KR')}\n지역:${region}\n키워드:${kw}\n업종:${industry}\n타입:${type}\n제목:${title}\n본문:${body.substring(0,300)}\n해시태그:${(tags||[]).join(' ')}\n글자수:${body.length}\n상태:자동저장`);
+    await postSheetRow({
+      date:new Date().toLocaleDateString('ko-KR'),
+      sheetId:SHEET_ID,
+      region:item.region,
+      keyword:item.kw,
+      industry,
+      type:item.type,
+      title:item.title,
+      body:item.body,
+      hashtags:(item.tags||[]).join(' '),
+      chars:item.body.length,
+      status:'자동저장'
+    });
     if(btn){ btn.className='rcb sv saved'; btn.textContent='✅ 자동저장됨'; }
   }catch(e){
     if(btn){ btn.textContent='저장 실패'; btn.disabled=false; }
@@ -1020,16 +1125,30 @@ function copyRes(id){
   navigator.clipboard.writeText(`${title}\n\n${body}${cta}\n\n${tags}`).then(()=>showToast('복사 완료!'));
 }
 
-async function saveSheet(id,kw,region,type){
-  const card=document.getElementById(id);
-  const title=card.querySelector('.rc-title').textContent;
-  const body=decodeURIComponent(card.querySelector('.rc-content').dataset.body);
-  const tags=[...card.querySelectorAll('.rc-tag')].map(t=>t.textContent).join(' ');
+async function saveSheet(id){
+  const item=resultStore[id];
+  if(!item)return;
+  if(!sheetEndpoint&&!localStorage.getItem('fnb_sheet_endpoint')){
+    showToast('시트 저장용 Web App URL을 먼저 저장해주세요');
+    return;
+  }
   const btn=document.getElementById('sv'+id);
   btn.textContent='저장 중...'; btn.disabled=true;
 
   try{
-    await callClaude(`구글 스프레드시트 ID: ${SHEET_ID}\n시트1 다음 빈 행에 추가:\n날짜:${new Date().toLocaleDateString('ko-KR')}\n지역:${region}\n키워드:${kw}\n업종:${industry}\n타입:${type}\n제목:${title}\n본문:${body.substring(0,300)}\n해시태그:${tags}\n글자수:${body.length}\n상태:작성완료`);
+    await postSheetRow({
+      date:new Date().toLocaleDateString('ko-KR'),
+      sheetId:SHEET_ID,
+      region:item.region,
+      keyword:item.kw,
+      industry,
+      type:item.type,
+      title:item.title,
+      body:item.body,
+      hashtags:(item.tags||[]).join(' '),
+      chars:item.body.length,
+      status:'작성완료'
+    });
     btn.className='rcb sv saved'; btn.textContent='✅ 저장됨';
     showToast('시트에 저장됐어요!');
   }catch(e){
