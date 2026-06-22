@@ -202,12 +202,12 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 <!-- 서버 연결 설정 -->
 <div class="api-banner">
   <i class="ti ti-cloud" style="font-size:14px"></i>
-  <strong>서버 연결</strong>
-  <input type="url" id="claudeEndpoint" placeholder="Google Apps Script Web App URL (비워두면 기본 연결 사용)">
+  <strong>Apps Script 연결</strong>
+  <input type="url" id="claudeEndpoint" placeholder="Claude 호출 코드가 배포된 Google Apps Script Web App URL">
   <button class="api-save" onclick="saveClaudeEndpoint()">URL 저장</button>
   <button class="api-save" onclick="testServerConnection()">연결 테스트</button>
   <span class="api-ok" id="apiOk">연결됨</span>
-  <span class="api-note">API 키는 Apps Script 내부 설정에만 저장하세요</span>
+  <span class="api-note">API 키는 화면이 아니라 Apps Script 속성에 저장하세요</span>
   <span style="margin-left:auto;font-size:11px;color:#166534;font-weight:600;background:#DCFCE7;padding:3px 10px;border-radius:12px">⚡ 구글 시트 자동 저장 연결됨</span>
 </div>
 
@@ -806,8 +806,15 @@ async function callClaude(prompt, maxTokens=1000){
   const text=await proxyRes.text();
   try{
     const data=JSON.parse(text);
-    if(data.success===false) throw new Error(data.message||'Claude 생성 실패');
-    return data.text || data.content || data.message || '';
+      if(data.success===false) throw new Error(data.message||'Claude 생성 실패');
+      const output=data.text || data.content || data.message || '';
+      if(!output && data.row){
+        throw new Error('현재 연결된 Apps Script는 시트 저장 전용입니다. apps-script-webapp.gs 최신 코드로 다시 배포한 Web App URL을 연결해주세요.');
+      }
+      if(!output){
+        throw new Error('Claude 응답 본문이 없습니다. Apps Script doPost가 prompt 요청에서 {success:true,text:"..."}를 반환하는지 확인해주세요.');
+      }
+      return output;
   }catch(e){
     if(e.message.includes('Claude') || e.message.includes('생성')) throw e;
     return text;

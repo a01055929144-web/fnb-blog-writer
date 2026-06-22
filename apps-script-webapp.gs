@@ -1,6 +1,16 @@
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_MODEL = 'claude-sonnet-4-6';
 
+function doGet() {
+  const props = PropertiesService.getScriptProperties();
+  return json_({
+    success: true,
+    service: 'fnb-blog-writer',
+    hasAnthropicKey: !!props.getProperty('ANTHROPIC_API_KEY'),
+    hasSheetId: !!props.getProperty('SHEET_ID'),
+  });
+}
+
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents || '{}');
