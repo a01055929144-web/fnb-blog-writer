@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F&B 지역 특화 블로그 작성기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#16A34A;--g2:#DCFCE7;--g3:#86EFAC;--g4:#15803D;
+  --d:#0F172A;--d2:#1E293B;--gray:#64748B;
+  --bg:#F8FAFC;--bd:#E2E8F0;--w:#fff;
+  --blue:#3B82F6;--blue2:#EFF6FF;
+  --amber:#F59E0B;--amber2:#FFFBEB;
+  --r:12px;--rs:8px;
+}
+body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(--bg);color:var(--d);min-height:100vh}
+
+.hd{background:var(--d);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:200}
+.hd-l{display:flex;align-items:center;gap:9px;color:#fff;font-size:14px;font-weight:700}
+.dot{width:7px;height:7px;background:var(--g);border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hd-r{display:flex;align-items:center;gap:7px}
+.sheet-a{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);padding:4px 10px;border-radius:6px;font-size:11px;text-decoration:none;transition:.15s}
+.sheet-a:hover{background:rgba(255,255,255,.2)}
+.hd-badge{background:var(--g);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px}
+
+/* API 키 배너 */
+.api-banner{background:var(--amber2);border-bottom:1px solid #FDE68A;padding:8px 20px;display:flex;align-items:center;gap:10px;font-size:12px;color:#78350F}
+.api-banner input{flex:1;border:1.5px solid #FDE68A;border-radius:var(--rs);padding:6px 10px;font-size:12px;background:#fff;outline:none;max-width:400px}
+.api-banner input:focus{border-color:var(--amber)}
+.api-save{padding:6px 12px;background:var(--amber);color:#fff;border:none;border-radius:var(--rs);font-size:11px;font-weight:700;cursor:pointer}
+.api-ok{color:var(--g);font-weight:700;display:none}
+
+.layout{display:grid;grid-template-columns:260px 1fr 360px;min-height:calc(100vh - 90px)}
+
+/* 사이드 공통 */
+.side{padding:14px;overflow-y:auto;position:sticky;top:90px;height:calc(100vh - 90px)}
+.side-l{background:var(--w);border-right:1px solid var(--bd)}
+.side-r{background:var(--w);border-left:1px solid var(--bd)}
+.s-ttl{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.7px;text-transform:uppercase;margin-bottom:7px;display:flex;align-items:center;gap:4px}
+.s-sec{margin-bottom:18px}
+
+/* 업종 */
+.ind-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.ind{padding:7px 4px;border-radius:var(--rs);border:1.5px solid var(--bd);background:var(--bg);cursor:pointer;text-align:center;font-size:10px;font-weight:500;color:var(--d2);transition:.15s;line-height:1.3}
+.ind em{font-size:14px;display:block;margin-bottom:2px;font-style:normal}
+.ind:hover,.ind.on{border-color:var(--g);background:var(--g2);color:var(--g);font-weight:700}
+
+/* 지역 탭 */
+.r-tabs{display:flex;gap:3px;margin-bottom:7px}
+.r-tab{padding:4px 10px;border-radius:10px;border:1px solid var(--bd);font-size:10px;font-weight:500;color:var(--gray);cursor:pointer;transition:.15s}
+.r-tab:hover{border-color:var(--blue);color:var(--blue)}
+.r-tab.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+
+/* 지역 카드 (상권 정보 포함) */
+.dist-list{display:flex;flex-direction:column;gap:3px;max-height:220px;overflow-y:auto}
+.dist-card{border:1px solid var(--bd);border-radius:var(--rs);padding:7px 9px;cursor:pointer;transition:.15s;background:var(--bg)}
+.dist-card:hover{border-color:var(--blue);background:var(--blue2)}
+.dist-card.on{border-color:var(--blue);background:var(--blue);color:#fff}
+.dc-name{font-size:11px;font-weight:700;margin-bottom:2px}
+.dc-tag{font-size:9px;opacity:.7;line-height:1.4}
+.dist-card.on .dc-tag{color:rgba(255,255,255,.8)}
+
+/* 선택된 지역 */
+.sel-regions{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;min-height:22px}
+.r-tag{background:var(--blue2);color:var(--blue);border:1px solid #BFDBFE;border-radius:8px;padding:2px 7px;font-size:10px;font-weight:600;display:flex;align-items:center;gap:2px}
+.r-tag span{cursor:pointer;opacity:.6}
+.r-tag span:hover{opacity:1}
+
+/* 품목 */
+.item-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;max-height:150px;overflow-y:auto}
+.item-btn{padding:5px 4px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);cursor:pointer;text-align:center;font-size:10px;color:var(--d2);transition:.15s}
+.item-btn:hover,.item-btn.on{border-color:var(--amber);background:var(--amber2);color:#92400E;font-weight:600}
+
+/* 타입 */
+.type-list{display:flex;flex-direction:column;gap:3px}
+.type-lbl{display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;padding:5px 7px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);transition:.15s}
+.type-lbl:hover{background:var(--g2);border-color:var(--g)}
+.type-lbl input{accent-color:var(--g)}
+
+/* 전화번호 */
+.ph-row{display:flex;gap:4px}
+.ph-row input{flex:1;border:1.5px solid var(--bd);border-radius:var(--rs);padding:7px 9px;font-size:11px;outline:none;transition:.15s}
+.ph-row input:focus{border-color:var(--g)}
+.ph-save{padding:7px 10px;background:var(--g);color:#fff;border:none;border-radius:var(--rs);font-size:10px;font-weight:700;cursor:pointer}
+
+/* 메인 */
+.main{padding:16px;overflow-y:auto}
+
+/* 키워드 생성 버튼 */
+.kw-gen{width:100%;padding:11px;background:var(--d2);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.15s;margin-bottom:12px}
+.kw-gen:hover{background:var(--d)}
+.kw-gen:disabled{opacity:.5;cursor:not-allowed}
+
+/* 안내 박스 */
+.info-box{background:var(--amber2);border:1px solid #FDE68A;border-radius:var(--rs);padding:10px 12px;margin-bottom:12px;font-size:11px;color:#78350F;line-height:1.7}
+
+/* 키워드 그룹 */
+.kw-sec{margin-bottom:14px}
+.kw-g-ttl{font-size:11px;font-weight:700;color:var(--d2);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.kw-cnt{background:var(--g2);color:var(--g);padding:1px 6px;border-radius:7px;font-size:9px;font-weight:700}
+.kw-actions{display:flex;gap:4px;margin-bottom:8px;align-items:center}
+.ka{padding:4px 9px;border-radius:6px;border:1px solid var(--bd);background:var(--w);font-size:10px;font-weight:600;cursor:pointer;color:var(--d2);transition:.15s}
+.ka:hover{background:var(--bg)}
+.ka.g{border-color:var(--g);color:var(--g)}
+.ka.g:hover{background:var(--g2)}
+.sel-cnt{font-size:10px;color:var(--gray);margin-left:auto}
+
+.kw-list{display:flex;flex-direction:column;gap:3px}
+.kwi{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--bg);cursor:pointer;transition:.15s}
+.kwi:hover{border-color:var(--g);background:var(--g2)}
+.kwi.on{border-color:var(--g);background:var(--g2)}
+.kwi-chk{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;transition:.15s}
+.kwi.on .kwi-chk{background:var(--g);border-color:var(--g);color:#fff}
+.kwi-txt{flex:1;font-size:11px;font-weight:500}
+.kwi.on .kwi-txt{color:var(--g);font-weight:600}
+.kwi-region{font-size:9px;color:var(--gray);background:var(--bg);border:1px solid var(--bd);padding:1px 5px;border-radius:5px;flex-shrink:0}
+.kwi.on .kwi-region{background:var(--g2);border-color:var(--g3);color:var(--g)}
+.diff{font-size:9px;padding:1px 5px;border-radius:5px;font-weight:600;flex-shrink:0}
+.d-lo{background:#DCFCE7;color:#166534}
+.d-mi{background:#FEF9C3;color:#854D0E}
+.d-hi{background:#FEE2E2;color:#991B1B}
+
+/* 생성 버튼 */
+.gen-btn{width:100%;padding:13px;background:var(--g);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;transition:.2s;box-shadow:0 3px 10px rgba(22,163,74,.3)}
+.gen-btn:hover{background:var(--g4);transform:translateY(-1px)}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* 진행 */
+.prog{background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:13px;margin-top:10px;display:none}
+.prog.show{display:block}
+.prog-ttl{font-size:11px;font-weight:700;margin-bottom:8px}
+.prog-list{display:flex;flex-direction:column;gap:3px}
+.pi{display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:6px;border:1px solid var(--bd);font-size:10px;background:var(--bg)}
+.pi.done{border-color:var(--g);background:var(--g2);color:var(--g)}
+.pi.doing{border-color:var(--blue);background:var(--blue2);color:var(--blue)}
+.pi.wait{color:var(--gray)}
+.prog-bar{height:3px;background:var(--bd);border-radius:2px;margin-top:8px;overflow:hidden}
+.prog-fill{height:100%;background:var(--g);border-radius:2px;transition:width .4s}
+
+/* 오른쪽 결과 */
+.res-empty{text-align:center;padding:40px 14px;color:var(--gray);font-size:11px}
+.res-empty i{font-size:28px;display:block;margin-bottom:8px;opacity:.3}
+
+.rc{border-radius:var(--r);border:1px solid var(--bd);overflow:hidden;margin-bottom:10px}
+.rc-top{padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--bd)}
+.rc-kw{font-size:11px;font-weight:700;color:var(--d);margin-bottom:1px}
+.rc-meta{font-size:9px;color:var(--gray);margin-bottom:4px}
+.rc-region-tag{display:inline-block;background:var(--blue2);color:var(--blue);border:1px solid #BFDBFE;border-radius:5px;padding:1px 6px;font-size:9px;font-weight:600;margin-bottom:4px}
+.rc-btns{display:flex;gap:3px}
+.rcb{padding:3px 7px;border-radius:5px;border:1px solid var(--bd);background:var(--w);font-size:9px;cursor:pointer;color:var(--gray);display:flex;align-items:center;gap:2px;transition:.15s}
+.rcb:hover{background:var(--bg)}
+.rcb.cp{border-color:var(--g);color:var(--g)}
+.rcb.sv{border-color:var(--blue);color:var(--blue)}
+.rcb.sv.saved{border-color:var(--g);color:var(--g);background:var(--g2)}
+.rc-body{padding:12px}
+.rc-title{font-size:13px;font-weight:700;line-height:1.5;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid var(--g2)}
+.rc-content{font-size:11px;line-height:1.85;color:var(--d2);white-space:pre-wrap;max-height:280px;overflow-y:auto}
+.rc-chars{font-size:9px;color:var(--gray);margin-top:5px;text-align:right}
+.mini-cta{margin-top:8px;background:var(--d2);border-radius:var(--rs);padding:9px 11px;font-size:10px;color:rgba(255,255,255,.85);line-height:1.8}
+.rc-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:7px;padding-top:7px;border-top:1px solid var(--bd)}
+.rc-tag{background:var(--bg);color:var(--gray);padding:2px 6px;border-radius:6px;font-size:9px}
+
+.toast{position:fixed;bottom:16px;right:16px;background:var(--d);color:#fff;padding:8px 13px;border-radius:var(--rs);font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;opacity:0;transform:translateY(8px);transition:.3s;z-index:999;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast i{color:var(--g)}
+
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr}
+  .side{position:static;height:auto;border:none;border-bottom:1px solid var(--bd)}
+}
+
+/* 토글 스위치 */
+.toggle-wrap{cursor:pointer}
+.toggle{width:36px;height:20px;border-radius:10px;background:var(--bd);position:relative;transition:.2s;flex-shrink:0}
+.toggle.on{background:var(--g)}
+.toggle-thumb{width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on .toggle-thumb{left:18px}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="hd-l"><div class="dot"></div>F&B 지역 특화 블로그 작성기</div>
+  <div class="hd-r">
+    <a class="sheet-a" href="https://docs.google.com/spreadsheets/d/1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU/edit" target="_blank">
+      <i class="ti ti-table" style="font-size:12px"></i> 구글 시트
+    </a>
+    <div class="hd-badge">지역 특화 SEO</div>
+  </div>
+</div>
+
+<!-- API 키 입력 -->
+<div class="api-banner">
+  <i class="ti ti-key" style="font-size:14px"></i>
+  <span style="white-space:nowrap;font-weight:600">Claude API Key</span>
+  <input type="password" id="apiKey" placeholder="sk-ant-api03-...">
+  <button class="api-save" onclick="saveApiKey()">저장</button>
+  <span class="api-ok" id="apiOk">✅ 연결됨</span>
+</div>
+
+<div class="layout">
+
+  <!-- 왼쪽: 설정 -->
+  <div class="side side-l">
+
+    <div class="s-sec">
+      <div class="s-ttl"><i class="ti ti-category" style="font-size:10px"></i> 업종</div>
+      <div class="ind-grid">
+        <div class="ind on" onclick="selInd(this,'한식/축산')"><em>🥩</em>한식/축산</div>
+        <div class="ind" onclick="selInd(this,'일식/수산')"><em>🍣</em>일식/수산</div>
+        <div class="ind" onclick="selInd(this,'중식')"><em>🥢</em>중식</div>
+        <div class="ind" onclick="selInd(this,'양식/샐러드')"><em>🥗</em>양식/샐러드</div>
+        <div class="ind" onclick="selInd(this,'주류')"><em>🍺</em>주류</div>
+        <div class="ind" onclick="selInd(this,'소스/가공')"><em>🫙</em>소스/가공</div>
+        <div class="ind" onclick="selInd(this,'카페/베이커리')"><em>☕</em>카페/베이커리</div>
+        <div class="ind" onclick="selInd(this,'신규창업')"><em>🏪</em>신규창업</div>
+      </div>
+    </div>
+
+    <div class="s-sec">
+      <div class="s-ttl"><i class="ti ti-map-pin" style="font-size:10px"></i> 수도권 지역 선택 (최대 5개)</div>
+      <div class="r-tabs">
+        <div class="r-tab on" onclick="selReg(this,'서울')">서울</div>
+        <div class="r-tab" onclick="selReg(this,'경기')">경기</div>
+        <div class="r-tab" onclick="selReg(this,'인천')">인천</div>
+      </div>
+      <div class="dist-list" id="distList"></div>
+      <div class="sel-regions" id="selRegions"></div>
+    </div>
+
+    <div class="s-sec">
+      <div class="s-ttl"><i class="ti ti-box" style="font-size:10px"></i> 세부 품목 (최대 5개)</div>
+      <div class="item-grid" id="itemGrid"></div>
+    </div>
+
+    <div class="s-sec">
+      <div class="s-ttl"><i class="ti ti-file-text" style="font-size:10px"></i> 콘텐츠 타입</div>
+      <div class="type-list">
+        <label class="type-lbl"><input type="checkbox" checked value="정보성 SEO">정보성 SEO 글</label>
+        <label class="type-lbl"><input type="checkbox" checked value="원가절감">원가절감 정보</label>
+        <label class="type-lbl"><input type="checkbox" value="대체 식자재">대체 식자재 소개</label>
+        <label class="type-lbl"><input type="checkbox" value="납품 노하우">납품 노하우</label>
+        <label class="type-lbl"><input type="checkbox" value="창업 컨설팅">창업 컨설팅</label>
+      </div>
+    </div>
+
+
+    <!-- 데이터 레이어 토글 -->
+    <div class="s-sec">
+      <div class="s-ttl"><i class="ti ti-database" style="font-size:10px"></i> 데이터 레이어 설정</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="border:1px solid var(--bd);border-radius:var(--rs);padding:10px;background:var(--bg)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+            <span style="font-size:11px;font-weight:700;color:var(--d)">🌍 일반 데이터</span>
+            <div class="toggle-wrap" onclick="togGeneral()">
+              <div class="toggle on" id="togG"><div class="toggle-thumb"></div></div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--gray);line-height:1.5">계절 시세·트렌드·원가절감 팁·납품 노하우·품목별 단가 정보</div>
+        </div>
+        <div style="border:1px solid var(--bd);border-radius:var(--rs);padding:10px;background:var(--bg)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+            <span style="font-size:11px;font-weight:700;color:var(--d)">📍 지역 특성 데이터</span>
+            <div class="toggle-wrap" onclick="togLocal()">
+              <div class="toggle on" id="togL"><div class="toggle-thumb"></div></div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--gray);line-height:1.5">상권 특성·타겟 업종·가격 수준·영업 팁</div>
+        </div>
+        <div id="layerStatus" style="font-size:10px;padding:7px 9px;border-radius:var(--rs);background:var(--g2);color:#166534;font-weight:600;text-align:center">
+          ✅ 일반 + 지역 데이터 모두 반영
+        </div>
+      </div>
+    </div>
+
+    <div class="s-sec">
+      <div class="s-ttl"><i class="ti ti-phone" style="font-size:10px"></i> 전화번호</div>
+      <div class="ph-row">
+        <input type="tel" id="phone" placeholder="010-0000-0000">
+        <button class="ph-save" onclick="savePhone()">저장</button>
+      </div>
+      <div id="ph-ok" style="font-size:10px;color:var(--g);margin-top:3px;display:none">✅ 저장됨</div>
+    </div>
+
+  </div>
+
+  <!-- 중간: 키워드 -->
+  <div class="main">
+
+    <button class="kw-gen" id="kwGenBtn" onclick="genKeywords()">
+      <i class="ti ti-search"></i> 지역 특화 롱테일 키워드 추출
+    </button>
+
+    <div class="info-box">
+      <strong>💡 지역별 상권 특성 반영</strong><br>
+      단순히 지역명만 바꾸는 게 아니라 <strong>그 지역 상권 특성, 주요 업종, 유동인구</strong>를 반영한 진짜 다른 글을 생성해요.<br>
+      예: 강남 → 프리미엄 식재료 수요 / 수원 → 왕갈비 특화 / 마포 → 트렌디 외식
+    </div>
+
+    <div id="kwContainer">
+      <div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">
+        <i class="ti ti-map-2" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3"></i>
+        업종 · 지역 · 품목 선택 후<br>키워드 추출 버튼을 눌러주세요
+      </div>
+    </div>
+
+    <button class="gen-btn" id="genBtn" onclick="generateAll()" disabled>
+      <i class="ti ti-wand"></i> 선택한 키워드로 지역 특화 포스팅 생성
+    </button>
+
+    <div class="prog" id="prog">
+      <div class="prog-ttl">📝 지역 특화 포스팅 생성 중...</div>
+      <div class="prog-list" id="progList"></div>
+      <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    </div>
+
+  </div>
+
+  <!-- 오른쪽: 결과 -->
+  <div class="side side-r">
+    <div class="s-ttl" style="margin-bottom:10px">
+      <i class="ti ti-article" style="font-size:10px"></i> 생성된 포스팅
+      <span id="resCnt" style="background:var(--g2);color:var(--g);padding:1px 6px;border-radius:7px;font-size:9px;margin-left:auto;font-weight:700">0개</span>
+    </div>
+    <div id="resContainer">
+      <div class="res-empty">
+        <i class="ti ti-article"></i>
+        생성된 포스팅이<br>여기에 표시됩니다
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"><i class="ti ti-check"></i><span id="toastMsg"></span></div>
+
+<script>
+/* ── 고정값 ── */
+const KAKAO='https://open.kakao.com/o/shEOWEth';
+const BLOG='https://blog.naver.com/yeong44';
+const SHEET_ID='1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU';
+
+/* ── 수도권 상권 특성 데이터 ── */
+const AREA_DATA = {
+  서울: {
+    '강남구': {
+      tags: '프리미엄 외식, 고급 한식·일식 밀집, 법인 접대 수요',
+      food: '고급 한우, 프리미엄 수산물, 오마카세 식재료',
+      price: '단가 높음, 품질 최우선',
+      target: '고급 레스토랑, 스테이크하우스, 오마카세',
+      tip: '강남 식당은 가격보다 품질·신뢰를 우선시함. 샘플 납품 후 장기계약 전환 가능성 높음'
+    },
+    '서초구': {
+      tags: '법원·검찰 인근, 직장인 밀집, 점심 수요 강함',
+      food: '한식 도시락, 신선 채소, 육류 정육',
+      price: '가성비+품질 균형',
+      target: '한식 백반, 고깃집, 분식',
+      tip: '서초는 점심 회전율이 높아 대량 납품이 유리. 신선도 관리가 핵심'
+    },
+    '송파구': {
+      tags: '잠실 롯데월드 상권, 가족 외식 수요, 다양한 업종',
+      food: '치킨·피자 재료, 패밀리 레스토랑 식재료, 디저트',
+      price: '중간 단가, 볼륨 납품 가능',
+      target: '패밀리 레스토랑, 카페, 프랜차이즈',
+      tip: '잠실 상권은 프랜차이즈 밀집. 본사 계약보다 직납 개인 매장 공략이 효과적'
+    },
+    '마포구': {
+      tags: '홍대·합정 트렌디 상권, 젊은 층, 외국인 관광객',
+      food: '트렌디 식재료, 비건·채식, 퓨전 요리 재료',
+      price: '중간 단가, 소량 다품목 선호',
+      target: '브런치 카페, 퓨전 레스토랑, 이자카야',
+      tip: '마포 식당은 메뉴 교체가 잦아 신상품·트렌드 식재료 제안이 효과적'
+    },
+    '영등포구': {
+      tags: '여의도 금융가, 타임스퀘어 쇼핑, 직장인 밀집',
+      food: '스테이크 재료, 양식 식재료, 주류',
+      price: '법인카드 사용 많아 단가 관대',
+      target: '양식 레스토랑, 일식, 주점',
+      tip: '여의도 법인 접대 식당은 주류 납품과 묶어서 제안하면 효과적'
+    },
+    '종로구': {
+      tags: '광화문 오피스, 전통 음식 상권, 관광객',
+      food: '전통 한식 재료, 보양식 재료, 궁중 식재료',
+      price: '역사 있는 업체 많아 신뢰 구축 필요',
+      target: '전통 한식당, 보쌈·족발, 해장국',
+      tip: '종로 오래된 식당은 기존 납품처와 관계 깊음. 가격 비교보다 서비스 차별화 필요'
+    },
+    '중구': {
+      tags: '명동 관광상권, 을지로 오피스, 남대문 시장',
+      food: '수입 식재료, 관광객 대상 한식 재료, 냉동 식품',
+      price: '외국인 관광객 대상 마진 높음',
+      target: '명동 한식당, 관광지 음식점',
+      tip: '명동 상권은 외국인 선호 메뉴 특화. 할랄·채식 식재료 수요도 존재'
+    },
+    '용산구': {
+      tags: '이태원 다국적 상권, 한남동 고급, 외국인 많음',
+      food: '수입 식재료, 다국적 요리 재료, 할랄 식품',
+      price: '고단가 허용, 다양성 중시',
+      target: '이태원 레스토랑, 멕시칸·이탈리안·중동 음식',
+      tip: '이태원은 수입 식재료 수요가 독특. 일반 유통사와 차별화된 품목 제안 가능'
+    },
+    '성동구': {
+      tags: '성수 MZ 트렌드, 카페·브런치 밀집, 팝업스토어',
+      food: '스페셜티 원두, 디저트 재료, 트렌디 식재료',
+      price: '프리미엄 가격 수용, 비주얼 중시',
+      target: '인스타 카페, 브런치, 베이커리',
+      tip: '성수 카페는 SNS 노출 중시. 특색 있는 식재료와 스토리텔링으로 접근'
+    },
+    '강서구': {
+      tags: '김포공항 인근, 마곡 신도시, 대규모 오피스',
+      food: '단체 급식 재료, 대용량 식자재, 신선 채소',
+      price: '대량 납품으로 가격 경쟁',
+      target: '구내식당, 단체급식, 대형 식당',
+      tip: '마곡 신도시 오피스 단체급식은 대량 납품 기회. 장기 계약 가능성 높음'
+    },
+    '구로구': {
+      tags: '구로디지털단지, 직장인 대상, 다국적 이민자',
+      food: '저가 대용량 식재료, 중국·동남아 식재료',
+      price: '가격 경쟁 심함, 볼륨이 수익',
+      target: '분식, 중식당, 김밥집, 구내식당',
+      tip: '구로는 외국인 근로자 대상 식당도 많아 할랄·동남아 식재료 틈새 시장 존재'
+    },
+    '관악구': {
+      tags: '서울대 상권, 20대 고객, 저가 외식',
+      food: '저가 식재료, 분식 재료, 치킨·피자 재료',
+      price: '가격 민감, 저단가 납품',
+      target: '학생 상대 분식, 치킨집, 편의점 도시락',
+      tip: '관악 학생 상권은 단가보다 안정적 납품이 중요. 소량 다빈도 배송 선호'
+    },
+    '동작구': {
+      tags: '노량진 고시촌, 흑석 대학가, 배달 강세',
+      food: '배달 전용 포장재, 저가 식재료, 간편식 재료',
+      price: '배달 마진 고려, 포장비 포함',
+      target: '배달 전문점, 치킨·피자·족발',
+      tip: '노량진은 배달앱 의존도 높음. 배달 용기·포장재와 묶어서 납품 제안 유효'
+    },
+    '은평구': {
+      tags: '주거 밀집, 가족 단위, 동네 식당',
+      food: '가정식 재료, 국·탕류 재료, 반찬 재료',
+      price: '중저가, 단골 관계 중요',
+      target: '동네 한식당, 고깃집, 분식',
+      tip: '은평 동네 식당은 관계 기반 영업. 첫 방문부터 친밀감 형성이 핵심'
+    },
+    '노원구': {
+      tags: '주거 밀집, 가족 외식, 학원가',
+      food: '가족 외식 재료, 고기류, 아이 메뉴 재료',
+      price: '중간 단가, 신뢰 중심',
+      target: '고깃집, 패밀리 레스토랑, 분식',
+      tip: '노원은 장기 거주자 많아 단골 식당 충성도 높음. 납품처 변경 설득에 시간 필요'
+    }
+  },
+  경기: {
+    '수원시': {
+      tags: '왕갈비 특화, 수원 삼성 직원, 화성 행궁 관광',
+      food: '왕갈비 전용 육류, 갈비 양념, 대용량 고기',
+      price: '갈비 단가 높음, 볼륨 납품 가능',
+      target: '수원 갈비집, 고깃집, 관광 음식점',
+      tip: '수원 갈비는 전국 유명 관광 먹거리. 왕갈비 전문 납품으로 차별화 가능'
+    },
+    '성남시': {
+      tags: '판교 IT 스타트업, 분당 고급 주거, 모란 재래시장',
+      food: '프리미엄 도시락, 케이터링 식재료, 유기농',
+      price: '판교 법인카드 수요, 고단가 허용',
+      target: '판교 구내식당, 케이터링, 분당 레스토랑',
+      tip: '판교 IT 기업 케이터링은 대량 고단가 납품 가능. 구내식당 계약 목표'
+    },
+    '용인시': {
+      tags: '에버랜드 관광, 신도시 거주, 베트남 이민자 많음',
+      food: '베트남·동남아 식재료, 가족 외식 재료',
+      price: '중간 단가, 다양성 중시',
+      target: '에버랜드 인근 음식점, 동남아 음식점',
+      tip: '용인 이민자 커뮤니티 대상 동남아 식재료 틈새 시장 공략 가능'
+    },
+    '고양시': {
+      tags: '일산 한류 관광, 킨텍스 전시, 신도시 거주',
+      food: '대용량 식재료, 전시 케이터링, 가족 외식',
+      price: '중간~고단가',
+      target: '일산 음식점, 킨텍스 케이터링, 카페',
+      tip: '킨텍스 행사 케이터링은 일시적이나 고단가. 사전 영업으로 시즌 계약 가능'
+    },
+    '화성시': {
+      tags: '동탄 신도시, 제조업 공단, 삼성전자 협력사',
+      food: '공장 구내식당 재료, 대용량 대중식 식재료',
+      price: '대량 납품, 가격 경쟁',
+      target: '공단 구내식당, 배달 전문점',
+      tip: '동탄 신도시 배달 시장 급성장 중. 배달 전문점 신규 창업자 공략 가능'
+    },
+    '부천시': {
+      tags: '서울 인접, 유흥가, 다양한 국적 음식점',
+      food: '주류, 안주 재료, 다국적 식재료',
+      price: '중저가, 볼륨 납품',
+      target: '유흥 음식점, 호프집, 이자카야',
+      tip: '부천 유흥가는 주류 납품과 안주 식재료를 묶어서 접근하면 효과적'
+    },
+    '안산시': {
+      tags: '다문화 도시, 시화 공단, 외국인 근로자 많음',
+      food: '중국·동남아·중앙아시아 식재료, 할랄 식품',
+      price: '저단가, 대량 납품',
+      target: '외국인 식당, 다문화 음식점, 공단 구내식당',
+      tip: '안산 원곡동 다문화 거리는 전국 최대 이민자 상권. 수입 식재료 전문 납품 가능'
+    },
+    '남양주시': {
+      tags: '다산 신도시, 젊은 가족, 카페거리',
+      food: '브런치 재료, 카페 식재료, 가족 외식 재료',
+      price: '중간 단가, 신뢰 관계 중시',
+      target: '카페, 브런치, 베이커리',
+      tip: '다산 신도시 젊은 가족 대상 카페 수요 급증. 스페셜티 원두·디저트 재료 공략 가능'
+    },
+    '평택시': {
+      tags: '미군 부대, 삼성 반도체, 물류 허브',
+      food: '미국식 식재료, 수입 식품, 대용량 납품',
+      price: '달러 구매력, 고단가 허용',
+      target: '미군 대상 식당, 물류 구내식당',
+      tip: '평택 미군 기지 인근 외국 음식점은 수입 식재료 전문 납품으로 차별화 가능'
+    },
+    '파주시': {
+      tags: '헤이리·프로방스 카페촌, 아웃렛 상권',
+      food: '카페·브런치 재료, 수제 음식 재료',
+      price: '관광 수요, 중고단가',
+      target: '카페거리 카페, 브런치, 수제맥주집',
+      tip: '파주 카페촌은 주말 관광객 중심. 주중 공백 메우는 식재료 효율화 제안 가능'
+    },
+    '김포시': {
+      tags: '한강신도시, 서울 출퇴근, 골드라인 상권',
+      food: '직장인 대상 식재료, 배달 재료',
+      price: '서울 접근성으로 중간 단가',
+      target: '직장인 대상 식당, 배달 전문점',
+      tip: '김포는 서울 전출입 인구 많아 신규 식당 창업 증가 추세. 창업 컨설팅 기회'
+    }
+  },
+  인천: {
+    '미추홀구': {
+      tags: '주안 유흥, 인천 토박이, 전통 시장',
+      food: '주류, 안주 재료, 가정식 재료',
+      price: '저중단가, 장기 관계',
+      target: '호프집, 이자카야, 동네 식당',
+      tip: '주안 유흥가 호프집은 주류 납품 물량이 큼. 소주·맥주 납품처 변경 제안 효과적'
+    },
+    '연수구': {
+      tags: '송도 국제도시, 외국인, 신도시 고급',
+      food: '수입 식재료, 프리미엄 식재료, 다국적 재료',
+      price: '고단가 허용, 품질 우선',
+      target: '송도 레스토랑, 외국인 대상 음식점',
+      tip: '송도 국제도시 외국인 거주자 대상 글로벌 식재료 납품 틈새 공략 가능'
+    },
+    '남동구': {
+      tags: '남동공단, 공장 밀집, 직장인 대량 급식',
+      food: '구내식당 대용량 식재료, 저가 대중식',
+      price: '대량 납품, 가격 경쟁 심함',
+      target: '공단 구내식당, 대형 식당',
+      tip: '남동공단 구내식당은 장기 계약 가능하나 가격 경쟁 치열. 서비스 차별화 필요'
+    },
+    '부평구': {
+      tags: '부평 상권, 젊은 층, 분식·패스트푸드',
+      food: '분식 재료, 저가 식재료, 치킨 재료',
+      price: '저중단가, 가격 민감',
+      target: '분식집, 치킨집, 학생 대상 식당',
+      tip: '부평은 젊은 층 상권으로 배달앱 의존도 높음. 배달 전문점 창업 증가 추세'
+    },
+    '서구': {
+      tags: '검단 신도시, 청라, 신규 개발',
+      food: '신규 창업 식재료 패키지, 카페 재료',
+      price: '신규 창업자 타겟, 초기 셋팅',
+      target: '신규 창업 식당, 카페, 프랜차이즈',
+      tip: '검단·청라 신도시 신규 창업 수요 많음. 창업 초기 식자재 셋팅 컨설팅 효과적'
+    }
+  }
+};
+
+/* ── 품목 데이터 ── */
+const ITEMS = {
+  '한식/축산':['삼겹살','목살','한우','갈비','불고기','닭고기','계란','두부','콩나물','김치','고추장','된장'],
+  '일식/수산':['광어','연어','참치','새우','전복','낙지','오징어','고등어','조개류','성게','김','미역'],
+  '중식':['돼지고기','닭고기','굴소스','두반장','춘장','냉동만두','냉동딤섬','두부','배추','당면'],
+  '양식/샐러드':['로메인','루꼴라','아보카도','올리브오일','파마산','모짜렐라','닭가슴살','크림','버터','드레싱'],
+  '주류':['소주','맥주','막걸리','와인','전통주','위스키','사케','매실주','보드카','과실주'],
+  '소스/가공':['케첩','마요네즈','핫소스','데리야끼','XO소스','고추기름','트러플오일','페스토','된장','고추장'],
+  '카페/베이커리':['원두','우유','오트밀크','크림','버터','밀가루','설탕','초콜릿','바닐라','크림치즈'],
+  '신규창업':['초기 식자재 패키지','납품 계약','단가 협상','메뉴 개발 식재료','원가 계산','주방 소모품']
+};
+
+/* ── 업종별 일반 데이터 (계절/트렌드/원가/납품 공통 정보) ── */
+const GENERAL_DATA = {
+  '한식/축산': {
+    season: {
+      '1': '겨울철 보양식 수요 급증. 설렁탕·갈비탕 재료 납품량 최대. 한우 선물세트 납품 기회.',
+      '2': '설 명절 한우·갈비 수요 폭증. 사전 물량 확보 필수. 제수용 고기 납품 기회.',
+      '3': '봄 개학 시즌, 학교 급식 납품 기회. 봄나물·두릅 등 제철 식재료 수요 증가.',
+      '4': '봄 나들이철, 고깃집 야외 시즌 시작. 삼겹살·목살 납품량 증가.',
+      '5': '가정의 달, 가족 외식 증가. 한우 프리미엄 수요 상승.',
+      '6': '보양식 시즌 시작. 삼계탕 재료 수요 급증. 닭고기·황기·대추 납품 기회.',
+      '7': '복날 삼계탕 피크. 초복·중복·말복 전 물량 확보 필수.',
+      '8': '말복 이후 가을 준비. 추어탕·보양 재료 전환.',
+      '9': '추석 명절 한우·갈비 수요 폭증. 2-3주 전 선제 납품 준비.',
+      '10': '가을 단풍철 나들이. 고깃집·한식당 방문객 증가.',
+      '11': '김장철 돼지고기·수육 수요 증가. 겨울 보양식 준비 시작.',
+      '12': '연말 회식 시즌. 삼겹살·갈비 납품량 연중 최대.'
+    },
+    trend: '건강식 한식 트렌드 강세. 한우 등급별 가격 차별화. 제주산·국내산 프리미엄 수요 증가.',
+    cost_tip: '한우는 등급별 단가 차이 큼. 1등급 대신 1+등급 혼용으로 원가 10-15% 절감 가능. 대량 구매 시 kg당 2,000-5,000원 절감.',
+    supply_tip: '축산 납품은 경매가 연동. KAMIS 도매가 기준 납품가 비교 가능. 주 2-3회 납품이 신선도 최적.',
+    items_detail: '삼겹살(kg당 도매 17,000-22,000원), 목살(15,000-20,000원), 한우1등급(80,000-120,000원), 닭고기(5,000-7,000원)'
+  },
+  '일식/수산': {
+    season: {
+      '1': '겨울 제철 광어·방어 최성수기. 단가 낮고 품질 최고.',
+      '2': '방어·과메기 마지막 시즌. 봄 도다리 준비.',
+      '3': '봄 도다리·주꾸미 시즌 시작. 횟집 방문객 증가.',
+      '4': '주꾸미·도다리 피크. 제철 수산물 납품 최적기.',
+      '5': '전복·멍게 시즌. 회 소비 증가.',
+      '6': '민어·장어 여름 보양 수산물 시즌 시작.',
+      '7': '여름 피서철 회 수요 최고. 광어·우럭·농어 납품 피크.',
+      '8': '전어 시즌 시작. 낙지·갑오징어 수요 증가.',
+      '9': '가을 전어·꽃게 피크. 연중 수산물 최성수기.',
+      '10': '꽃게·갈치·고등어 시즌. 횟집 방문객 연중 최다.',
+      '11': '겨울 과메기·방어 시즌 시작.',
+      '12': '방어·굴·광어 겨울 제철. 연말 회식 수산물 납품 증가.'
+    },
+    trend: '오마카세 열풍으로 고급 수산물 수요 증가. 제주산·국내산 프리미엄 선호. 활어 vs 선어 선택 다양화.',
+    cost_tip: '수산물은 새벽 경매가 연동. 노량진·가락시장 경매가 대비 10-20% 저렴한 직납 가능. 냉동 수산물 병행 시 원가 30% 절감.',
+    supply_tip: '활어는 수조 관리가 핵심. 선어는 새벽 배송이 신선도 좌우. 주 3회 이상 납품 권장.',
+    items_detail: '광어(kg당 도매 18,000-28,000원), 연어(노르웨이산 12,000-16,000원), 참치(등급별 30,000-100,000원)'
+  },
+  '중식': {
+    season: {
+      '1': '설 명절 중식당 방문 증가. 코스 요리 수요.',
+      '2': '춘절 관련 중식 수요. 딤섬·만두 납품 기회.',
+      '3': '봄 냉동식품 재고 정리. 새 시즌 식재료 전환.',
+      '4': '짬뽕 재료 수요 증가. 해산물 납품 연계.',
+      '5': '중식 배달 성수기 시작.',
+      '6': '냉면·냉짬뽕 여름 메뉴 재료 수요.',
+      '7': '여름 배달 피크. 짜장·짬뽕 재료 납품 최대.',
+      '8': '가을 메뉴 준비. 양장피·탕수육 재료.',
+      '9': '가을 중식 성수기. 코스 요리 수요 증가.',
+      '10': '연말 단체 코스 예약 시작. 고급 재료 납품 기회.',
+      '11': '연말 단체 중식 수요 증가.',
+      '12': '연말 회식 중식 피크. 코스 요리 재료 납품.'
+    },
+    trend: '마라탕·훠궈 열풍 지속. 중국 식재료 수입 증가. 냉동 딤섬·만두 편의성 수요 급증.',
+    cost_tip: '춘장·굴소스 등 소스류는 대용량 구매 시 30% 절감. 냉동 재료와 신선 재료 혼합 운영으로 원가 관리.',
+    supply_tip: '중식 재료는 주 2회 납품이 일반적. 냉동 제품은 월 1-2회 대량 납품 가능.',
+    items_detail: '돼지고기(목살 기준 15,000-18,000원/kg), 춘장(3kg 15,000원), 굴소스(2L 12,000원)'
+  },
+  '양식/샐러드': {
+    season: {
+      '1': '겨울 샐러드 수요 소강. 따뜻한 파스타 재료 증가.',
+      '2': '밸런타인 레스토랑 수요. 프리미엄 식재료 납품.',
+      '3': '봄 샐러드 시즌 시작. 신선 채소 납품 증가.',
+      '4': '봄 다이어트 시즌. 샐러드 전문점 매출 최고.',
+      '5': '야외 브런치 시즌. 샐러드·파스타 재료 수요 증가.',
+      '6': '여름 신선 채소 수급 불안정. 대체 식재료 준비.',
+      '7': '여름 샐러드·냉파스타 수요. 신선도 관리 중요.',
+      '8': '열대 과일·망고 샐러드 트렌드.',
+      '9': '가을 수확철 제철 채소 풍부. 납품 단가 하락.',
+      '10': '가을 브런치 시즌. 호박·단호박 재료 수요.',
+      '11': '겨울 준비. 따뜻한 메뉴 전환 시작.',
+      '12': '연말 파티 케이터링 샐러드 수요.'
+    },
+    trend: '비건·채식 트렌드 강세. 유기농·무농약 식재료 프리미엄 수요. 그레인볼·포케 유행.',
+    cost_tip: '채소류는 산지 직납 시 30-50% 절감 가능. 계절별 제철 채소 적극 활용. 수입산과 국산 혼합 운영.',
+    supply_tip: '신선 채소는 주 3-4회 소량 납품이 폐기율 최소화. 드레싱류는 월 1-2회 대량 납품.',
+    items_detail: '로메인(kg당 3,000-5,000원), 아보카도(개당 1,000-2,000원), 올리브오일(1L 8,000-15,000원)'
+  },
+  '주류': {
+    season: {
+      '1': '신년 회식 주류 수요 급증.',
+      '2': '설 명절 전통주·와인 선물 수요.',
+      '3': '봄 야외 활동 맥주 수요 시작.',
+      '4': '꽃놀이 시즌 맥주·막걸리 피크.',
+      '5': '가정의 달 프리미엄 주류 선물 수요.',
+      '6': '여름 맥주 시즌 시작. 생맥주 납품 증가.',
+      '7': '여름 맥주 피크. 수제맥주·수입맥주 트렌드.',
+      '8': '8월 성수기 주류 납품 연중 최대.',
+      '9': '추석 전통주·와인 선물 수요.',
+      '10': '가을 와인·위스키 시즌 시작.',
+      '11': '연말 와인·위스키 수요 증가.',
+      '12': '연말 회식 주류 납품 연중 최다.'
+    },
+    trend: '수제맥주·크래프트 맥주 급성장. 저알코올·무알코올 트렌드. 전통주(막걸리·전통 소주) 프리미엄화.',
+    cost_tip: '소주·맥주는 대리점 계약 시 할인율 협상 가능. 월 납품량 기준 단계별 할인 적용. 수입맥주는 직수입 루트 활용 시 20% 절감.',
+    supply_tip: '주류는 냉장 배송 필수. 주 1-2회 정기 납품이 일반적. 맥주는 유통기한 관리 중요.',
+    items_detail: '소주(참이슬 기준 박스당 17,000-19,000원), 맥주(카스 박스 23,000-26,000원), 막걸리(장수 박스 12,000원)'
+  },
+  '소스/가공': {
+    season: {
+      '1': '겨울 소스류 재고 정리 및 신규 계약.',
+      '2': '봄 메뉴 준비 소스 납품.',
+      '3': '봄 시즌 메뉴 소스 수요.',
+      '4': '신메뉴 소스 납품 기회.',
+      '5': '여름 메뉴 소스 준비.',
+      '6': '여름 냉소스·드레싱 수요 증가.',
+      '7': '여름 소스 피크.',
+      '8': '가을 메뉴 소스 전환 준비.',
+      '9': '추석 후 메뉴 교체 소스 납품.',
+      '10': '가을·겨울 소스 납품.',
+      '11': '연말 메뉴 소스 납품.',
+      '12': '연말 특별 메뉴 소스 수요.'
+    },
+    trend: '마라소스·트러플소스 등 특화 소스 수요 급증. OEM 소스 자체 개발 트렌드. 저염·저당 소스 프리미엄화.',
+    cost_tip: '소스류 대용량 구매 시 30-40% 절감. 자체 OEM 소스 개발 시 장기적 원가 절감.',
+    supply_tip: '소스류는 유통기한이 길어 월 1-2회 대량 납품 가능. 냉장 소스는 주 1회 납품.',
+    items_detail: '굴소스(2L 8,000-12,000원), 마라소스(500g 5,000-8,000원), 트러플오일(250ml 15,000-30,000원)'
+  },
+  '카페/베이커리': {
+    season: {
+      '1': '겨울 음료 원두·시럽 수요.',
+      '2': '밸런타인 초콜릿·디저트 재료 피크.',
+      '3': '봄 신메뉴 원두·재료 납품.',
+      '4': '봄 딸기 음료·케이크 재료 피크.',
+      '5': '어버이날·어린이날 케이크 재료 수요.',
+      '6': '여름 아이스 음료 재료 시작.',
+      '7': '여름 음료 피크. 빙수 재료 수요.',
+      '8': '여름 냉음료 최대 성수기.',
+      '9': '가을 신메뉴 준비. 호박·밤 디저트 재료.',
+      '10': '가을 음료 시즌. 단호박·고구마 라떼 재료.',
+      '11': '크리스마스 케이크 재료 준비 시작.',
+      '12': '연말 케이크·디저트 재료 피크.'
+    },
+    trend: '스페셜티 커피 열풍. 오트밀크·아몬드밀크 대체유 수요 급증. 비건 베이커리 트렌드.',
+    cost_tip: '원두는 산지 직수입 시 40% 절감. 대체유는 대용량 구매 시 20% 할인. 시럽류 대량 구매 단가 협상.',
+    supply_tip: '원두는 주 1회 납품이 신선도 최적. 우유·대체유는 주 2-3회 소량 납품.',
+    items_detail: '원두(1kg 도매 20,000-50,000원), 오트밀크(1L 2,500-3,500원), 생크림(1L 5,000-7,000원)'
+  },
+  '신규창업': {
+    season: {
+      '1': '연초 창업 준비 시즌. 상권 분석·메뉴 개발.',
+      '2': '봄 오픈 준비 본격화.',
+      '3': '봄 신규 오픈 성수기. 창업 컨설팅 수요 최고.',
+      '4': '봄 오픈 매장 안정화.',
+      '5': '여름 오픈 준비 시작.',
+      '6': '여름 창업 준비.',
+      '7': '여름 성수기 매장 운영 안정화.',
+      '8': '가을 오픈 준비 시작.',
+      '9': '가을 신규 오픈 성수기.',
+      '10': '가을 오픈 매장 안정화.',
+      '11': '연말 창업 계획 수립.',
+      '12': '내년 봄 오픈 준비 시작.'
+    },
+    trend: '1인 카페·소규모 전문점 창업 증가. 배달 전문점 창업 급증. 프랜차이즈 vs 독립 매장 양극화.',
+    cost_tip: '초기 식자재 셋팅 비용 최소화 전략. 소량 다품목보다 핵심 메뉴 집중 납품. 3개월 운영 후 납품처 재검토.',
+    supply_tip: '창업 초기는 소량 납품 가능 업체 선택. 최소 발주량 확인 필수. 신용 거래보다 현금 거래로 시작.',
+    items_detail: '초기 셋팅 비용 업종별 100-500만원. 월 식자재비 매출의 30-35% 적정. 납품처 2-3곳 분산 권장.'
+  }
+};
+
+/* ── 상태 ── */
+let industry = '한식/축산';
+let curRegion = '서울';
+let selDistricts = []; // {region, district, key}
+let selItems = [];
+let selKws = [];
+let resCount = 0;
+let phone = localStorage.getItem('fnb_ph') || '';
+let apiKey = localStorage.getItem('fnb_api') || '';
+let useGeneral = true;   // 일반 데이터 사용 여부
+let useLocal = true;     // 지역 특성 데이터 사용 여부
+
+if(phone){ document.getElementById('phone').value=phone; document.getElementById('ph-ok').style.display='block'; }
+if(apiKey){ document.getElementById('apiKey').value='sk-ant-***'; document.getElementById('apiOk').style.display='inline'; }
+
+/* ── API 키 ── */
+function saveApiKey(){
+  const k=document.getElementById('apiKey').value.trim();
+  if(!k){showToast('API 키를 입력해주세요');return;}
+  apiKey=k;
+  localStorage.setItem('fnb_api',k);
+  document.getElementById('apiOk').style.display='inline';
+  showToast('API 키 저장됐어요!');
+}
+
+function savePhone(){
+  phone=document.getElementById('phone').value.trim();
+  if(!phone)return;
+  localStorage.setItem('fnb_ph',phone);
+  document.getElementById('ph-ok').style.display='block';
+  showToast('전화번호 저장됐어요!');
+}
+
+/* ── 렌더 ── */
+function renderDistricts(){
+  const areas=AREA_DATA[curRegion]||{};
+  document.getElementById('distList').innerHTML=Object.entries(areas).map(([name,info])=>`
+    <div class="dist-card${selDistricts.find(x=>x.district===name)?' on':''}" onclick="togDist('${name}')">
+      <div class="dc-name">${name}</div>
+      <div class="dc-tag">${info.tags.split(',').slice(0,2).join('·')}</div>
+    </div>`).join('');
+}
+
+function renderItems(){
+  document.getElementById('itemGrid').innerHTML=(ITEMS[industry]||[]).map(it=>`
+    <div class="item-btn${selItems.includes(it)?' on':''}" onclick="togItem('${it}')">${it}</div>`).join('');
+}
+
+function renderSelRegions(){
+  document.getElementById('selRegions').innerHTML=selDistricts.map(d=>`
+    <div class="r-tag">${d.region} ${d.district}<span onclick="rmDist('${d.district}')">×</span></div>`).join('');
+}
+
+/* ── 이벤트 ── */
+function selInd(el,name){
+  document.querySelectorAll('.ind').forEach(e=>e.classList.remove('on'));
+  el.classList.add('on'); industry=name; selItems=[]; renderItems();
+}
+function selReg(el,name){
+  document.querySelectorAll('.r-tab').forEach(e=>e.classList.remove('on'));
+  el.classList.add('on'); curRegion=name; renderDistricts();
+}
+function togDist(name){
+  const idx=selDistricts.findIndex(x=>x.district===name);
+  if(idx>-1){ selDistricts.splice(idx,1); }
+  else{
+    if(selDistricts.length>=5){showToast('지역은 최대 5개까지 선택 가능해요');return;}
+    selDistricts.push({region:curRegion,district:name,key:`${curRegion}_${name}`});
+  }
+  renderDistricts(); renderSelRegions();
+}
+function rmDist(name){
+  selDistricts=selDistricts.filter(x=>x.district!==name);
+  renderDistricts(); renderSelRegions();
+}
+function togItem(it){
+  if(selItems.includes(it)) selItems=selItems.filter(x=>x!==it);
+  else if(selItems.length<5){selItems.push(it);}
+  else{showToast('품목은 최대 5개까지 선택 가능해요');return;}
+  renderItems();
+}
+
+/* ── API 호출 ── */
+async function callClaude(prompt, maxTokens=1000){
+  const key = apiKey || localStorage.getItem('fnb_api');
+  if(!key) throw new Error('API 키 없음');
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})
+  });
+  if(!res.ok) throw new Error(`API 오류: ${res.status}`);
+  const data=await res.json();
+  return data.content?.[0]?.text||'';
+}
+
+/* ── 키워드 추출 ── */
+async function genKeywords(){
+  if(!selDistricts.length){showToast('지역을 1개 이상 선택해주세요');return;}
+  if(!selItems.length){showToast('품목을 1개 이상 선택해주세요');return;}
+  if(!apiKey&&!localStorage.getItem('fnb_api')){showToast('API 키를 먼저 입력해주세요');return;}
+
+  const btn=document.getElementById('kwGenBtn');
+  btn.innerHTML='<i class="ti ti-loader-2"></i> 키워드 추출 중...'; btn.disabled=true;
+
+  const regionSummary=selDistricts.map(d=>{
+    const info=AREA_DATA[d.region]?.[d.district]||{};
+    return `${d.region} ${d.district}: ${info.tags||''}`;
+  }).join('\n');
+
+  const prompt=`F&B 식자재 중개 블로그를 위한 네이버 SEO 롱테일 키워드를 추출해주세요.
+
+[업종]: ${industry}
+[선택 지역과 상권 특성]:
+${regionSummary}
+[품목]: ${selItems.join(', ')}
+
+각 지역의 상권 특성을 반영하여 지역별로 다른 키워드를 생성해주세요.
+단순히 지역명만 바꾸는 것이 아니라 그 지역 특성이 반영된 진짜 다른 키워드여야 합니다.
+
+JSON만 반환 (설명 없이, 마크다운 코드블록 없이):
+{
+  "keywords": [
+    {
+      "keyword": "강남 한우 납품업체 추천",
+      "region": "서울 강남구",
+      "intent": "구매",
+      "difficulty": "low",
+      "why": "강남 고급 식당 한우 수요 타겟"
+    }
+  ]
+}
+
+총 ${selDistricts.length * selItems.length * 2}개 이상, 각 지역×품목 조합으로 2개씩.
+difficulty: low(경쟁낮음)/mid(보통)/high(경쟁높음)
+intent: 구매/탐색/비교/창업`;
+
+  try{
+    const text=await callClaude(prompt);
+    const clean=text.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    selKws=[];
+    renderKeywords(parsed.keywords||[]);
+    showToast(`${(parsed.keywords||[]).length}개 키워드 추출 완료!`);
+  }catch(e){
+    showToast('키워드 추출 실패 — API 키와 선택 항목을 확인해주세요');
+  }
+
+  btn.innerHTML='<i class="ti ti-search"></i> 지역 특화 롱테일 키워드 추출'; btn.disabled=false;
+}
+
+function renderKeywords(kws){
+  // 난이도별 그룹
+  const groups={low:[],mid:[],high:[]};
+  kws.forEach(k=>{ if(groups[k.difficulty]) groups[k.difficulty].push(k); });
+
+  const labels={low:'🎯 경쟁 낮음 (최우선 공략)',mid:'📊 경쟁 보통',high:'🔍 틈새 키워드'};
+
+  let html=`<div class="kw-actions">
+    <button class="ka g" onclick="selAllKw()">전체 선택</button>
+    <button class="ka" onclick="clearKw()">초기화</button>
+    <span class="sel-cnt" id="selCnt">0개 선택됨</span>
+  </div>`;
+
+  ['low','mid','high'].forEach(diff=>{
+    const list=groups[diff];
+    if(!list.length)return;
+    html+=`<div class="kw-sec">
+      <div class="kw-g-ttl">${labels[diff]}<span class="kw-cnt">${list.length}개</span></div>
+      <div class="kw-list">
+        ${list.map((kw,i)=>`
+          <div class="kwi" id="kwi-${diff}-${i}" onclick="togKw('${diff}',${i},'${kw.keyword.replace(/'/g,"\\'")}','${kw.region}')">
+            <div class="kwi-chk"></div>
+            <div class="kwi-txt">${kw.keyword}</div>
+            <span class="kwi-region">${kw.region}</span>
+            <span class="diff d-${diff==='low'?'lo':diff==='mid'?'mi':'hi'}">
+              ${diff==='low'?'낮음':diff==='mid'?'보통':'높음'}
+            </span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('kwContainer').innerHTML=html;
+  updateGenBtn();
+}
+
+let kwData=[];
+function togKw(diff,idx,kw,region){
+  const el=document.getElementById(`kwi-${diff}-${idx}`);
+  const exists=selKws.find(x=>x.kw===kw);
+  if(exists){
+    selKws=selKws.filter(x=>x.kw!==kw);
+    el.classList.remove('on'); el.querySelector('.kwi-chk').textContent='';
+  }else{
+    if(selKws.length>=10){showToast('최대 10개까지 선택 가능해요');return;}
+    selKws.push({kw,region});
+    el.classList.add('on'); el.querySelector('.kwi-chk').textContent='✓';
+  }
+  document.getElementById('selCnt').textContent=`${selKws.length}개 선택됨`;
+  updateGenBtn();
+}
+function selAllKw(){
+  selKws=[];
+  document.querySelectorAll('.kwi').forEach(el=>{
+    if(selKws.length>=10)return;
+    selKws.push({kw:el.querySelector('.kwi-txt').textContent.trim(),region:el.querySelector('.kwi-region').textContent.trim()});
+    el.classList.add('on'); el.querySelector('.kwi-chk').textContent='✓';
+  });
+  document.getElementById('selCnt').textContent=`${selKws.length}개 선택됨`;
+  updateGenBtn();
+}
+function clearKw(){
+  selKws=[];
+  document.querySelectorAll('.kwi').forEach(el=>{el.classList.remove('on');el.querySelector('.kwi-chk').textContent='';});
+  document.getElementById('selCnt').textContent='0개 선택됨';
+  updateGenBtn();
+}
+function updateGenBtn(){
+  const btn=document.getElementById('genBtn');
+  btn.disabled=selKws.length===0;
+  btn.innerHTML=`<i class="ti ti-wand"></i> 선택한 ${selKws.length}개 키워드로 지역 특화 포스팅 생성`;
+}
+
+/* ── 포스팅 생성 ── */
+function getSelTypes(){
+  return [...document.querySelectorAll('.type-list input:checked')].map(el=>el.value);
+}
+
+function buildPostPrompt(kwObj, type){
+  const {kw, region} = kwObj;
+  // 지역 상권 데이터 가져오기
+  const parts = region.split(' ');
+  const regKey = parts[0];
+  const distKey = parts.slice(1).join(' ');
+  const areaInfo = (AREA_DATA[regKey]||{})[distKey] || {};
+  const ph = phone || '상담 문의';
+  const month = new Date().getMonth()+1;
+
+  return `당신은 F&B 식자재 중개 영업 전문 네이버 블로그 작성자입니다.
+
+[핵심 키워드]: "${kw}" ← 이 키워드로 네이버 1페이지 노출 목표
+[타겟 지역]: ${region}
+[지역 상권 특성]:
+- 상권 특징: ${areaInfo.tags||''}
+- 주요 식재료 수요: ${areaInfo.food||''}
+- 가격 수준: ${areaInfo.price||''}
+- 주요 타겟 업종: ${areaInfo.target||''}
+- 영업 팁: ${areaInfo.tip||''}
+
+[업종]: ${industry}
+[콘텐츠 타입]: ${type}
+[현재 월]: ${month}월
+[연락처]
+- 카카오 오픈채팅: ${KAKAO}
+- 네이버 블로그: ${BLOG}
+- 전화: ${ph}
+
+⚠️ 중요: 이 글은 "${region}" 지역 특성에 완전히 맞춤화되어야 합니다.
+단순히 지역명만 넣는 것이 아니라, 위 상권 특성을 본문에 자연스럽게 녹여야 합니다.
+
+**제목**: "${kw}" 키워드 포함 + ${region} 지역 식당 사장님 클릭 유도 제목 (이모지 포함)
+
+**본문** (1500-2000자):
+
+[도입부 150-200자]
+${region} 지역 식당 사장님의 실제 고민으로 시작.
+${areaInfo.target||'식당'} 운영하시는 분들이 공감할 내용.
+${month}월 계절 특성 반영.
+
+[본론1 — ${region} 지역 특화 정보 450-550자]
+제목: 소제목 포함
+- ${region} 상권 특성과 식자재 수요 관계
+- "${kw}" 관련 실질적 정보
+- ${areaInfo.food||'해당 식재료'} 납품 시 고려할 점
+- 구체적 수치·사례 포함
+
+[본론2 — 원가/납품 실전 정보 400-500자]
+제목: 소제목 포함
+- ${region} 지역 납품처 선택 기준
+- ${areaInfo.price||'단가'} 관련 절감 방법
+- 실제 납품 프로세스 설명
+- 무료 상담으로 해결 가능하다는 흐름 자연스럽게
+
+[본론3 — 체크리스트/정리 250-350자]
+제목: 소제목 포함
+- ${region} ${industry} 식당 사장님을 위한 3-5가지 핵심 포인트
+- "저에게 연락하시면 ${region} 지역 최적 납품처를 연결해드립니다" 포함
+
+[마무리 CTA 150-200자]
+무료 상담 강조. ${region} 지역 전문 상담 가능 명시.
+카카오 오픈채팅: ${KAKAO}
+전화: ${ph}
+
+**해시태그**: #${kw.replace(/\s/g,'')} 포함 15-20개
+(${region} 지역명 포함 해시태그 + 업종 키워드 + 식자재 키워드 조합)
+
+본문 전체에 "${kw}"를 자연스럽게 3-5회 반복.
+소제목은 ** **로 표시.`;
+}
+
+async function generateAll(){
+  if(!selKws.length)return;
+  const types=getSelTypes();
+  if(!types.length){showToast('콘텐츠 타입을 선택해주세요');return;}
+  if(!apiKey&&!localStorage.getItem('fnb_api')){showToast('API 키를 먼저 입력해주세요');return;}
+
+  // 키워드 × 타입 (최대 10개)
+  const jobs=[];
+  selKws.forEach(kwObj=>{
+    types.forEach(t=>{
+      if(jobs.length<10) jobs.push({kwObj,type:t});
+    });
+  });
+
+  document.getElementById('genBtn').disabled=true;
+  document.getElementById('prog').classList.add('show');
+
+  const pl=document.getElementById('progList');
+  pl.innerHTML=jobs.map((j,i)=>`
+    <div class="pi wait" id="pi${i}">
+      <span style="width:14px;text-align:center">⏳</span>
+      <span>${j.kwObj.kw} · ${j.type}</span>
+    </div>`).join('');
+  document.getElementById('progFill').style.width='0%';
+
+  let done=0;
+  for(let i=0;i<jobs.length;i++){
+    const {kwObj,type}=jobs[i];
+    const pi=document.getElementById(`pi${i}`);
+    pi.className='pi doing'; pi.querySelector('span').textContent='✍️';
+
+    try{
+      const text=await callClaude(buildPostPrompt(kwObj,type));
+      addResult(text,kwObj,type);
+      pi.className='pi done'; pi.querySelector('span').textContent='✅';
+    }catch(e){
+      pi.className='pi'; pi.querySelector('span').textContent='❌';
+    }
+    done++;
+    document.getElementById('progFill').style.width=`${Math.round(done/jobs.length*100)}%`;
+  }
+
+  document.getElementById('genBtn').disabled=false;
+  document.getElementById('prog').classList.remove('show');
+  showToast(`${done}개 지역 특화 포스팅 생성 완료!`);
+}
+
+/* ── 결과 렌더 ── */
+function addResult(text,kwObj,type){
+  const con=document.getElementById('resContainer');
+  if(con.querySelector('.res-empty')) con.innerHTML='';
+
+  const titleM=text.match(/\*\*제목\*\*[:\s]*(.*)/);
+  const title=titleM?titleM[1].trim().replace(/\*\*/g,''):'';
+  const hashM=text.match(/\*\*해시태그\*\*[:\s]*([\s\S]*?)$/);
+  let tags=[];
+  if(hashM) tags=hashM[1].trim().split(/[\s,\n]+/).filter(t=>t.startsWith('#'));
+  let body=text.replace(/\*\*제목\*\*.*\n?/,'').replace(/\*\*해시태그\*\*[\s\S]*$/,'').replace(/\*\*본문\*\*[:\s]*/,'').replace(/\*\*/g,'').trim();
+  const chars=body.length;
+  const id='r'+Date.now()+Math.random().toString(36).slice(2,5);
+
+  resCount++;
+  document.getElementById('resCnt').textContent=resCount+'개';
+
+  const card=document.createElement('div');
+  card.className='rc';
+  card.id=id;
+  card.innerHTML=`
+    <div class="rc-top">
+      <div class="rc-region-tag">📍 ${kwObj.region}</div>
+      <div class="rc-kw">🔑 ${kwObj.kw}</div>
+      <div class="rc-meta">${type} · ${chars.toLocaleString()}자 · 태그 ${tags.length}개</div>
+      <div class="rc-btns">
+        <button class="rcb cp" onclick="copyRes('${id}')"><i class="ti ti-copy" style="font-size:9px"></i> 복사</button>
+        <button class="rcb sv" id="sv${id}" onclick="saveSheet('${id}','${kwObj.kw.replace(/'/g,"\\'")}','${kwObj.region}','${type}')">
+          <i class="ti ti-table" style="font-size:9px"></i> 시트 저장
+        </button>
+      </div>
+    </div>
+    <div class="rc-body">
+      <div class="rc-title">${title}</div>
+      <div class="rc-content" data-body="${encodeURIComponent(body)}">${body}</div>
+      <div class="rc-chars">${chars.toLocaleString()}자 / 목표 1500-2000자</div>
+      <div class="mini-cta">💬 카카오: ${KAKAO}<br>📝 블로그: ${BLOG}<br>📱 전화: ${phone||'번호 저장 필요'}</div>
+      <div class="rc-tags">${tags.slice(0,15).map(t=>`<span class="rc-tag">${t}</span>`).join('')}</div>
+    </div>`;
+  con.insertBefore(card,con.firstChild);
+}
+
+function copyRes(id){
+  const card=document.getElementById(id);
+  const title=card.querySelector('.rc-title').textContent;
+  const body=decodeURIComponent(card.querySelector('.rc-content').dataset.body);
+  const tags=[...card.querySelectorAll('.rc-tag')].map(t=>t.textContent).join(' ');
+  const cta=`\n\n━━━━━━━━━━━━━━━━━━━━\n📦 식자재 무료 상담\n💬 카카오: ${KAKAO}\n📝 블로그: ${BLOG}\n📱 전화: ${phone||''}\n━━━━━━━━━━━━━━━━━━━━`;
+  navigator.clipboard.writeText(`${title}\n\n${body}${cta}\n\n${tags}`).then(()=>showToast('복사 완료!'));
+}
+
+async function saveSheet(id,kw,region,type){
+  const card=document.getElementById(id);
+  const title=card.querySelector('.rc-title').textContent;
+  const body=decodeURIComponent(card.querySelector('.rc-content').dataset.body);
+  const tags=[...card.querySelectorAll('.rc-tag')].map(t=>t.textContent).join(' ');
+  const btn=document.getElementById('sv'+id);
+  btn.textContent='저장 중...'; btn.disabled=true;
+
+  try{
+    await callClaude(`구글 스프레드시트 ID: ${SHEET_ID}\n시트1 다음 빈 행에 추가:\n날짜:${new Date().toLocaleDateString('ko-KR')}\n지역:${region}\n키워드:${kw}\n업종:${industry}\n타입:${type}\n제목:${title}\n본문:${body.substring(0,300)}\n해시태그:${tags}\n글자수:${body.length}\n상태:작성완료`);
+    btn.className='rcb sv saved'; btn.textContent='✅ 저장됨';
+    showToast('시트에 저장됐어요!');
+  }catch(e){
+    btn.textContent='저장 실패'; btn.disabled=false;
+  }
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+
+/* ── 데이터 레이어 토글 ── */
+function togGeneral(){
+  useGeneral=!useGeneral;
+  document.getElementById('togG').classList.toggle('on',useGeneral);
+  updateLayerStatus();
+}
+function togLocal(){
+  useLocal=!useLocal;
+  document.getElementById('togL').classList.toggle('on',useLocal);
+  updateLayerStatus();
+}
+function updateLayerStatus(){
+  const el=document.getElementById('layerStatus');
+  if(useGeneral&&useLocal){
+    el.style.background='var(--g2)';el.style.color='#166534';
+    el.textContent='✅ 일반 + 지역 데이터 모두 반영';
+  }else if(useGeneral&&!useLocal){
+    el.style.background='var(--blue2)';el.style.color='#1D4ED8';
+    el.textContent='🌍 일반 데이터만 반영';
+  }else if(!useGeneral&&useLocal){
+    el.style.background='var(--blue2)';el.style.color='#1D4ED8';
+    el.textContent='📍 지역 특성 데이터만 반영';
+  }else{
+    el.style.background='#FEE2E2';el.style.color='#991B1B';
+    el.textContent='⚠️ 데이터 없음 — 기본 생성';
+  }
+}
+
+renderDistricts();
+renderItems();
+</script>
+</body>
+</html>
