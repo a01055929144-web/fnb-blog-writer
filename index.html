@@ -53,6 +53,8 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 .r-tab{padding:4px 10px;border-radius:10px;border:1px solid var(--bd);font-size:10px;font-weight:500;color:var(--gray);cursor:pointer;transition:.15s}
 .r-tab:hover{border-color:var(--blue);color:var(--blue)}
 .r-tab.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+.region-search{width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:7px 9px;font-size:11px;outline:none;margin-bottom:7px;background:#fff}
+.region-search:focus{border-color:var(--blue)}
 
 /* 지역 카드 (상권 정보 포함) */
 .dist-list{display:flex;flex-direction:column;gap:3px;max-height:220px;overflow-y:auto}
@@ -73,6 +75,10 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 .item-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;max-height:150px;overflow-y:auto}
 .item-btn{padding:5px 4px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);cursor:pointer;text-align:center;font-size:10px;color:var(--d2);transition:.15s}
 .item-btn:hover,.item-btn.on{border-color:var(--amber);background:var(--amber2);color:#92400E;font-weight:600}
+.custom-item{display:flex;gap:4px;margin-top:6px}
+.custom-item input{flex:1;border:1.5px solid var(--bd);border-radius:var(--rs);padding:7px 9px;font-size:11px;outline:none;background:#fff}
+.custom-item input:focus{border-color:var(--amber)}
+.custom-item button{padding:7px 10px;background:var(--amber);color:#fff;border:none;border-radius:var(--rs);font-size:10px;font-weight:700;cursor:pointer}
 
 /* 타입 */
 .type-list{display:flex;flex-direction:column;gap:3px}
@@ -195,10 +201,16 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 <!-- API 키 입력 -->
 <div class="api-banner">
   <i class="ti ti-key" style="font-size:14px"></i>
-  <span style="white-space:nowrap;font-weight:600">Claude API Key</span>
-  <input type="password" id="apiKey" placeholder="sk-ant-api03-...">
-  <button class="api-save" onclick="saveApiKey()">저장</button>
-  <span class="api-ok" id="apiOk" style="display:none">✅ 연결됨</span>
+  <strong>API 설정</strong>
+  <input type="url" id="claudeEndpoint" placeholder="Claude Proxy URL (권장)">
+  <button class="api-save" onclick="saveClaudeEndpoint()">프록시 저장</button>
+  <input type="password" id="apiKey" placeholder="Anthropic API 키를 입력하세요">
+  <button class="api-save" onclick="saveApiKey()">키 저장</button>
+  <button class="api-save" onclick="testApiKey()">API 테스트</button>
+  <input type="url" id="sheetEndpoint" placeholder="Google Apps Script Web App URL">
+  <button class="api-save" onclick="saveSheetEndpoint()">시트 URL 저장</button>
+  <span class="api-ok" id="apiOk">저장됨</span>
+  <span class="api-note">공개 저장소에는 키를 넣지 마세요</span>
   <span style="margin-left:auto;font-size:11px;color:#166534;font-weight:600;background:#DCFCE7;padding:3px 10px;border-radius:12px">⚡ 구글 시트 자동 저장 연결됨</span>
 </div>
 
@@ -228,6 +240,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
         <div class="r-tab" onclick="selReg(this,'경기')">경기</div>
         <div class="r-tab" onclick="selReg(this,'인천')">인천</div>
       </div>
+      <input class="region-search" id="regionSearch" placeholder="지역 검색 (예: 강남, 수원, 중구)" oninput="searchRegion(this.value)">
       <div class="dist-list" id="distList"></div>
       <div class="sel-regions" id="selRegions"></div>
     </div>
@@ -235,6 +248,10 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     <div class="s-sec">
       <div class="s-ttl"><i class="ti ti-box" style="font-size:10px"></i> 세부 품목 (최대 5개)</div>
       <div class="item-grid" id="itemGrid"></div>
+      <div class="custom-item">
+        <input id="customItem" placeholder="기타 품목 직접 입력" onkeydown="if(event.key==='Enter')addCustomItem()">
+        <button onclick="addCustomItem()">추가</button>
+      </div>
     </div>
 
     <div class="s-sec">
@@ -619,17 +636,41 @@ const GENERAL_DATA = {
 /* ── 상태 ── */
 let industry = '한식/축산';
 let curRegion = '서울';
+let regionQuery = '';
 let selDistricts = []; // {region, district, key}
 let selItems = [];
+let itemData = [];
 let selKws = [];
 let resCount = 0;
 let phone = localStorage.getItem('fnb_ph') || '';
 let apiKey = localStorage.getItem('fnb_api') || '';
+let claudeEndpoint = localStorage.getItem('fnb_claude_endpoint') || '';
+let sheetEndpoint = localStorage.getItem('fnb_sheet_endpoint') || '';
+
 let useGeneral = true;   // 일반 데이터 사용 여부
 let useLocal = true;     // 지역 특성 데이터 사용 여부
 
 if(phone){ document.getElementById('phone').value=phone; document.getElementById('ph-ok').style.display='block'; }
-if(apiKey){ document.getElementById('apiKey').value='sk-ant-***'; document.getElementById('apiOk').style.display='inline'; }
+if(apiKey){ document.getElementById('apiKey').value=apiKey; document.getElementById('apiOk').style.display='inline'; }
+if(claudeEndpoint){ document.getElementById('claudeEndpoint').value=claudeEndpoint; document.getElementById('apiOk').style.display='inline'; }
+if(sheetEndpoint){ document.getElementById('sheetEndpoint').value=sheetEndpoint; }
+
+function esc(v){
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
+
+function setChildren(el, children){
+  el.replaceChildren(...children.filter(Boolean));
+}
+
+function makeEl(tag, className, text){
+  const el=document.createElement(tag);
+  if(className) el.className=className;
+  if(text!==undefined) el.textContent=text;
+  return el;
+}
 
 /* ── API 키 ── */
 function saveApiKey(){
@@ -639,6 +680,37 @@ function saveApiKey(){
   localStorage.setItem('fnb_api',k);
   document.getElementById('apiOk').style.display='inline';
   showToast('API 키 저장됐어요!');
+}
+
+function saveClaudeEndpoint(){
+  const url=document.getElementById('claudeEndpoint').value.trim();
+  if(!url){showToast('Claude Proxy URL을 입력해주세요');return;}
+  claudeEndpoint=url;
+  localStorage.setItem('fnb_claude_endpoint',url);
+  document.getElementById('apiOk').style.display='inline';
+  showToast('Claude 프록시 URL이 저장됐어요!');
+}
+
+function saveSheetEndpoint(){
+  const url=document.getElementById('sheetEndpoint').value.trim();
+  if(!url){showToast('시트 저장용 Web App URL을 입력해주세요');return;}
+  sheetEndpoint=url;
+  localStorage.setItem('fnb_sheet_endpoint',url);
+  document.getElementById('apiOk').style.display='inline';
+  showToast('시트 저장 URL이 저장됐어요!');
+}
+
+async function testApiKey(){
+  const btn=[...document.querySelectorAll('.api-save')].find(b=>b.textContent.includes('API 테스트'));
+  if(btn){btn.disabled=true;btn.textContent='테스트 중...';}
+  try{
+    const text=await callClaude('정상 연결 확인용입니다. OK만 답하세요.',80);
+    showToast(`API 연결 성공: ${text.trim().slice(0,20) || 'OK'}`);
+  }catch(e){
+    showToast(e.message || 'API 연결 실패');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='API 테스트';}
+  }
 }
 
 function savePhone(){
@@ -651,25 +723,42 @@ function savePhone(){
 
 /* ── 렌더 ── */
 function renderDistricts(){
-  const keys=REGION_TABS[curRegion]||[];
-  document.getElementById('distList').innerHTML=keys.map(name=>{
-    const info=AREA_DATA[curRegion][name]||{};
-    const isOn=selDistricts.find(x=>x.district===name);
-    return `<div class="dist-card${isOn?' on':''}" onclick="togDist('${name}')">
-      <div class="dc-name">${name}</div>
-      <div class="dc-tag">${(info.tags||'').split(',').slice(0,2).join('·')}</div>
+  const q=regionQuery.trim().toLowerCase();
+  const entries=q
+    ? Object.keys(REGION_TABS).flatMap(region=>(REGION_TABS[region]||[]).map(name=>({region,name}))).filter(({region,name})=>{
+      const info=AREA_DATA[region]?.[name]||{};
+      return `${region} ${name} ${info.tags||''}`.toLowerCase().includes(q);
+    })
+    : (REGION_TABS[curRegion]||[]).map(name=>({region:curRegion,name}));
+
+  const list=document.getElementById('distList');
+  if(!entries.length){
+    list.innerHTML='<div style="padding:12px;text-align:center;color:var(--gray);font-size:11px">검색 결과가 없습니다</div>';
+    return;
+  }
+
+  list.innerHTML=entries.map(({region,name})=>{
+    const info=AREA_DATA[region]?.[name]||{};
+    const key=`${region}|${name}`;
+    const isOn=selDistricts.find(x=>x.key===key);
+    return `<div class="dist-card${isOn?' on':''}" onclick="togDist('${name}','${region}')">
+      <div class="dc-name">${q?esc(region)+' ':''}${esc(name)}</div>
+      <div class="dc-tag">${esc((info.tags||'').split(',').slice(0,2).join('·'))}</div>
     </div>`;
   }).join('');
 }
 
 function renderItems(){
-  document.getElementById('itemGrid').innerHTML=(ITEMS[industry]||[]).map(it=>`
-    <div class="item-btn${selItems.includes(it)?' on':''}" onclick="togItem('${it}')">${it}</div>`).join('');
+  const base=ITEMS[industry]||[];
+  const custom=selItems.filter(it=>!base.includes(it));
+  itemData=[...base,...custom];
+  document.getElementById('itemGrid').innerHTML=itemData.map((it,index)=>`
+    <div class="item-btn${selItems.includes(it)?' on':''}" onclick="togItemByIndex(${index})">${esc(it)}</div>`).join('');
 }
 
 function renderSelRegions(){
   document.getElementById('selRegions').innerHTML=selDistricts.map(d=>`
-    <div class="r-tag">${d.region} ${d.district}<span onclick="rmDist('${d.district}')">×</span></div>`).join('');
+    <div class="r-tag">${esc(d.region)} ${esc(d.district)}<span onclick="rmDist('${d.key}')">×</span></div>`).join('');
 }
 
 /* ── 이벤트 ── */
@@ -679,19 +768,24 @@ function selInd(el,name){
 }
 function selReg(el,name){
   document.querySelectorAll('.r-tab').forEach(e=>e.classList.remove('on'));
-  el.classList.add('on'); curRegion=name; renderDistricts();
+  el.classList.add('on'); curRegion=name; regionQuery=''; document.getElementById('regionSearch').value=''; renderDistricts();
 }
-function togDist(name){
-  const idx=selDistricts.findIndex(x=>x.district===name);
+function searchRegion(value){
+  regionQuery=value||'';
+  renderDistricts();
+}
+function togDist(name,region=curRegion){
+  const key=`${region}|${name}`;
+  const idx=selDistricts.findIndex(x=>x.key===key);
   if(idx>-1){ selDistricts.splice(idx,1); }
   else{
-    if(selDistricts.length>=6){showToast('지역은 최대 6개까지 선택 가능해요');return;}
-    selDistricts.push({region:curRegion,district:name,key:name});
+    if(selDistricts.length>=5){showToast('지역은 최대 5개까지 선택 가능해요');return;}
+    selDistricts.push({region,district:name,key});
   }
   renderDistricts(); renderSelRegions();
 }
-function rmDist(name){
-  selDistricts=selDistricts.filter(x=>x.district!==name);
+function rmDist(key){
+  selDistricts=selDistricts.filter(x=>x.key!==key);
   renderDistricts(); renderSelRegions();
 }
 function togItem(it){
@@ -700,17 +794,71 @@ function togItem(it){
   else{showToast('품목은 최대 5개까지 선택 가능해요');return;}
   renderItems();
 }
+function togItemByIndex(index){
+  const item=itemData[index];
+  if(item) togItem(item);
+}
+function addCustomItem(){
+  const input=document.getElementById('customItem');
+  const item=input.value.trim();
+  if(!item){showToast('추가할 품목을 입력해주세요');return;}
+  if(selItems.includes(item)){showToast('이미 선택된 품목이에요');input.value='';return;}
+  if(selItems.length>=5){showToast('품목은 최대 5개까지 선택 가능해요');return;}
+  selItems.push(item);
+  input.value='';
+  renderItems();
+  showToast(`${item} 품목이 추가됐어요`);
+}
 
 /* ── API 호출 ── */
 async function callClaude(prompt, maxTokens=1000){
+  const proxy = claudeEndpoint || localStorage.getItem('fnb_claude_endpoint');
+  if(proxy){
+    let proxyRes;
+    try{
+      proxyRes=await fetch(proxy,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTokens,prompt})
+      });
+    }catch(e){
+      throw new Error('Claude 프록시 연결 실패: URL과 배포 상태를 확인해주세요');
+    }
+    if(!proxyRes.ok) throw new Error(`Claude 프록시 오류: ${proxyRes.status}`);
+    const text=await proxyRes.text();
+    try{
+      const data=JSON.parse(text);
+      if(data.success===false) throw new Error(data.message||'Claude 프록시 실패');
+      return data.text || data.content || data.message || '';
+    }catch(e){
+      if(e.message.includes('Claude 프록시')) throw e;
+      return text;
+    }
+  }
+
   const key = apiKey || localStorage.getItem('fnb_api');
   if(!key) throw new Error('API 키 없음');
-  const res=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
-    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})
-  });
-  if(!res.ok) throw new Error(`API 오류: ${res.status}`);
+  let res;
+  try{
+    res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})
+    });
+  }catch(e){
+    throw new Error('API 연결 실패: 브라우저에서 Anthropic 직접 호출이 차단됐거나 네트워크 문제가 있습니다');
+  }
+  if(!res.ok){
+    let detail='';
+    try{
+      const err=await res.json();
+      detail=err?.error?.message || err?.message || '';
+    }catch(e){}
+    if(res.status===401) throw new Error(`API 키 인증 실패: ${detail || '키가 유효한지 확인해주세요'}`);
+    if(res.status===403) throw new Error(`API 권한 오류: ${detail || '계정 권한 또는 브라우저 호출 정책을 확인해주세요'}`);
+    if(res.status===404) throw new Error(`모델 오류: claude-sonnet-4-6 사용 가능 여부를 확인해주세요`);
+    throw new Error(`API 오류 ${res.status}${detail?': '+detail:''}`);
+  }
   const data=await res.json();
   return data.content?.[0]?.text||'';
 }
@@ -764,7 +912,7 @@ intent: 구매/탐색/비교/창업`;
     renderKeywords(parsed.keywords||[]);
     showToast(`${(parsed.keywords||[]).length}개 키워드 추출 완료!`);
   }catch(e){
-    showToast('키워드 추출 실패 — API 키와 선택 항목을 확인해주세요');
+    showToast(e.message || '키워드 추출 실패');
   }
 
   btn.innerHTML='<i class="ti ti-search"></i> 지역 특화 롱테일 키워드 추출'; btn.disabled=false;
@@ -957,6 +1105,7 @@ async function generateAll(){
       pi.className='pi done'; pi.querySelector('span').textContent='✅';
     }catch(e){
       pi.className='pi'; pi.querySelector('span').textContent='❌';
+      showToast(e.message || '포스팅 생성 실패');
     }
     done++;
     document.getElementById('progFill').style.width=`${Math.round(done/jobs.length*100)}%`;
