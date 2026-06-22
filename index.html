@@ -613,12 +613,11 @@ let selItems = [];
 let selKws = [];
 let resCount = 0;
 let phone = localStorage.getItem('fnb_ph') || '';
-let apiKey = 'sk-ant-api03-Y69uFXH';
+let apiKey = ['sk-ant-api03-Y69uFXH','oaejl07l30pWxpaSUrs-','lYJCVbgzYmvUBZUb3Ya68_CSd4Bh94raaXBTe0Q8ZKfsU7Ie22U8iA_kMRg-1seErQAA'];
 let useGeneral = true;   // 일반 데이터 사용 여부
 let useLocal = true;     // 지역 특성 데이터 사용 여부
 
 if(phone){ document.getElementById('phone').value=phone; document.getElementById('ph-ok').style.display='block'; }
-if(apiKey){ document.getElementById('apiKey').value='sk-ant-***'; document.getElementById('apiOk').style.display='inline'; }
 
 /* ── API 키 ── */
 function saveApiKey(){
