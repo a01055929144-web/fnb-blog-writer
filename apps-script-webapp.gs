@@ -37,6 +37,15 @@ function doGet() {
   });
 }
 
+function authorizeOnce() {
+  PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+  SpreadsheetApp.openById(getSheetId_());
+  UrlFetchApp.fetch('https://api.anthropic.com', {
+    method: 'get',
+    muteHttpExceptions: true,
+  });
+}
+
 function callClaude_(data) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
   if (!apiKey) throw new Error('Script Properties에 ANTHROPIC_API_KEY가 없습니다.');
