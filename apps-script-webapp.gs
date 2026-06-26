@@ -17,7 +17,7 @@ const SHEETS = {
   clusters: '토픽클러스터',
   posts: '작성글',
   cta: 'CTA',
-  memo: '설정메모',
+  memo: '사용가이드',
   state: '앱상태',
 };
 
@@ -255,8 +255,11 @@ function ctaRows_(state, savedAt) {
 }
 
 function memoRows_(state, savedAt) {
-  const keyword = state.keyword || {};
-  return [[savedAt, 'Keyword Engine', keyword.guideMemo || '']];
+  return [[
+    savedAt,
+    'Keyword Engine',
+    '지역 선택 > 업종 선택 > 기본/추가 품목 선택 > 키워드 추출 > Topic Cluster > AI Writer 순서로 사용합니다. 같은 조건은 저장된 결과를 재사용해 API 토큰을 절약합니다.',
+  ]];
 }
 
 function replaceRows_(sheet, headers, rows) {

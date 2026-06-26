@@ -225,8 +225,14 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 .sec-title{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.7px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:4px}
 .mini-search{width:100%;height:34px;border:1px solid var(--bd);border-radius:var(--rs);padding:0 11px;margin-bottom:8px;background:var(--w);color:var(--d);font-size:12px;font-weight:500;outline:none}
 .mini-search:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
-.guide-memo{width:100%;min-height:84px;border:1px solid var(--bd);border-radius:var(--rs);padding:10px 11px;background:var(--w);color:var(--d);font-size:12px;line-height:1.5;resize:vertical;outline:none}
-.guide-memo:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.item-add{display:flex;gap:6px;margin-bottom:8px}
+.item-add .mini-search{margin-bottom:0}
+.item-add .btn{height:34px;padding:0 12px;font-size:11px;white-space:nowrap}
+.item-btn.custom{position:relative;padding-right:18px}
+.item-btn .item-x{position:absolute;right:5px;top:50%;transform:translateY(-50%);color:var(--gray);font-size:11px}
+.guide-box{border:1px solid var(--bd);border-radius:var(--rs);background:var(--bg);padding:11px 12px;margin-bottom:14px}
+.guide-box ol{padding-left:18px;color:var(--d2);font-size:11px;line-height:1.65}
+.guide-box strong{color:var(--g)}
 
 /* ── Analytics ── */
 .analytics-row{display:grid;grid-template-columns:200px 1fr;gap:16px}
@@ -425,10 +431,21 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
         <div class="sec-title" style="margin-top:14px"><i class="ti ti-box" style="font-size:11px"></i> 품목 (최대 5개)</div>
         <input class="mini-search" id="itemSearch" placeholder="품목 검색" oninput="handleItemSearch(this.value)">
+        <div class="item-add">
+          <input class="mini-search" id="customItemInput" placeholder="직접 품목 추가">
+          <button class="btn btn-outline" onclick="addCustomItem()"><i class="ti ti-plus"></i> 추가</button>
+        </div>
         <div class="item-grid" id="itemGrid" style="margin-bottom:14px"></div>
 
-        <div class="sec-title"><i class="ti ti-notes" style="font-size:11px"></i> 사용 가이드 메모</div>
-        <textarea class="guide-memo" id="guideMemo" placeholder="키워드 추출 기준, 피해야 할 표현, 납품 강점 등을 적어두세요." oninput="handleGuideMemoInput(this.value)"></textarea>
+        <div class="sec-title"><i class="ti ti-notes" style="font-size:11px"></i> 사용 가이드</div>
+        <div class="guide-box">
+          <ol>
+            <li><strong>지역</strong>에서 납품 타깃 상권을 최대 5개까지 선택하세요.</li>
+            <li><strong>업종</strong>을 고른 뒤 기본 품목 또는 직접 추가한 품목을 선택하세요.</li>
+            <li>키워드 추출 후 구매 의도가 높은 키워드만 골라 Topic Cluster로 넘기세요.</li>
+            <li>같은 조건은 저장된 결과를 재사용해 API 토큰을 아낍니다.</li>
+          </ol>
+        </div>
 
         <div class="sec-title" style="margin-top:14px"><i class="ti ti-database" style="font-size:11px"></i> 데이터 레이어</div>
         <div class="toggle-row">
@@ -996,8 +1013,10 @@ let projects = JSON.parse(localStorage.getItem('fnb_projects') || '[]');
 let regionQuery = '';
 let industryQuery = '';
 let itemQuery = '';
-let guideMemo = localStorage.getItem('fnb_guide_memo') || '';
+let customItems = JSON.parse(localStorage.getItem('fnb_custom_items') || '{}');
 let persistTimer = null;
+let keywordCache = JSON.parse(localStorage.getItem('fnb_kw_cache') || '{}');
+let clusterCache = JSON.parse(localStorage.getItem('fnb_cluster_cache') || '{}');
 let useGeneral = true;
 let useLocal = true;
 let phone = localStorage.getItem('fnb_ph') || '';
@@ -1008,6 +1027,7 @@ localStorage.removeItem('fnb_api');
 if(phone){ document.getElementById('phoneInput').value = phone; document.getElementById('phoneSaved').style.display='block'; document.getElementById('ctaPhone').textContent = phone; }
 
 function esc(v){ return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function jsArg(v){ return esc(JSON.stringify(String(v||''))); }
 
 /* ══════════════════════════════════════
    네비게이션
@@ -1069,9 +1089,9 @@ function buildAppState(){
       selectedItems: selItems,
       selectedKeywords: selKws,
       kwData,
+      customItems,
       useGeneral,
       useLocal,
-      guideMemo,
     },
     cluster: {
       clusterData,
@@ -1098,9 +1118,9 @@ function applyAppState(state){
   selItems = Array.isArray(keyword.selectedItems) ? keyword.selectedItems : selItems;
   selKws = Array.isArray(keyword.selectedKeywords) ? keyword.selectedKeywords : selKws;
   kwData = Array.isArray(keyword.kwData) ? keyword.kwData : kwData;
+  customItems = keyword.customItems && typeof keyword.customItems === 'object' ? keyword.customItems : customItems;
   useGeneral = keyword.useGeneral !== undefined ? !!keyword.useGeneral : useGeneral;
   useLocal = keyword.useLocal !== undefined ? !!keyword.useLocal : useLocal;
-  guideMemo = keyword.guideMemo || guideMemo;
 
   const cluster = state.cluster || {};
   clusterData = Array.isArray(cluster.clusterData) ? cluster.clusterData : clusterData;
@@ -1110,7 +1130,7 @@ function applyAppState(state){
   history = Array.isArray(writer.history) ? writer.history : history;
 
   localStorage.setItem('fnb_projects', JSON.stringify(projects));
-  localStorage.setItem('fnb_guide_memo', guideMemo);
+  localStorage.setItem('fnb_custom_items', JSON.stringify(customItems));
 }
 
 async function loadAppSnapshot(){
@@ -1142,17 +1162,12 @@ function persistLater(reason){
 function handleRegionSearch(value){ regionQuery=value.trim(); renderDist(); }
 function handleIndustrySearch(value){ industryQuery=value.trim(); renderIndustryOptions(); }
 function handleItemSearch(value){ itemQuery=value.trim(); renderItems(); }
-function handleGuideMemoInput(value){
-  guideMemo = value;
-  localStorage.setItem('fnb_guide_memo', guideMemo);
-  persistLater('guideMemo');
-}
 
 function renderIndustryOptions(){
   const q = industryQuery.toLowerCase();
   const rows = INDUSTRIES.filter(item=>!q || item.name.toLowerCase().includes(q));
   document.getElementById('industryGrid').innerHTML = rows.map(item=>`
-    <div class="ind${item.name===industry?' on':''}" onclick="selInd(this,'${item.name}')"><em>${item.icon}</em>${esc(item.name)}</div>
+    <div class="ind${item.name===industry?' on':''}" onclick="selInd(this,${jsArg(item.name)})"><em>${item.icon}</em>${esc(item.name)}</div>
   `).join('');
 }
 
@@ -1231,9 +1246,33 @@ function rmDist(name){
 }
 function renderItems(){
   const q = itemQuery.toLowerCase();
-  document.getElementById('itemGrid').innerHTML = (ITEMS[industry]||[]).filter(it=>!q || it.toLowerCase().includes(q)).map(it=>
-    `<div class="item-btn${selItems.includes(it)?' on':''}" onclick="togItem('${it}')">${esc(it)}</div>`
+  const baseItems = (ITEMS[industry]||[]).map(name=>({name, custom:false}));
+  const addedItems = (customItems[industry]||[]).map(name=>({name, custom:true}));
+  document.getElementById('itemGrid').innerHTML = [...baseItems, ...addedItems].filter(it=>!q || it.name.toLowerCase().includes(q)).map(it=>
+    `<div class="item-btn${selItems.includes(it.name)?' on':''}${it.custom?' custom':''}" onclick="togItem(${jsArg(it.name)})">${esc(it.name)}${it.custom?`<span class="item-x" onclick="removeCustomItem(event,${jsArg(it.name)})">×</span>`:''}</div>`
   ).join('');
+}
+function addCustomItem(){
+  const input = document.getElementById('customItemInput');
+  const item = input.value.trim();
+  if(!item){ showToast('추가할 품목을 입력해주세요'); return; }
+  customItems[industry] = customItems[industry] || [];
+  if((ITEMS[industry]||[]).includes(item) || customItems[industry].includes(item)){
+    showToast('이미 있는 품목이에요'); return;
+  }
+  customItems[industry].push(item);
+  localStorage.setItem('fnb_custom_items', JSON.stringify(customItems));
+  input.value = '';
+  renderItems();
+  persistLater('customItemAdd');
+}
+function removeCustomItem(event, item){
+  event.stopPropagation();
+  customItems[industry] = (customItems[industry]||[]).filter(x=>x!==item);
+  selItems = selItems.filter(x=>x!==item);
+  localStorage.setItem('fnb_custom_items', JSON.stringify(customItems));
+  renderItems();
+  persistLater('customItemRemove');
 }
 function togItem(it){
   if(selItems.includes(it)) selItems = selItems.filter(x=>x!==it);
@@ -1269,9 +1308,35 @@ function updateLayerStatus(){
 /* ══════════════════════════════════════
    Keyword Engine
 ══════════════════════════════════════ */
+function stableKey(payload){
+  return JSON.stringify(payload);
+}
+function saveKeywordCache(key){
+  keywordCache[key] = {kwData, savedAt:Date.now()};
+  const keys = Object.keys(keywordCache).slice(-20);
+  keywordCache = keys.reduce((acc,k)=>{ acc[k]=keywordCache[k]; return acc; }, {});
+  localStorage.setItem('fnb_kw_cache', JSON.stringify(keywordCache));
+}
+function saveClusterCache(key){
+  clusterCache[key] = {clusterData, savedAt:Date.now()};
+  const keys = Object.keys(clusterCache).slice(-12);
+  clusterCache = keys.reduce((acc,k)=>{ acc[k]=clusterCache[k]; return acc; }, {});
+  localStorage.setItem('fnb_cluster_cache', JSON.stringify(clusterCache));
+}
+
 async function genKeywords(){
   if(!selDistricts.length){ showToast('지역을 선택해주세요'); return; }
   if(!selItems.length){ showToast('품목을 선택해주세요'); return; }
+  const cacheKey = stableKey({industry, selDistricts, selItems, useGeneral, useLocal});
+  if(keywordCache[cacheKey] && Array.isArray(keywordCache[cacheKey].kwData)){
+    kwData = keywordCache[cacheKey].kwData;
+    selKws = [];
+    renderKeywords();
+    document.getElementById('kwTotalBadge').textContent = kwData.length+'개';
+    showToast('저장된 조건 결과를 불러왔어요');
+    persistLater('keywordsCacheHit');
+    return;
+  }
   const btn = document.getElementById('kwGenBtn');
   btn.innerHTML='<i class="ti ti-loader-2"></i> 키워드 추출 중...'; btn.disabled=true;
 
@@ -1280,20 +1345,20 @@ async function genKeywords(){
     return useLocal ? `${d.region} ${d.district}: ${info.tags||''}` : `${d.region} ${d.district}`;
   }).join('\n');
 
+  const targetCount = Math.min(24, Math.max(8, selDistricts.length * selItems.length * 2));
   const prompt = `F&B 식자재 중개 블로그용 네이버 SEO 롱테일 키워드를 추출해주세요.
 
 [업종]: ${industry}
 [지역]: ${regionSummary}
 [품목]: ${selItems.join(', ')}
-[사용 가이드 메모]: ${guideMemo || '없음'}
 
 JSON만 반환 (마크다운 없이):
 {"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low","why":"설명"}]}
 
-총 ${selDistricts.length * selItems.length * 3}개 이상. difficulty: low/mid/high. intent: 구매/탐색/비교/창업`;
+총 ${targetCount}개. 구매 의도 높은 롱테일 위주. difficulty: low/mid/high. intent: 구매/탐색/비교/창업`;
 
   try{
-    const text = await callClaude(prompt);
+    const text = await callClaude(prompt, 700);
     let clean = text.replace(/```json|```/g,'').trim();
     // JSON 블록만 추출
     const jStart = clean.indexOf('{');
@@ -1302,6 +1367,7 @@ JSON만 반환 (마크다운 없이):
     const parsed = JSON.parse(clean);
     kwData = (parsed.keywords||[]).map((k,i)=>({...k,index:i}));
     selKws = [];
+    saveKeywordCache(cacheKey);
     renderKeywords();
     document.getElementById('kwTotalBadge').textContent = kwData.length+'개';
     showToast(`${kwData.length}개 키워드 추출 완료!`);
@@ -1374,6 +1440,15 @@ function goToCluster(){
 ══════════════════════════════════════ */
 async function genCluster(){
   if(!selKws.length){ showToast('먼저 키워드를 선택해주세요'); return; }
+  const cacheKey = stableKey({industry, selKws});
+  if(clusterCache[cacheKey] && Array.isArray(clusterCache[cacheKey].clusterData)){
+    clusterData = clusterCache[cacheKey].clusterData;
+    document.getElementById('clusterResult').style.display='block';
+    renderCluster();
+    showToast('저장된 클러스터를 불러왔어요');
+    persistLater('clusterCacheHit');
+    return;
+  }
 
   const btn = document.getElementById('clusterGenBtn');
   btn.innerHTML='<i class="ti ti-loader-2"></i> 생성 중...'; btn.disabled=true;
@@ -1381,7 +1456,7 @@ async function genCluster(){
   document.getElementById('clusterResult').style.display='none';
 
   const progList = document.getElementById('clusterProgList');
-  const steps = ['검색 의도 분석 중...','콘텐츠 맵 생성 중...','50개 글 기획 중...','우선순위 분류 중...'];
+  const steps = ['검색 의도 분석 중...','콘텐츠 맵 생성 중...','핵심 글 기획 중...','우선순위 분류 중...'];
   progList.innerHTML = steps.map((s,i)=>`<div class="pi wait" id="cp${i}"><span>⏳</span> ${s}</div>`).join('');
 
   let progInterval = setInterval(()=>{
@@ -1392,13 +1467,14 @@ async function genCluster(){
   const kwList = selKws.map(k=>k.kw).join(', ');
   const regions = [...new Set(selKws.map(k=>k.region))].join(', ');
 
+  const targetCount = Math.min(24, Math.max(12, selKws.length * 3));
   const prompt = `F&B 식자재 중개 블로그를 위한 Topic Cluster를 생성해주세요.
 
 [업종]: ${industry}
 [지역]: ${regions}
 [선택 키워드]: ${kwList}
 
-이 키워드들을 기반으로 네이버 SEO에 최적화된 블로그 글 기획 50개를 생성해주세요.
+이 키워드들을 기반으로 네이버 SEO에 최적화된 블로그 글 기획 ${targetCount}개를 생성해주세요.
 각 글은 검색 의도가 다르고, 서로 내부링크로 연결될 수 있어야 합니다.
 
 JSON만 반환 (마크다운 없이):
@@ -1411,16 +1487,17 @@ intent: 창업/원가절감/거래처변경/납품/정보/비교 중 하나
 priority: high/mid/low
 type: 정보성/원가절감/납품노하우/창업컨설팅/트렌드/비교
 
-50개 생성. 지역별, 의도별 다양하게.`;
+${targetCount}개 생성. 구매·비교·납품 의도 우선, 중복 제목 금지.`;
 
   try{
-    const text = await callClaude(prompt, 1000);
+    const text = await callClaude(prompt, 900);
     let clean = text.replace(/```json|```/g,'').trim();
     const jStart = clean.indexOf('{');
     const jEnd = clean.lastIndexOf('}');
     if(jStart > -1 && jEnd > -1) clean = clean.slice(jStart, jEnd+1);
     const parsed = JSON.parse(clean);
     clusterData = parsed.cluster||[];
+    saveClusterCache(cacheKey);
     clearInterval(progInterval);
     steps.forEach((_,i)=>{ const el=document.getElementById('cp'+i); if(el){el.className='pi done';el.querySelector('span').textContent='✅';} });
     setTimeout(()=>{
@@ -1836,7 +1913,6 @@ function syncRegionTabs(){
 
 function hydrateControls(){
   syncRegionTabs();
-  document.getElementById('guideMemo').value = guideMemo;
   document.getElementById('togG').classList.toggle('on', useGeneral);
   document.getElementById('togL').classList.toggle('on', useLocal);
   updateLayerStatus();
