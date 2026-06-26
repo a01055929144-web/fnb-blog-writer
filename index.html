@@ -984,12 +984,11 @@ let projects = JSON.parse(localStorage.getItem('fnb_projects') || '[]');
 let useGeneral = true;
 let useLocal = true;
 let phone = localStorage.getItem('fnb_ph') || '';
-const AK = ['sk-ant-api03-AZfMCcz','71AK5r5E8rTjUUP4b1gcj5K1wwkTKI','mdbcnqrKIL35eVmitvmOzGbI-76leaJ4ALgqFhlCxM__S3gPA-hUuNCAAA'].join('');
-let apiKey = localStorage.getItem('fnb_api') || AK;
+let apiKey = '';
+localStorage.removeItem('fnb_api');
 
 // 초기화
 if(phone){ document.getElementById('phoneInput').value = phone; document.getElementById('phoneSaved').style.display='block'; document.getElementById('ctaPhone').textContent = phone; }
-if(apiKey){ document.getElementById('apiKey').value = apiKey; }
 
 function esc(v){ return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1012,22 +1011,21 @@ function saveApiKey(){
 }
 
 async function callClaude(prompt, maxTokens=1000){
-  const _AK = ['sk-ant-api03-AZfMCcz','71AK5r5E8rTjUUP4b1gcj5K1wwkTKI','mdbcnqrKIL35eVmitvmOzGbI-76leaJ4ALgqFhlCxM__S3gPA-hUuNCAAA'].join('');
-  const key = apiKey || localStorage.getItem('fnb_api') || _AK;
-  if(!key) throw new Error('API 키 없음');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:maxTokens, messages:[{role:'user',content:prompt}] })
-  });
-  if(!res.ok) throw new Error(`API 오류: ${res.status}`);
-  const data = await res.json();
-  return data.content?.[0]?.text || '';
+  let res;
+  try{
+    res = await fetch(SHEET_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({prompt, max_tokens:maxTokens})
+    });
+  }catch(e){
+    throw new Error('Apps Script 연결 실패');
+  }
+  const data = await res.json().catch(()=>({success:false,message:'Apps Script 응답 파싱 실패'}));
+  if(!res.ok || data.success===false){
+    throw new Error(data.message || `API 오류: ${res.status}`);
+  }
+  return data.text || '';
 }
 
 /* ══════════════════════════════════════
