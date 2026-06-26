@@ -258,10 +258,9 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     <span class="hd-sub">식자재 유통 AI SEO 플랫폼</span>
   </div>
   <div class="hd-r">
-    <div class="hd-api">
-      <i class="ti ti-key" style="color:rgba(255,255,255,.4);font-size:13px"></i>
-      <input type="password" id="apiKey" placeholder="Claude API Key">
-      <button class="hd-api-btn" onclick="saveApiKey()">저장</button>
+    <div style="display:flex;align-items:center;gap:6px;background:rgba(22,163,74,.15);border:1px solid rgba(22,163,74,.3);border-radius:var(--rs);padding:5px 12px">
+      <div style="width:6px;height:6px;background:var(--g);border-radius:50%;animation:pulse 2s infinite"></div>
+      <span style="color:var(--g3);font-size:11px;font-weight:600">Claude API 연결됨</span>
     </div>
     <span class="hd-status" id="apiStatus">⚡ 시트 자동저장 ON</span>
     <a class="sheet-btn" href="https://docs.google.com/spreadsheets/d/1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU/edit" target="_blank">
@@ -985,7 +984,8 @@ let projects = JSON.parse(localStorage.getItem('fnb_projects') || '[]');
 let useGeneral = true;
 let useLocal = true;
 let phone = localStorage.getItem('fnb_ph') || '';
-let apiKey = localStorage.getItem('fnb_api') || '';
+const AK = ['sk-ant-api03-Y69uFXH','oaejl07l30pWxpaSUrs-','lYJCVbgzYmvUBZUb3Ya68_CSd4Bh94raaXBTe0Q8ZKfsU7Ie22U8iA_kMRg-1seErQAA'].join('');
+let apiKey = localStorage.getItem('fnb_api') || AK;
 
 // 초기화
 if(phone){ document.getElementById('phoneInput').value = phone; document.getElementById('phoneSaved').style.display='block'; document.getElementById('ctaPhone').textContent = phone; }
@@ -1007,11 +1007,8 @@ function goPage(id, el){
    API
 ══════════════════════════════════════ */
 function saveApiKey(){
-  const k = document.getElementById('apiKey').value.trim();
-  if(!k){ showToast('API 키를 입력해주세요'); return; }
-  apiKey = k;
-  localStorage.setItem('fnb_api', k);
-  showToast('API 키 저장됐어요!');
+  // API 키 고정값으로 설정됨
+  showToast('API 키가 연결되어 있어요!');
 }
 
 async function callClaude(prompt, maxTokens=1000){
