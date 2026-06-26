@@ -223,6 +223,10 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 /* ── 섹션 타이틀 ── */
 .sec-title{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.7px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:4px}
+.mini-search{width:100%;height:34px;border:1px solid var(--bd);border-radius:var(--rs);padding:0 11px;margin-bottom:8px;background:var(--w);color:var(--d);font-size:12px;font-weight:500;outline:none}
+.mini-search:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.guide-memo{width:100%;min-height:84px;border:1px solid var(--bd);border-radius:var(--rs);padding:10px 11px;background:var(--w);color:var(--d);font-size:12px;line-height:1.5;resize:vertical;outline:none}
+.guide-memo:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
 
 /* ── Analytics ── */
 .analytics-row{display:grid;grid-template-columns:200px 1fr;gap:16px}
@@ -405,19 +409,8 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <div class="card">
         <div class="card-hd"><i class="ti ti-settings"></i><h3>키워드 설정</h3></div>
 
-        <div class="sec-title"><i class="ti ti-category" style="font-size:11px"></i> 업종</div>
-        <div class="ind-grid" style="margin-bottom:14px">
-          <div class="ind on" onclick="selInd(this,'한식/축산')"><em>🥩</em>한식/축산</div>
-          <div class="ind" onclick="selInd(this,'일식/수산')"><em>🍣</em>일식/수산</div>
-          <div class="ind" onclick="selInd(this,'중식')"><em>🥢</em>중식</div>
-          <div class="ind" onclick="selInd(this,'양식/샐러드')"><em>🥗</em>양식/샐러드</div>
-          <div class="ind" onclick="selInd(this,'주류')"><em>🍺</em>주류</div>
-          <div class="ind" onclick="selInd(this,'소스/가공')"><em>🫙</em>소스/가공</div>
-          <div class="ind" onclick="selInd(this,'카페/베이커리')"><em>☕</em>카페/베이커리</div>
-          <div class="ind" onclick="selInd(this,'신규창업')"><em>🏪</em>신규창업</div>
-        </div>
-
         <div class="sec-title"><i class="ti ti-map-pin" style="font-size:11px"></i> 지역 (최대 5개)</div>
+        <input class="mini-search" id="regionSearch" placeholder="지역명·상권 검색" oninput="handleRegionSearch(this.value)">
         <div class="r-tabs">
           <div class="r-tab on" onclick="selReg(this,'서울')">서울</div>
           <div class="r-tab" onclick="selReg(this,'경기')">경기</div>
@@ -426,10 +419,18 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
         <div class="dist-grid" id="distGrid" style="margin-bottom:6px"></div>
         <div class="sel-tags" id="selRegions"></div>
 
+        <div class="sec-title" style="margin-top:14px"><i class="ti ti-category" style="font-size:11px"></i> 업종</div>
+        <input class="mini-search" id="industrySearch" placeholder="업종 검색" oninput="handleIndustrySearch(this.value)">
+        <div class="ind-grid" id="industryGrid" style="margin-bottom:14px"></div>
+
         <div class="sec-title" style="margin-top:14px"><i class="ti ti-box" style="font-size:11px"></i> 품목 (최대 5개)</div>
+        <input class="mini-search" id="itemSearch" placeholder="품목 검색" oninput="handleItemSearch(this.value)">
         <div class="item-grid" id="itemGrid" style="margin-bottom:14px"></div>
 
-        <div class="sec-title"><i class="ti ti-database" style="font-size:11px"></i> 데이터 레이어</div>
+        <div class="sec-title"><i class="ti ti-notes" style="font-size:11px"></i> 사용 가이드 메모</div>
+        <textarea class="guide-memo" id="guideMemo" placeholder="키워드 추출 기준, 피해야 할 표현, 납품 강점 등을 적어두세요." oninput="handleGuideMemoInput(this.value)"></textarea>
+
+        <div class="sec-title" style="margin-top:14px"><i class="ti ti-database" style="font-size:11px"></i> 데이터 레이어</div>
         <div class="toggle-row">
           <div class="toggle-info"><h4>🌍 일반 데이터</h4><p>계절 시세·트렌드·원가절감 팁</p></div>
           <div class="toggle on" id="togG" onclick="togGeneral()"><div class="toggle-thumb"></div></div>
@@ -805,6 +806,17 @@ const ITEMS = {
   '신규창업':['초기 식자재 패키지','납품 계약','단가 협상','메뉴 개발 식재료','원가 계산','주방 소모품']
 };
 
+const INDUSTRIES = [
+  {name:'한식/축산', icon:'🥩'},
+  {name:'일식/수산', icon:'🍣'},
+  {name:'중식', icon:'🥢'},
+  {name:'양식/샐러드', icon:'🥗'},
+  {name:'주류', icon:'🍺'},
+  {name:'소스/가공', icon:'🫙'},
+  {name:'카페/베이커리', icon:'☕'},
+  {name:'신규창업', icon:'🏪'}
+];
+
 const GENERAL_DATA = {
   '한식/축산': {
     season: {
@@ -981,6 +993,11 @@ let clusterData = [];
 let selClusters = [];
 let history = [];
 let projects = JSON.parse(localStorage.getItem('fnb_projects') || '[]');
+let regionQuery = '';
+let industryQuery = '';
+let itemQuery = '';
+let guideMemo = localStorage.getItem('fnb_guide_memo') || '';
+let persistTimer = null;
 let useGeneral = true;
 let useLocal = true;
 let phone = localStorage.getItem('fnb_ph') || '';
@@ -1000,6 +1017,7 @@ function goPage(id, el){
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('on'));
   document.getElementById('page-'+id).classList.add('on');
   if(el) el.classList.add('on');
+  persistLater('page:'+id);
 }
 
 /* ══════════════════════════════════════
@@ -1041,12 +1059,108 @@ async function saveToSheet(row){
   }catch(e){ console.log('시트 저장 실패:', e); }
 }
 
+function buildAppState(){
+  return {
+    projects,
+    keyword: {
+      industry,
+      currentRegion: curRegion,
+      selectedDistricts: selDistricts,
+      selectedItems: selItems,
+      selectedKeywords: selKws,
+      kwData,
+      useGeneral,
+      useLocal,
+      guideMemo,
+    },
+    cluster: {
+      clusterData,
+      selectedClusters: selClusters,
+    },
+    writer: {
+      history: history.map(h=>({...h, body:String(h.body||'').slice(0,500)})),
+    },
+    cta: {
+      phone,
+      useGeneral,
+      useLocal,
+    },
+  };
+}
+
+function applyAppState(state){
+  if(!state) return;
+  projects = Array.isArray(state.projects) ? state.projects : projects;
+  const keyword = state.keyword || {};
+  industry = keyword.industry || industry;
+  curRegion = keyword.currentRegion || curRegion;
+  selDistricts = Array.isArray(keyword.selectedDistricts) ? keyword.selectedDistricts : selDistricts;
+  selItems = Array.isArray(keyword.selectedItems) ? keyword.selectedItems : selItems;
+  selKws = Array.isArray(keyword.selectedKeywords) ? keyword.selectedKeywords : selKws;
+  kwData = Array.isArray(keyword.kwData) ? keyword.kwData : kwData;
+  useGeneral = keyword.useGeneral !== undefined ? !!keyword.useGeneral : useGeneral;
+  useLocal = keyword.useLocal !== undefined ? !!keyword.useLocal : useLocal;
+  guideMemo = keyword.guideMemo || guideMemo;
+
+  const cluster = state.cluster || {};
+  clusterData = Array.isArray(cluster.clusterData) ? cluster.clusterData : clusterData;
+  selClusters = Array.isArray(cluster.selectedClusters) ? cluster.selectedClusters : selClusters;
+
+  const writer = state.writer || {};
+  history = Array.isArray(writer.history) ? writer.history : history;
+
+  localStorage.setItem('fnb_projects', JSON.stringify(projects));
+  localStorage.setItem('fnb_guide_memo', guideMemo);
+}
+
+async function loadAppSnapshot(){
+  try{
+    const res = await fetch(SHEET_ENDPOINT + '?action=loadState');
+    const data = await res.json();
+    if(data.success && data.state) applyAppState(data.state);
+  }catch(e){ console.log('상태 불러오기 실패:', e); }
+}
+
+async function saveAppSnapshot(reason){
+  try{
+    await fetch(SHEET_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'saveState', reason, state:buildAppState()})
+    });
+  }catch(e){ console.log('상태 저장 실패:', e); }
+}
+
+function persistLater(reason){
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(()=>saveAppSnapshot(reason), 700);
+}
+
 /* ══════════════════════════════════════
    업종/지역/품목 선택
 ══════════════════════════════════════ */
+function handleRegionSearch(value){ regionQuery=value.trim(); renderDist(); }
+function handleIndustrySearch(value){ industryQuery=value.trim(); renderIndustryOptions(); }
+function handleItemSearch(value){ itemQuery=value.trim(); renderItems(); }
+function handleGuideMemoInput(value){
+  guideMemo = value;
+  localStorage.setItem('fnb_guide_memo', guideMemo);
+  persistLater('guideMemo');
+}
+
+function renderIndustryOptions(){
+  const q = industryQuery.toLowerCase();
+  const rows = INDUSTRIES.filter(item=>!q || item.name.toLowerCase().includes(q));
+  document.getElementById('industryGrid').innerHTML = rows.map(item=>`
+    <div class="ind${item.name===industry?' on':''}" onclick="selInd(this,'${item.name}')"><em>${item.icon}</em>${esc(item.name)}</div>
+  `).join('');
+}
+
 function selInd(el, name){
-  document.querySelectorAll('#page-keyword .ind').forEach(e=>e.classList.remove('on'));
-  el.classList.add('on'); industry=name; selItems=[]; renderItems();
+  industry=name; selItems=[];
+  renderIndustryOptions();
+  renderItems();
+  persistLater('industry');
 }
 function selProjInd(el, name){
   document.querySelectorAll('#projIndGrid .ind').forEach(e=>e.classList.remove('on'));
@@ -1054,7 +1168,7 @@ function selProjInd(el, name){
 }
 function selReg(el, name){
   document.querySelectorAll('#page-keyword .r-tab').forEach(e=>e.classList.remove('on'));
-  el.classList.add('on'); curRegion=name; renderDist();
+  el.classList.add('on'); curRegion=name; renderDist(); persistLater('regionTab');
 }
 function selProjReg(el, name){
   document.querySelectorAll('#projModal .r-tab').forEach(e=>e.classList.remove('on'));
@@ -1062,7 +1176,11 @@ function selProjReg(el, name){
 }
 
 function renderDist(){
-  const keys = REGION_TABS[curRegion]||[];
+  const q = regionQuery.toLowerCase();
+  const keys = (REGION_TABS[curRegion]||[]).filter(name=>{
+    const info = (AREA_DATA[curRegion]||{})[name]||{};
+    return !q || name.toLowerCase().includes(q) || String(info.tags||'').toLowerCase().includes(q) || String(info.food||'').toLowerCase().includes(q);
+  });
   document.getElementById('distGrid').innerHTML = keys.map(name=>{
     const info = (AREA_DATA[curRegion]||{})[name]||{};
     const on = selDistricts.find(x=>x.district===name);
@@ -1071,6 +1189,11 @@ function renderDist(){
       <div class="dt">${esc((info.tags||'').split(',')[0])}</div>
     </div>`;
   }).join('');
+}
+function renderSelectedRegions(){
+  document.getElementById('selRegions').innerHTML = selDistricts.map(d=>
+    `<div class="sel-tag">${esc(d.region)} ${esc(d.district)}<span onclick="rmDist('${d.district}')">×</span></div>`
+  ).join('');
 }
 function renderProjDist(reg){
   const keys = REGION_TABS[reg||'서울']||[];
@@ -1087,9 +1210,8 @@ function togDist(name){
     selDistricts.push({region:curRegion,district:name});
   }
   renderDist();
-  document.getElementById('selRegions').innerHTML = selDistricts.map(d=>
-    `<div class="sel-tag">${esc(d.region)} ${esc(d.district)}<span onclick="rmDist('${d.district}')">×</span></div>`
-  ).join('');
+  renderSelectedRegions();
+  persistLater('district');
 }
 let projSelDists = [];
 function togProjDist(el, reg, name){
@@ -1104,12 +1226,12 @@ function togProjDist(el, reg, name){
 function rmDist(name){
   selDistricts = selDistricts.filter(x=>x.district!==name);
   renderDist();
-  document.getElementById('selRegions').innerHTML = selDistricts.map(d=>
-    `<div class="sel-tag">${esc(d.region)} ${esc(d.district)}<span onclick="rmDist('${d.district}')">×</span></div>`
-  ).join('');
+  renderSelectedRegions();
+  persistLater('districtRemove');
 }
 function renderItems(){
-  document.getElementById('itemGrid').innerHTML = (ITEMS[industry]||[]).map(it=>
+  const q = itemQuery.toLowerCase();
+  document.getElementById('itemGrid').innerHTML = (ITEMS[industry]||[]).filter(it=>!q || it.toLowerCase().includes(q)).map(it=>
     `<div class="item-btn${selItems.includes(it)?' on':''}" onclick="togItem('${it}')">${esc(it)}</div>`
   ).join('');
 }
@@ -1118,6 +1240,7 @@ function togItem(it){
   else if(selItems.length<5){ selItems.push(it); }
   else{ showToast('품목은 최대 5개까지 선택 가능해요'); return; }
   renderItems();
+  persistLater('item');
 }
 
 /* ══════════════════════════════════════
@@ -1127,11 +1250,13 @@ function togGeneral(){
   useGeneral=!useGeneral;
   document.getElementById('togG').classList.toggle('on',useGeneral);
   updateLayerStatus();
+  persistLater('generalLayer');
 }
 function togLocal(){
   useLocal=!useLocal;
   document.getElementById('togL').classList.toggle('on',useLocal);
   updateLayerStatus();
+  persistLater('localLayer');
 }
 function updateLayerStatus(){
   const el = document.getElementById('layerStatus');
@@ -1160,6 +1285,7 @@ async function genKeywords(){
 [업종]: ${industry}
 [지역]: ${regionSummary}
 [품목]: ${selItems.join(', ')}
+[사용 가이드 메모]: ${guideMemo || '없음'}
 
 JSON만 반환 (마크다운 없이):
 {"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low","why":"설명"}]}
@@ -1179,6 +1305,7 @@ JSON만 반환 (마크다운 없이):
     renderKeywords();
     document.getElementById('kwTotalBadge').textContent = kwData.length+'개';
     showToast(`${kwData.length}개 키워드 추출 완료!`);
+    persistLater('keywordsGenerated');
   }catch(e){
     showToast('키워드 추출 실패 — API 키 확인해주세요');
   }
@@ -1218,13 +1345,15 @@ function togKw(index){
     selKws.push({kw:item.keyword, region:item.region});
   }
   renderKeywords();
+  persistLater('keywordSelect');
 }
 function selAllKw(){
   selKws = [];
   kwData.slice(0,10).forEach(k=>selKws.push({kw:k.keyword,region:k.region}));
   renderKeywords();
+  persistLater('keywordSelectAll');
 }
-function clearKw(){ selKws=[]; renderKeywords(); }
+function clearKw(){ selKws=[]; renderKeywords(); persistLater('keywordClear'); }
 function updateKwBtn(){
   const cnt = selKws.length;
   document.getElementById('kwSelCnt').textContent = cnt+'개 선택됨';
@@ -1300,6 +1429,7 @@ type: 정보성/원가절감/납품노하우/창업컨설팅/트렌드/비교
       renderCluster();
     }, 800);
     showToast(`${clusterData.length}개 콘텐츠 클러스터 생성 완료!`);
+    persistLater('clusterGenerated');
   }catch(e){
     clearInterval(progInterval);
     showToast('클러스터 생성 실패 — 다시 시도해주세요');
@@ -1324,10 +1454,12 @@ function togCluster(i){
   const el = document.getElementById('cc'+i);
   if(selClusters.includes(i)){ selClusters=selClusters.filter(x=>x!==i); el.classList.remove('on'); }
   else{ selClusters.push(i); el.classList.add('on'); }
+  persistLater('clusterSelect');
 }
 function selAllCluster(){
   selClusters = clusterData.map((_,i)=>i);
   document.querySelectorAll('.cluster-card').forEach(el=>el.classList.add('on'));
+  persistLater('clusterSelectAll');
 }
 function writeSelected(){
   if(!selClusters.length){ showToast('글을 선택해주세요'); return; }
@@ -1472,6 +1604,7 @@ function addWriterResult(text, kw, region, type){
 
   // 시트 저장
   saveToSheet({date:entry.date,region,keyword:kw,industry,type,title,body:body.substring(0,300),hashtags:tags.join(' '),chars,status:'자동저장'});
+  persistLater('postCreated');
 
   const div = document.createElement('div');
   div.className='result-wrap';
@@ -1587,6 +1720,7 @@ function saveProjModal(){
   renderProjects();
   closeProjModal();
   showToast('프로젝트 생성 완료!');
+  persistLater('projectCreated');
 }
 function renderProjects(){
   const grid = document.getElementById('projGrid');
@@ -1619,6 +1753,7 @@ function savePhone(){
   document.getElementById('phoneSaved').style.display='block';
   document.getElementById('ctaPhone').textContent = phone;
   showToast('전화번호 저장됐어요!');
+  persistLater('phone');
 }
 
 /* ══════════════════════════════════════
@@ -1693,11 +1828,39 @@ function showToast(msg){
 /* ══════════════════════════════════════
    초기화
 ══════════════════════════════════════ */
-renderDist();
-renderItems();
-renderProjects();
-updateDashboard();
-updateAnalytics();
+function syncRegionTabs(){
+  document.querySelectorAll('#page-keyword .r-tab').forEach(tab=>{
+    tab.classList.toggle('on', tab.textContent.trim()===curRegion);
+  });
+}
+
+function hydrateControls(){
+  syncRegionTabs();
+  document.getElementById('guideMemo').value = guideMemo;
+  document.getElementById('togG').classList.toggle('on', useGeneral);
+  document.getElementById('togL').classList.toggle('on', useLocal);
+  updateLayerStatus();
+}
+
+async function initApp(){
+  await loadAppSnapshot();
+  hydrateControls();
+  renderIndustryOptions();
+  renderDist();
+  renderSelectedRegions();
+  renderItems();
+  renderProjects();
+  renderKeywords();
+  document.getElementById('kwTotalBadge').textContent = kwData.length+'개';
+  if(clusterData.length){
+    document.getElementById('clusterResult').style.display='block';
+    renderCluster();
+  }
+  renderHistList();
+  updateDashboard();
+  updateAnalytics();
+}
+initApp();
 </script>
 </body>
 </html>
