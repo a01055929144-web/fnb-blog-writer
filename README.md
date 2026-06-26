@@ -18,8 +18,8 @@
 ## 사용 방법
 
 ### 1. 초기 설정
-1. 페이지 상단 **API 설정** 배너에 Anthropic API 키 입력 → 저장
-2. Google Apps Script Web App URL 입력 → 저장 (아래 시트 연동 참고)
+1. Google Apps Script의 **Script Properties**에 `ANTHROPIC_API_KEY` 입력
+2. 페이지 상단 **Apps Script 연결** 배너에 Web App URL 입력 → 저장
 3. 왼쪽 사이드바에서 전화번호 입력 → 저장
 
 ### 2. 포스팅 생성
