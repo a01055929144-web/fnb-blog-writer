@@ -1364,125 +1364,74 @@ function saveClusterCache(key){
 async function genKeywords(){
   if(!selDistricts.length){ showToast('지역을 선택해주세요'); return; }
   if(!selItems.length){ showToast('품목을 선택해주세요'); return; }
-  const cacheKey = stableKey({industry, selDistricts, selItems, useGeneral, useLocal});
-  if(keywordCache[cacheKey] && Array.isArray(keywordCache[cacheKey].kwData)){
-    kwData = keywordCache[cacheKey].kwData;
-    selKws = [];
-    renderKeywords();
-    document.getElementById('kwTotalBadge').textContent = kwData.length+'개';
-    showToast('저장된 조건 결과를 불러왔어요');
-    persistLater('keywordsCacheHit');
-    return;
-  }
+
   const btn = document.getElementById('kwGenBtn');
   btn.innerHTML='<i class="ti ti-loader-2"></i> 키워드 추출 중...'; btn.disabled=true;
 
-  const regionSummary = selDistricts.map(d=>{
+  const regionSummary = selDistricts.map(function(d){
     const info = useLocal ? ((AREA_DATA[d.region]||{})[d.district]||{}) : {};
-    return useLocal ? `${d.region} ${d.district}: ${info.tags||''}` : `${d.region} ${d.district}`;
+    return useLocal ? d.region+' '+d.district+': '+(info.tags||'') : d.region+' '+d.district;
   }).join('\n');
 
-  const targetCount = Math.min(24, Math.max(8, selDistricts.length * selItems.length * 2));
-  const prompt = `F&B 식자재 중개 블로그용 네이버 SEO 롱테일 키워드를 추출해주세요.
+  // 시스템 프롬프트 방식으로 JSON 강제
+  const sysPrompt = '당신은 JSON만 반환하는 API입니다. 절대로 JSON 외의 텍스트, 마크다운, 코드블록을 출력하지 마세요.';
 
-[업종]: ${industry}
-[지역]: ${regionSummary}
-[품목]: ${selItems.join(', ')}
-
-JSON만 반환 (마크다운 없이):
-{"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low","why":"설명"}]}
-
-총 ${targetCount}개. 구매 의도 높은 롱테일 위주. difficulty: low/mid/high. intent: 구매/탐색/비교/창업`;
+  const userPrompt = 'F&B 식자재 중개 블로그용 네이버 SEO 롱테일 키워드를 생성하세요.\n\n'
+    + '업종: ' + industry + '\n'
+    + '지역:\n' + regionSummary + '\n'
+    + '품목: ' + selItems.join(', ') + '\n\n'
+    + '아래 JSON 구조로만 응답하세요:\n'
+    + '{"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low"},{"keyword":"강남 고깃집 식자재 원가절감","region":"서울 강남구","intent":"탐색","difficulty":"low"}]}\n\n'
+    + '총 ' + (selDistricts.length * selItems.length * 3) + '개 생성. difficulty는 low/mid/high. intent는 구매/탐색/비교/창업 중 하나.';
 
   try{
-    const text = await callClaude(prompt, 700);
-    let clean = text.replace(/```json|```/g,'').trim();
-    // JSON 블록만 추출
-    const jStart = clean.indexOf('{');
-    const jEnd = clean.lastIndexOf('}');
-    if(jStart > -1 && jEnd > -1) clean = clean.slice(jStart, jEnd+1);
-    let parsed;
-    try {
-      parsed = JSON.parse(clean);
-    } catch(pe) {
-      // 배열만 복구 시도
-      const m = clean.match(/"keywords"\s*:\s*(\[[\s\S]*?\]\s*)(?=}|$)/);
-      if(m){ try{ parsed = {keywords: JSON.parse(m[1])}; } catch(e2){ throw new Error('JSON 파싱 실패: '+pe.message); } }
-      else { throw new Error('JSON 파싱 실패: '+pe.message); }
+    const _k = apiKey || localStorage.getItem('fnb_api');
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': _k,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: sysPrompt,
+        messages: [{role:'user', content: userPrompt}]
+      })
+    });
+
+    if(!res.ok){
+      const errText = await res.text();
+      throw new Error('API ' + res.status + ': ' + errText.substring(0,100));
     }
-    kwData = (parsed.keywords||[]).map((k,i)=>({...k,index:i}));
+
+    const data = await res.json();
+    let text = (data.content?.[0]?.text || '').trim();
+
+    // 백틱 코드블록 제거
+    text = text.replace(/^```[\w]*\n?/,'').replace(/\n?```$/,'').trim();
+    // { 로 시작하는 JSON만 추출
+    const start = text.indexOf('{');
+    const end2 = text.lastIndexOf('}');
+    if(start > -1 && end2 > start) text = text.slice(start, end2+1);
+
+    const parsed = JSON.parse(text);
+    kwData = (parsed.keywords||[]).map(function(k,i){ return Object.assign({},k,{index:i}); });
     selKws = [];
-    saveKeywordCache(cacheKey);
     renderKeywords();
     document.getElementById('kwTotalBadge').textContent = kwData.length+'개';
-    showToast(`${kwData.length}개 키워드 추출 완료!`);
-    persistLater('keywordsGenerated');
+    showToast(kwData.length+'개 키워드 추출 완료!');
+
   }catch(e){
-    showToast('추출 실패: ' + (e?.message||String(e)).substring(0,60)); console.error(e);
+    console.error('genKeywords 오류:', e);
+    showToast('추출 실패: ' + (e&&e.message ? e.message.substring(0,60) : String(e).substring(0,60)));
   }
+
   btn.innerHTML='<i class="ti ti-search"></i> 롱테일 키워드 추출'; btn.disabled=false;
 }
 
-function renderKeywords(){
-  const groups={low:[],mid:[],high:[]};
-  kwData.forEach(k=>{ if(groups[k.difficulty]) groups[k.difficulty].push(k); });
-  const labels={low:'🎯 경쟁 낮음 (최우선)',mid:'📊 경쟁 보통',high:'🔍 틈새 키워드'};
-  let html='';
-  ['low','mid','high'].forEach(diff=>{
-    if(!groups[diff].length) return;
-    html+=`<div class="kw-group">
-      <div class="kw-group-title">${labels[diff]}<span class="kw-count">${groups[diff].length}개</span></div>
-      <div class="kw-list">${groups[diff].map(kw=>`
-        <div class="kw-item${selKws.find(x=>x.kw===kw.keyword)?' on':''}" id="kwi-${kw.index}" onclick="togKw(${kw.index})">
-          <div class="kw-chk">${selKws.find(x=>x.kw===kw.keyword)?'✓':''}</div>
-          <div class="kw-txt">${esc(kw.keyword)}</div>
-          <span class="kw-region">${esc(kw.region)}</span>
-          <span class="diff d-${diff==='low'?'lo':diff==='mid'?'mi':'hi'}">${diff==='low'?'낮음':diff==='mid'?'보통':'높음'}</span>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  });
-  document.getElementById('kwContainer').innerHTML = html || '<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">키워드가 없어요</div>';
-  updateKwBtn();
-}
-
-function togKw(index){
-  const item = kwData[index];
-  if(!item) return;
-  const exists = selKws.find(x=>x.kw===item.keyword);
-  if(exists){ selKws = selKws.filter(x=>x.kw!==item.keyword); }
-  else{
-    if(selKws.length>=10){ showToast('최대 10개까지 선택 가능해요'); return; }
-    selKws.push({kw:item.keyword, region:item.region});
-  }
-  renderKeywords();
-  persistLater('keywordSelect');
-}
-function selAllKw(){
-  selKws = [];
-  kwData.slice(0,10).forEach(k=>selKws.push({kw:k.keyword,region:k.region}));
-  renderKeywords();
-  persistLater('keywordSelectAll');
-}
-function clearKw(){ selKws=[]; renderKeywords(); persistLater('keywordClear'); }
-function updateKwBtn(){
-  const cnt = selKws.length;
-  document.getElementById('kwSelCnt').textContent = cnt+'개 선택됨';
-  const btn = document.getElementById('toClusterBtn');
-  btn.style.display = cnt>0 ? 'flex' : 'none';
-  btn.textContent = '';
-  btn.innerHTML = `<i class="ti ti-sitemap"></i> 선택한 ${cnt}개 키워드로 Topic Cluster 생성`;
-}
-function goToCluster(){
-  document.getElementById('clusterKeywordInfo').innerHTML =
-    `<strong>${selKws.length}개 키워드 선택됨</strong><br>` +
-    selKws.map(k=>`<span style="display:inline-block;background:var(--g2);color:var(--g);border-radius:6px;padding:2px 8px;font-size:10px;margin:2px;font-weight:600">${esc(k.kw)}</span>`).join('');
-  goPage('cluster', document.querySelectorAll('.nav-tab')[3]);
-}
-
-/* ══════════════════════════════════════
-   Topic Cluster
-══════════════════════════════════════ */
 async function genCluster(){
   if(!selKws.length){ showToast('먼저 키워드를 선택해주세요'); return; }
   const cacheKey = stableKey({industry, selKws});
