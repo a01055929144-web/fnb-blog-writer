@@ -1505,15 +1505,6 @@ function goToCluster(){
 ══════════════════════════════════════ */
 async function genCluster(){
   if(!selKws.length){ showToast('먼저 키워드를 선택해주세요'); return; }
-  const cacheKey = stableKey({industry, selKws});
-  if(clusterCache[cacheKey] && Array.isArray(clusterCache[cacheKey].clusterData)){
-    clusterData = clusterCache[cacheKey].clusterData;
-    document.getElementById('clusterResult').style.display='block';
-    renderCluster();
-    showToast('저장된 클러스터를 불러왔어요');
-    persistLater('clusterCacheHit');
-    return;
-  }
 
   const btn = document.getElementById('clusterGenBtn');
   btn.innerHTML='<i class="ti ti-loader-2"></i> 생성 중...'; btn.disabled=true;
@@ -1522,168 +1513,62 @@ async function genCluster(){
 
   const progList = document.getElementById('clusterProgList');
   const steps = ['검색 의도 분석 중...','콘텐츠 맵 생성 중...','핵심 글 기획 중...','우선순위 분류 중...'];
-  progList.innerHTML = steps.map((s,i)=>`<div class="pi wait" id="cp${i}"><span>⏳</span> ${s}</div>`).join('');
+  progList.innerHTML = steps.map((s,i)=>'<div class="pi wait" id="cp'+i+'"><span>⏳</span> '+s+'</div>').join('');
 
-  let progInterval = setInterval(()=>{
-    const waiting = document.querySelector('.pi.wait');
-    if(waiting){ waiting.className='pi doing'; waiting.querySelector('span').textContent='✍️'; }
+  let si = 0;
+  let progInterval = setInterval(function(){
+    var w = document.querySelector('.pi.wait');
+    if(w){ w.className='pi doing'; w.querySelector('span').textContent='✍️'; }
+    si++;
+    document.getElementById('clusterProgFill').style.width = Math.min(si*20,90)+'%';
   }, 1500);
 
-  const kwList = selKws.map(k=>k.kw).join(', ');
-  const regions = [...new Set(selKws.map(k=>k.region))].join(', ');
+  const kwList = selKws.map(function(k){ return k.kw; }).join(', ');
+  const regions = [...new Set(selKws.map(function(k){ return k.region; }))].join(', ');
+  const targetCount = Math.min(15, Math.max(8, selKws.length * 2));
 
-  const targetCount = Math.min(24, Math.max(12, selKws.length * 3));
-  const prompt = `F&B 식자재 중개 블로그를 위한 Topic Cluster를 생성해주세요.
-
-[업종]: ${industry}
-[지역]: ${regions}
-[선택 키워드]: ${kwList}
-
-이 키워드들을 기반으로 네이버 SEO에 최적화된 블로그 글 기획 ${targetCount}개를 생성해주세요.
-각 글은 검색 의도가 다르고, 서로 내부링크로 연결될 수 있어야 합니다.
-
-JSON만 반환 (마크다운 없이):
-{"cluster":[
-  {"title":"강남 삼겹살 납품업체 비교 TOP5","keyword":"강남 삼겹살 납품","intent":"비교","priority":"high","region":"서울 강남구","type":"정보성"},
-  ...
-]}
-
-intent: 창업/원가절감/거래처변경/납품/정보/비교 중 하나
-priority: high/mid/low
-type: 정보성/원가절감/납품노하우/창업컨설팅/트렌드/비교
-
-${targetCount}개 생성. 구매·비교·납품 의도 우선, 중복 제목 금지.`;
+  // 간소화된 JSON 구조 (필드 최소화로 토큰 절약)
+  const prompt = 'F&B 식자재 중개 블로그 Topic Cluster를 생성하세요.\n\n'
+    + '업종: ' + industry + '\n'
+    + '지역: ' + regions + '\n'
+    + '키워드: ' + kwList + '\n\n'
+    + '아래 JSON으로만 응답 (설명 없이):\n'
+    + '{"cluster":[{"title":"제목","keyword":"핵심키워드","intent":"납품","priority":"high","region":"서울 강남구","type":"정보성"}]}\n\n'
+    + targetCount + '개 생성. intent: 납품/원가절감/창업/비교/정보/거래처변경. priority: high/mid/low. type: 정보성/원가절감/납품노하우/창업컨설팅/트렌드/비교';
 
   try{
-    const text = await callClaude(prompt, 900);
+    const text = await callClaude(prompt, 1000);
     let clean = text.replace(/```json|```/g,'').trim();
-    const jStart = clean.indexOf('{');
-    const jEnd = clean.lastIndexOf('}');
-    if(jStart > -1 && jEnd > -1) clean = clean.slice(jStart, jEnd+1);
+    const s = clean.indexOf('{');
+    const e = clean.lastIndexOf('}');
+    if(s > -1 && e > s) clean = clean.slice(s, e+1);
     const parsed = JSON.parse(clean);
-    clusterData = parsed.cluster||[];
-    saveClusterCache(cacheKey);
+    clusterData = parsed.cluster || [];
+
     clearInterval(progInterval);
-    steps.forEach((_,i)=>{ const el=document.getElementById('cp'+i); if(el){el.className='pi done';el.querySelector('span').textContent='✅';} });
-    setTimeout(()=>{
+    steps.forEach(function(_,i){
+      var el = document.getElementById('cp'+i);
+      if(el){ el.className='pi done'; el.querySelector('span').textContent='✅'; }
+    });
+    document.getElementById('clusterProgFill').style.width='100%';
+
+    setTimeout(function(){
       document.getElementById('clusterProg').classList.remove('show');
       document.getElementById('clusterResult').style.display='block';
       renderCluster();
-    }, 800);
-    showToast(`${clusterData.length}개 콘텐츠 클러스터 생성 완료!`);
-    persistLater('clusterGenerated');
+    }, 600);
+
+    showToast(clusterData.length+'개 콘텐츠 클러스터 생성 완료!');
+
   }catch(e){
     clearInterval(progInterval);
-    showToast('클러스터 생성 실패 — 다시 시도해주세요');
     document.getElementById('clusterProg').classList.remove('show');
+    var msg = e && e.message ? e.message.substring(0,80) : String(e).substring(0,80);
+    showToast('클러스터 생성 실패: ' + msg);
+    console.error('genCluster error:', e);
   }
+
   btn.innerHTML='<i class="ti ti-wand"></i> 클러스터 자동 생성'; btn.disabled=false;
-}
-
-function renderCluster(){
-  selClusters = [];
-  const intentColors = {'창업':'intent-창업','원가절감':'intent-원가절감','거래처변경':'intent-거래처변경','납품':'intent-납품','정보':'intent-정보','비교':'intent-정보','트렌드':'intent-정보'};
-  document.getElementById('clusterGrid').innerHTML = clusterData.map((c,i)=>`
-    <div class="cluster-card" id="cc${i}" onclick="togCluster(${i})">
-      <div class="cluster-num">#${i+1} · ${esc(c.region||'')} · ${esc(c.type||'')}</div>
-      <div class="cluster-title">${esc(c.title)}</div>
-      <span class="cluster-intent ${intentColors[c.intent]||'intent-정보'}">${esc(c.intent)}</span>
-      <span style="float:right;font-size:9px;padding:2px 6px;border-radius:5px;font-weight:700;background:${c.priority==='high'?'#DCFCE7':c.priority==='mid'?'#FEF9C3':'#F3F4F6'};color:${c.priority==='high'?'#166534':c.priority==='mid'?'#854D0E':'#374151'}">${c.priority==='high'?'높음':c.priority==='mid'?'보통':'낮음'}</span>
-    </div>`).join('');
-}
-
-function togCluster(i){
-  const el = document.getElementById('cc'+i);
-  if(selClusters.includes(i)){ selClusters=selClusters.filter(x=>x!==i); el.classList.remove('on'); }
-  else{ selClusters.push(i); el.classList.add('on'); }
-  persistLater('clusterSelect');
-}
-function selAllCluster(){
-  selClusters = clusterData.map((_,i)=>i);
-  document.querySelectorAll('.cluster-card').forEach(el=>el.classList.add('on'));
-  persistLater('clusterSelectAll');
-}
-function writeSelected(){
-  if(!selClusters.length){ showToast('글을 선택해주세요'); return; }
-  const first = clusterData[selClusters[0]];
-  document.getElementById('writerKw').value = first.keyword||first.title;
-  document.getElementById('writerRegion').value = first.region||'';
-  goPage('writer', document.querySelectorAll('.nav-tab')[4]);
-  showToast(`AI Writer에서 "${first.title}" 작성 준비 완료!`);
-}
-
-/* ══════════════════════════════════════
-   AI Writer
-══════════════════════════════════════ */
-function buildWriterPrompt(kw, region, type, length, options){
-  const parts = (region||'').split(' ');
-  const regKey = parts[0];
-  const distKey = parts.slice(1).join(' ');
-  const areaInfo = useLocal ? ((AREA_DATA[regKey]||{})[distKey]||{}) : {};
-  const genInfo = useGeneral ? (GENERAL_DATA[industry]||{}) : {};
-  const month = new Date().getMonth()+1;
-  const ph = phone||'상담 문의';
-
-  const localBlock = useLocal && Object.keys(areaInfo).length ? `
-[지역 상권 특성]
-- 상권: ${areaInfo.tags||''}
-- 주요 식재료 수요: ${areaInfo.food||''}
-- 가격 수준: ${areaInfo.price||''}
-- 타겟 업종: ${areaInfo.target||''}
-- 영업 팁: ${areaInfo.tip||''}` : '';
-
-  const generalBlock = useGeneral && Object.keys(genInfo).length ? `
-[일반 데이터]
-- ${month}월 시즌: ${(genInfo.season||{})[String(month)]||''}
-- 트렌드: ${genInfo.trend||''}
-- 원가절감: ${genInfo.cost_tip||''}
-- 납품 팁: ${genInfo.supply_tip||''}
-- 단가 정보: ${genInfo.items_detail||''}` : '';
-
-  const optStr = options.join(', ');
-
-  return `당신은 F&B 식자재 중개 영업 전문 네이버 블로그 작성자입니다.
-
-[핵심 키워드]: "${kw}" ← 네이버 1페이지 노출 목표
-[타겟 지역]: ${region||'수도권'}
-[업종]: ${industry}
-[콘텐츠 타입]: ${type}
-[목표 글자수]: ${length}자
-[포함 요소]: ${optStr}
-${localBlock}
-${generalBlock}
-[연락처] 카카오: ${KAKAO} / 블로그: ${BLOG} / 전화: ${ph}
-
-아래 형식으로 작성해주세요:
-
-**제목**: "${kw}" 포함 + 클릭 유도 제목 (이모지 1-2개)
-
-**본문** (${length}자):
-
-[도입부 200-250자]
-${region} 식당 사장님 공감 포인트로 시작. ${month}월 시즌 반영.
-
-[본론1 소제목] (500-600자)
-${region} 지역 특성 + "${kw}" 실질적 정보. 구체적 수치 포함.
-
-[본론2 소제목] (500-600자)
-원가절감·납품 실전 정보. 단가 정보 포함.
-
-[본론3 소제목] (400-500자)
-${options.includes('비교표') ? '비교표 포함.' : ''} ${options.includes('체크리스트') ? '체크리스트 포함.' : ''}
-
-${options.includes('FAQ') ? `[FAQ] (300-400자)
-Q1: 자주 묻는 질문 5개 + 답변` : ''}
-
-[마무리 CTA] (150-200자)
-무료 상담 강조. 카카오: ${KAKAO} / 전화: ${ph}
-
-${options.includes('이미지위치') ? '본문 내 [이미지: 설명] 형식으로 이미지 삽입 위치 3-5곳 표시' : ''}
-
-**해시태그**: #${kw.replace(/\s/g,'')} 포함 20개
-(${region} 지역명 + 업종 + 식자재 + 납품 키워드 조합)
-
-본문에 "${kw}" 4-6회 자연스럽게 반복. 소제목은 **굵게**.`;
 }
 
 async function generatePost(){
