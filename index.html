@@ -368,6 +368,17 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <div class="card-hd"><i class="ti ti-bulb"></i><h3>다음 추천 작업</h3></div>
       <div id="dash-next">
         <div style="display:flex;flex-direction:column;gap:8px">
+          <!-- 원클릭 자동화 버튼 -->
+          <div onclick="startAutoMode()" style="padding:16px;border-radius:var(--rs);background:linear-gradient(135deg,#166534 0%,#15803D 100%);cursor:pointer;text-align:center;box-shadow:0 4px 14px rgba(22,163,74,.3)">
+            <div style="font-size:22px;margin-bottom:4px">🚀</div>
+            <div style="color:#fff;font-size:14px;font-weight:800;margin-bottom:3px">원클릭 전체 자동화</div>
+            <div style="color:rgba(255,255,255,.75);font-size:11px">키워드 추출 → 글 기획 → 글 작성 → 시트 저장</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+            <div style="flex:1;height:1px;background:var(--bd)"></div>
+            <span style="font-size:10px;color:var(--gray);white-space:nowrap">또는 단계별 진행</span>
+            <div style="flex:1;height:1px;background:var(--bd)"></div>
+          </div>
           <div style="padding:10px 12px;border-radius:var(--rs);background:var(--g2);border:1px solid var(--g3);font-size:12px;color:#166534;cursor:pointer" onclick="goPage('keyword',document.querySelectorAll('.nav-tab')[2])">
             <strong>① 키워드 추출</strong><br>지역·업종·품목 선택 후 롱테일 키워드 발굴
           </div>
@@ -495,6 +506,9 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
       <button class="btn btn-dark btn-full" id="kwGenBtn" onclick="genKeywords()">
         <i class="ti ti-search"></i> 롱테일 키워드 추출
+      </button>
+      <button onclick="startAutoMode()" style="width:100%;margin-top:8px;padding:11px;background:linear-gradient(135deg,#166534,#15803D);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(22,163,74,.25)">
+        🚀 원클릭 전체 자동화
       </button>
     </div>
 
