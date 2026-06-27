@@ -268,6 +268,21 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 .guide-content.show{display:block}
 .guide-content ol{padding-left:18px;color:rgba(255,255,255,.65);font-size:12px;line-height:2}
 .guide-content ol li strong{color:var(--g3)}
+
+/* 업로드 상태 배지 */
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;transition:.2s;border:none;user-select:none}
+.status-pending{background:#FEF3C7;color:#92400E;border:1px solid #FDE68A}
+.status-pending:hover{background:#FDE68A}
+.status-done{background:#DCFCE7;color:#166534;border:1px solid #86EFAC}
+.status-done:hover{background:#BBF7D0}
+/* 복사 버튼 */
+.copy-full-btn{width:100%;padding:11px;background:var(--d2);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.2s;margin-bottom:6px}
+.copy-full-btn:hover{background:var(--d)}
+.copy-full-btn.copied{background:var(--g)}
+/* 히스토리 상태 표시 */
+.hist-status{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700}
+.hs-pending{background:#FEF3C7;color:#92400E}
+.hs-done{background:#DCFCE7;color:#166534}
 </style>
 </head>
 <body>
@@ -1855,11 +1870,16 @@ function updateDashboard(){
   const today = new Date().toLocaleDateString('ko-KR');
   const todayCnt = history.filter(h=>h.date===today).length;
   const total = history.length;
+  const doneCnt = history.filter(function(h){ return h.uploadStatus === 'done'; }).length;
   document.getElementById('stat-today').textContent = todayCnt;
   document.getElementById('stat-total').textContent = total;
   document.getElementById('stat-traffic').textContent = (total*50).toLocaleString();
   document.getElementById('stat-leads').textContent = Math.round(total*50*0.03);
-  document.getElementById('stat-regions').textContent = [...new Set(history.map(h=>h.region))].length;
+  document.getElementById('stat-regions').textContent = [...new Set(history.map(function(h){ return h.region; }))].length;
+  const doneEl = document.getElementById('stat-done');
+  if(doneEl) doneEl.textContent = doneCnt;
+  const pendingEl = document.getElementById('stat-pending');
+  if(pendingEl) pendingEl.textContent = total - doneCnt;
 
   const recent = document.getElementById('dash-recent');
   if(history.length){
@@ -1882,24 +1902,57 @@ function updateAnalytics(){
 
 function renderHistList(){
   const el = document.getElementById('histList');
-  if(!history.length){ el.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px;background:var(--w);border-radius:var(--r);border:1px solid var(--bd)">아직 작성된 글이 없어요</div>'; return; }
-  el.innerHTML = history.map((h,i)=>`
-    <div class="hist-item" onclick="showHistDetail(${i})">
-      <div class="hist-title">${esc(h.title||h.kw)}</div>
-      <div class="hist-meta">${esc(h.region)} · ${esc(h.type)}</div>
-      <div class="hist-saved">✅ ${h.date}</div>
-    </div>`).join('');
+  if(!history.length){
+    el.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px;background:var(--w);border-radius:var(--r);border:1px solid var(--bd)">아직 작성된 글이 없어요</div>';
+    return;
+  }
+  el.innerHTML = history.map(function(h,i){
+    const isDone = h.uploadStatus === 'done';
+    const statusCls = isDone ? 'hist-status hs-done' : 'hist-status hs-pending';
+    const statusTxt = isDone ? '✅ 발행완료' : '⏳ 미발행';
+    return '<div class="hist-item" style="position:relative">'
+      + '<div onclick="showHistDetail('+i+')" style="cursor:pointer">'
+      + '<div class="hist-title">'+esc(h.title||h.kw)+'</div>'
+      + '<div class="hist-meta">'+esc(h.region)+' · '+esc(h.type)+'</div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">'
+      + '<span style="font-size:9px;color:var(--gray)">'+h.date+'</span>'
+      + '<span class="'+statusCls+'" onclick="event.stopPropagation();toggleUploadStatus('+i+')">'+statusTxt+'</span>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
 }
 
 function showHistDetail(i){
   const h = history[i];
-  document.getElementById('histDetail').innerHTML=`
-    <div class="post-title" style="font-size:16px">${esc(h.title||h.kw)}</div>
-    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">${esc(h.region)} · ${esc(h.type)} · ${h.chars.toLocaleString()}자 · ${h.date}</div>
-    <div class="post-body">${esc(h.body)}</div>
-    <div class="post-tags" style="margin-top:12px">${(h.tags||[]).slice(0,15).map(t=>`<span class="post-tag">${esc(t)}</span>`).join('')}</div>
-    <button class="btn btn-green" style="margin-top:14px;width:100%" onclick="copyHistPost(${i})"><i class="ti ti-copy"></i> 복사</button>`;
+  if(!h) return;
+  const isDone = h.uploadStatus === 'done';
+  const el = document.getElementById('histDetail');
+  el.innerHTML =
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">'
+    + '<div class="post-title" style="font-size:15px;flex:1;margin-right:10px">'+esc(h.title||h.kw)+'</div>'
+    + '<button class="status-badge '+(isDone?'status-done':'status-pending')+'" id="detailStatusBtn" onclick="toggleUploadStatus('+i+')">'
+    + (isDone?'✅ 발행완료':'⏳ 미발행')
+    + '</button>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">'
+    + '<span>📍 '+esc(h.region)+'</span>'
+    + '<span>📝 '+esc(h.type)+'</span>'
+    + '<span>📏 '+(h.chars||0).toLocaleString()+'자</span>'
+    + '<span>📅 '+h.date+'</span>'
+    + '</div>'
+    + '<button class="copy-full-btn" id="copyFullBtn" onclick="copyFullPost('+i+')">'
+    + '<i class="ti ti-copy"></i> 전체 복사 (제목+본문+CTA+해시태그)'
+    + '</button>'
+    + '<button onclick="copyOnlyBody('+i+')" style="width:100%;padding:8px;background:var(--bg);color:var(--d2);border:1.5px solid var(--bd);border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:5px">'
+    + '<i class="ti ti-text"></i> 본문만 복사'
+    + '</button>'
+    + '<div style="background:var(--bg);border-radius:var(--rs);padding:14px;max-height:400px;overflow-y:auto;font-size:12px;line-height:1.9;color:var(--d2);white-space:pre-wrap;border:1px solid var(--bd)">'+esc(h.body)+'</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">'
+    + (h.tags||[]).slice(0,15).map(function(t){ return '<span style="background:var(--bg);color:var(--gray);padding:2px 7px;border-radius:8px;font-size:10px">'+esc(t)+'</span>'; }).join('')
+    + '</div>';
 }
+
 
 function copyHistPost(i){
   const h = history[i];
@@ -2224,6 +2277,72 @@ function updateAutoModal(step, icon, text){
   var textEl = document.getElementById('autoStep'+n+'Text');
   if(iconEl) iconEl.textContent = icon;
   if(textEl) textEl.textContent = text;
+}
+
+
+function copyFullPost(i){
+  const h = history[i];
+  if(!h) return;
+  const ph = phone || '';
+  const cta = '\n\n━━━━━━━━━━━━━━━━━━━━\n'
+    + '📦 식자재 무료 상담\n'
+    + '💬 카카오: https://open.kakao.com/o/shEOWEth\n'
+    + '📝 블로그: https://blog.naver.com/yeong44\n'
+    + (ph ? '📱 전화: '+ph+'\n' : '')
+    + '━━━━━━━━━━━━━━━━━━━━';
+  const full = (h.title||h.kw) + '\n\n' + (h.body||'') + cta + '\n\n' + (h.tags||[]).join(' ');
+  navigator.clipboard.writeText(full).then(function(){
+    const btn = document.getElementById('copyFullBtn');
+    if(btn){ btn.classList.add('copied'); btn.innerHTML='<i class="ti ti-check"></i> 복사 완료!'; }
+    showToast('전체 복사 완료! 네이버 블로그에 붙여넣으세요');
+    setTimeout(function(){
+      if(btn){ btn.classList.remove('copied'); btn.innerHTML='<i class="ti ti-copy"></i> 전체 복사 (제목+본문+CTA+해시태그)'; }
+    }, 2000);
+  });
+}
+
+function copyOnlyBody(i){
+  const h = history[i];
+  if(!h) return;
+  navigator.clipboard.writeText(h.body||'').then(function(){
+    showToast('본문 복사 완료!');
+  });
+}
+
+async function toggleUploadStatus(i){
+  const h = history[i];
+  if(!h) return;
+
+  // 상태 토글
+  h.uploadStatus = (h.uploadStatus === 'done') ? 'pending' : 'done';
+  const isDone = h.uploadStatus === 'done';
+
+  // UI 즉시 반영
+  renderHistList();
+  showHistDetail(i);
+  showToast(isDone ? '✅ 발행완료로 변경됐어요!' : '⏳ 미발행으로 변경됐어요');
+
+  // 구글 시트 상태 업데이트
+  try{
+    await fetch(SHEET_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({
+        sheetId: SHEET_ID,
+        action: 'updateStatus',
+        keyword: h.kw,
+        title: h.title,
+        date: h.date,
+        uploadStatus: isDone ? '발행완료' : '미발행',
+        status: isDone ? '발행완료' : '자동생성'
+      })
+    });
+    console.log('시트 상태 업데이트 완료');
+  }catch(e){
+    console.warn('시트 상태 업데이트 실패:', e);
+  }
+
+  updateDashboard();
 }
 
 </script>
