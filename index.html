@@ -1123,13 +1123,29 @@ async function callClaude(prompt, maxTokens=2000){
    구글 시트 저장
 ══════════════════════════════════════ */
 async function saveToSheet(row){
-  try{
-    await fetch(SHEET_ENDPOINT, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({...row, sheetId: SHEET_ID})
-    });
-  }catch(e){ console.log('시트 저장 실패:', e); }
+  const payload = Object.assign({}, row, {sheetId: SHEET_ID});
+  // 최대 2회 시도
+  for(var attempt = 0; attempt < 2; attempt++){
+    try{
+      const res = await fetch(SHEET_ENDPOINT, {
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: JSON.stringify(payload)
+      });
+      const text = await res.text();
+      let result;
+      try{ result = JSON.parse(text); }catch(e){ result = {success: res.ok}; }
+      if(result.success !== false){
+        console.log('시트 저장 성공 (행 ' + (result.row||'?') + ')');
+        return true;
+      }
+      console.warn('시트 저장 응답 오류:', result);
+    }catch(e){
+      console.warn('시트 저장 시도 ' + (attempt+1) + ' 실패:', e);
+      if(attempt < 1) await new Promise(function(r){ setTimeout(r, 1000); });
+    }
+  }
+  return false;
 }
 
 function buildAppState(){
