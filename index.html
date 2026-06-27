@@ -1071,8 +1071,8 @@ function renderDist(){
     const info = (AREA_DATA[curRegion]||{})[name]||{};
     const on = selDistricts.find(function(x){return x.district===name;});
     const cls = on ? 'dist-btn on' : 'dist-btn';
-    const tag = (info.tags||'').split(',')[0];
-    return '<div class="'+cls+'" onclick="togDist(''+name+'')"><div class="dn">'+esc(name)+'</div><div class="dt">'+esc(tag)+'</div></div>';
+    const tag = esc((info.tags||'').split(',')[0]);
+    return '<div class="'+cls+'" data-dist="'+esc(name)+'" onclick="togDistEl(this)"><div class="dn">'+esc(name)+'</div><div class="dt">'+tag+'</div></div>';
   }).join('');
 }
 function renderProjDist(reg){
@@ -1080,8 +1080,12 @@ function renderProjDist(reg){
   const el = document.getElementById('projDistGrid');
   if(!el) return;
   el.innerHTML = keys.map(function(name){
-    return '<div class="dist-btn" onclick="togProjDist(this,''+reg+'',''+name+'')"><div class="dn">'+esc(name)+'</div></div>';
+    return '<div class="dist-btn" data-reg="'+esc(reg||'서울')+'" data-name="'+esc(name)+'" onclick="togProjDistEl(this)"><div class="dn">'+esc(name)+'</div></div>';
   }).join('');
+}
+function togDistEl(el){
+  const name = el.dataset.dist;
+  togDist(name);
 }
 function togDist(name){
   const idx = selDistricts.findIndex(x=>x.district===name);
@@ -1091,19 +1095,22 @@ function togDist(name){
     selDistricts.push({region:curRegion,district:name});
   }
   renderDist();
-  document.getElementById('selRegions').innerHTML = selDistricts.map(d=>
-    `<div class="sel-tag">${esc(d.region)} ${esc(d.district)}<span onclick="rmDist('${d.district}')">×</span></div>`
-  ).join('');
+  const sr = document.getElementById('selRegions');
+  if(sr) sr.innerHTML = selDistricts.map(function(d){
+    return '<div class="sel-tag">'+esc(d.region)+' '+esc(d.district)+'<span onclick="rmDist(\'' + d.district.replace(/'/g,"\'") + '\')">×</span></div>';
+  }).join('');
 }
 let projSelDists = [];
+function togProjDistEl(el){
+  togProjDist(el, el.dataset.reg, el.dataset.name);
+}
 function togProjDist(el, reg, name){
   el.classList.toggle('on');
   const key = reg+' '+name;
-  if(projSelDists.includes(key)) projSelDists = projSelDists.filter(x=>x!==key);
+  if(projSelDists.includes(key)) projSelDists = projSelDists.filter(function(x){return x!==key;});
   else projSelDists.push(key);
-  document.getElementById('projSelRegions').innerHTML = projSelDists.map(r=>
-    `<div class="sel-tag">${esc(r)}</div>`
-  ).join('');
+  const psr = document.getElementById('projSelRegions');
+  if(psr) psr.innerHTML = projSelDists.map(function(r){return '<div class="sel-tag">'+esc(r)+'</div>';}).join('');
 }
 function rmDist(name){
   selDistricts = selDistricts.filter(x=>x.district!==name);
@@ -1117,8 +1124,12 @@ function renderItems(){
   if(!el) return;
   el.innerHTML = (ITEMS[industry]||[]).map(function(it){
     const cls = selItems.includes(it) ? 'item-btn on' : 'item-btn';
-    return '<div class="'+cls+'" onclick="togItem(''+it+'')">'+esc(it)+'</div>';
+    return '<div class="'+cls+'" data-item="'+esc(it)+'" onclick="togItemEl(this)">'+esc(it)+'</div>';
   }).join('');
+}
+function togItemEl(el){
+  const it = el.dataset.item;
+  togItem(it);
 }
 function togItem(it){
   if(selItems.includes(it)) selItems = selItems.filter(x=>x!==it);
