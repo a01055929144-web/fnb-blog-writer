@@ -1083,7 +1083,7 @@ function saveApiKey(){
   showToast('API 키가 연결되어 있어요!');
 }
 
-async function callClaude(prompt, maxTokens=1000){
+async function callClaude(prompt, maxTokens=2000){
   // API 키 직접 조합
   var k1="sk-ant-api03-AZfMCcz", k2="71AK5r5E8rTjUUP4b1gcj5K1wwkTKI", k3="mdbcnqrKIL35eVmitvmOzGbI-76leaJ4ALgqFhlCxM__S3gPA-hUuNCAAA";
   var apiK = k1+k2+k3;
@@ -1421,7 +1421,7 @@ JSON만 반환 (마크다운 없이):
 총 ${targetCount}개. difficulty: low/mid/high. intent: 구매/탐색/비교/창업. why 필드 없이 4개 필드만.`;
 
   try{
-    const text = await callClaude(prompt, 1000);
+    const text = await callClaude(prompt, 2000);
     let clean = text.replace(/```json|```/g,'').trim();
     // JSON 블록만 추출
     const jStart = clean.indexOf('{');
@@ -1537,7 +1537,7 @@ async function genCluster(){
     + targetCount + '개 생성. intent: 납품/원가절감/창업/비교/정보/거래처변경. priority: high/mid/low. type: 정보성/원가절감/납품노하우/창업컨설팅/트렌드/비교';
 
   try{
-    const text = await callClaude(prompt, 1000);
+    const text = await callClaude(prompt, 2000);
     let clean = text.replace(/```json|```/g,'').trim();
     const s = clean.indexOf('{');
     const e = clean.lastIndexOf('}');
