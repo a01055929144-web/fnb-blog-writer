@@ -295,6 +295,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 <!-- 네비 -->
 <div class="nav">
   <div class="nav-tab on" onclick="goPage('dashboard',this)"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+</div>
 <!-- 접이식 사용 가이드 -->
 <div class="guide-toggle">
   <button class="guide-toggle-btn" id="guideBtn" onclick="toggleGuide()">
@@ -313,6 +314,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     </ol>
   </div>
 </div>
+
 
 
 
@@ -1386,12 +1388,23 @@ JSON만 반환 (마크다운 없이):
 
   try{
     const text = await callClaude(prompt, 700);
+    // JSON 파싱 강화
     let clean = text.replace(/```json|```/g,'').trim();
-    // JSON 블록만 추출
     const jStart = clean.indexOf('{');
     const jEnd = clean.lastIndexOf('}');
     if(jStart > -1 && jEnd > -1) clean = clean.slice(jStart, jEnd+1);
-    const parsed = JSON.parse(clean);
+    // 제어문자 제거
+    clean = clean.replace(/[\x00-\x1F\x7F]/g, ' ');
+    let parsed;
+    try { parsed = JSON.parse(clean); }
+    catch(parseErr){
+      // JSON 복구 시도: keywords 배열만 추출
+      const arrMatch = clean.match(/"keywords"\s*:\s*(\[[\s\S]*\])/);
+      if(arrMatch){
+        try { parsed = {keywords: JSON.parse(arrMatch[1])}; }
+        catch(e2){ throw new Error('JSON 파싱 실패: ' + parseErr.message); }
+      } else { throw new Error('JSON 파싱 실패: ' + parseErr.message); }
+    }
     kwData = (parsed.keywords||[]).map((k,i)=>({...k,index:i}));
     selKws = [];
     saveKeywordCache(cacheKey);
