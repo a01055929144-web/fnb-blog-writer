@@ -1982,6 +1982,15 @@ async function initApp(){
   updateAnalytics();
 }
 initApp();
+
+function toggleGuide(){
+  var btn=document.getElementById('guideBtn');
+  var con=document.getElementById('guideContent');
+  if(!btn||!con)return;
+  btn.classList.toggle('open');
+  con.classList.toggle('show');
+}
+
 </script>
 </body>
 </html>
