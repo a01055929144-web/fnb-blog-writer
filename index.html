@@ -1571,6 +1571,41 @@ async function genCluster(){
   btn.innerHTML='<i class="ti ti-wand"></i> 클러스터 자동 생성'; btn.disabled=false;
 }
 
+function renderCluster(){
+  selClusters = [];
+  const intentColors = {'창업':'intent-창업','원가절감':'intent-원가절감','거래처변경':'intent-거래처변경','납품':'intent-납품','정보':'intent-정보','비교':'intent-정보','트렌드':'intent-정보'};
+  document.getElementById('clusterGrid').innerHTML = clusterData.map((c,i)=>`
+    <div class="cluster-card" id="cc${i}" onclick="togCluster(${i})">
+      <div class="cluster-num">#${i+1} · ${esc(c.region||'')} · ${esc(c.type||'')}</div>
+      <div class="cluster-title">${esc(c.title)}</div>
+      <span class="cluster-intent ${intentColors[c.intent]||'intent-정보'}">${esc(c.intent)}</span>
+      <span style="float:right;font-size:9px;padding:2px 6px;border-radius:5px;font-weight:700;background:${c.priority==='high'?'#DCFCE7':c.priority==='mid'?'#FEF9C3':'#F3F4F6'};color:${c.priority==='high'?'#166534':c.priority==='mid'?'#854D0E':'#374151'}">${c.priority==='high'?'높음':c.priority==='mid'?'보통':'낮음'}</span>
+    </div>`).join('');
+}
+
+function togCluster(i){
+  const el = document.getElementById('cc'+i);
+  if(selClusters.includes(i)){ selClusters=selClusters.filter(x=>x!==i); el.classList.remove('on'); }
+  else{ selClusters.push(i); el.classList.add('on'); }
+  persistLater('clusterSelect');
+}
+function selAllCluster(){
+  selClusters = clusterData.map((_,i)=>i);
+  document.querySelectorAll('.cluster-card').forEach(el=>el.classList.add('on'));
+  persistLater('clusterSelectAll');
+}
+function writeSelected(){
+  if(!selClusters.length){ showToast('글을 선택해주세요'); return; }
+  const first = clusterData[selClusters[0]];
+  document.getElementById('writerKw').value = first.keyword||first.title;
+  document.getElementById('writerRegion').value = first.region||'';
+  goPage('writer', document.querySelectorAll('.nav-tab')[4]);
+  showToast(`AI Writer에서 "${first.title}" 작성 준비 완료!`);
+}
+
+/* ══════════════════════════════════════
+   AI Writer
+══════════════════════════════════════ */
 async function generatePost(){
   const kw = document.getElementById('writerKw').value.trim();
   if(!kw){ showToast('키워드를 입력해주세요'); return; }
