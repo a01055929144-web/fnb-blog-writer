@@ -748,6 +748,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 const KAKAO = 'https://open.kakao.com/o/shEOWEth';
 const BLOG  = 'https://blog.naver.com/yeong44';
 const SHEET_ID = '1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU';
+const CLAUDE_KEY = ['sk-ant-api03-AZfMCcz','71AK5r5E8rTjUUP4b1gcj5K1wwkTKI','mdbcnqrKIL35eVmitvmOzGbI-76leaJ4ALgqFhlCxM__S3gPA-hUuNCAAA'].join('');
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxMQHpmO_Y9ekv4lQTftvBRIi3sioEhEJer04aVWntkrJjNM9u82JPKYr70d4ZxTN-p/exec';
 
 /* ══════════════════════════════════════
@@ -1083,24 +1084,22 @@ function saveApiKey(){
 }
 
 async function callClaude(prompt, maxTokens=1000){
-  const _k = ['sk-ant-api03-AZfMCcz','71AK5r5E8rTjUUP4b1gcj5K1wwkTKI','mdbcnqrKIL35eVmitvmOzGbI-76leaJ4ALgqFhlCxM__S3gPA-hUuNCAAA'].join('');
-  const key = apiKey || localStorage.getItem('fnb_api') || _k;
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
+      "Content-Type": "application/json",
+      "x-api-key": CLAUDE_KEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
     },
-    body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:maxTokens, messages:[{role:'user',content:prompt}] })
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:maxTokens, messages:[{role:"user",content:prompt}] })
   });
   if(!res.ok){
     const errText = await res.text();
-    throw new Error('API ' + res.status + ': ' + errText.substring(0,80));
+    throw new Error("API " + res.status + ": " + errText.substring(0,100));
   }
   const data = await res.json();
-  return data.content?.[0]?.text || '';
+  return data.content?.[0]?.text || "";
 }
 
 /* ══════════════════════════════════════
@@ -1390,7 +1389,7 @@ async function genKeywords(){
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': _k,
+        "x-api-key": CLAUDE_KEY,
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
