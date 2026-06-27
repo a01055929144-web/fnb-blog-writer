@@ -1416,12 +1416,12 @@ async function genKeywords(){
 [품목]: ${selItems.join(', ')}
 
 JSON만 반환 (마크다운 없이):
-{"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low","why":"설명"}]}
+{"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low"}]}
 
-총 ${targetCount}개. 구매 의도 높은 롱테일 위주. difficulty: low/mid/high. intent: 구매/탐색/비교/창업`;
+총 ${targetCount}개. difficulty: low/mid/high. intent: 구매/탐색/비교/창업. why 필드 없이 4개 필드만.`;
 
   try{
-    const text = await callClaude(prompt, 700);
+    const text = await callClaude(prompt, 1000);
     let clean = text.replace(/```json|```/g,'').trim();
     // JSON 블록만 추출
     const jStart = clean.indexOf('{');
