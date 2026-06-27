@@ -299,7 +299,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 <div class="guide-toggle">
   <button class="guide-toggle-btn" id="guideBtn" onclick="toggleGuide()">
     <i class="ti ti-info-circle"></i>
-    사용 가이드 — F&B Lead Engine 사용 방법
+    📋 사용 가이드 — 클릭하여 펼치기
     <span class="arr">▼</span>
   </button>
   <div class="guide-content" id="guideContent">
@@ -313,6 +313,8 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     </ol>
   </div>
 </div>
+
+
 
   <div class="nav-tab" onclick="goPage('project',this)"><i class="ti ti-folders"></i>Project</div>
   <div class="nav-tab" onclick="goPage('keyword',this)"><i class="ti ti-search"></i>Keyword Engine</div>
@@ -1398,7 +1400,9 @@ JSON만 반환 (마크다운 없이):
     showToast(`${kwData.length}개 키워드 추출 완료!`);
     persistLater('keywordsGenerated');
   }catch(e){
-    showToast('키워드 추출 실패 — API 키 확인해주세요');
+    const errMsg = e && e.message ? e.message.substring(0,60) : String(e).substring(0,60);
+    showToast('추출 실패: ' + errMsg);
+    console.error('genKeywords error:', e);
   }
   btn.innerHTML='<i class="ti ti-search"></i> 롱테일 키워드 추출'; btn.disabled=false;
 }
