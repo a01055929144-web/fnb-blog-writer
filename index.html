@@ -256,33 +256,6 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
   .analytics-row{grid-template-columns:1fr}
   .page{padding:12px}
 }
-
-/* 접이식 가이드 */
-.guide-toggle{background:var(--d2);border-bottom:2px solid var(--g)}
-.guide-toggle-btn{width:100%;padding:9px 20px;display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.8);font-size:12px;font-weight:600;cursor:pointer;background:none;border:none;text-align:left;transition:.15s}
-.guide-toggle-btn:hover{background:rgba(255,255,255,.05);color:#fff}
-.guide-toggle-btn i{font-size:14px;color:var(--g)}
-.guide-toggle-btn .arr{margin-left:auto;transition:transform .2s;font-size:11px;color:var(--gray2)}
-.guide-toggle-btn.open .arr{transform:rotate(180deg)}
-.guide-content{display:none;background:#1a2535;border-bottom:1px solid rgba(255,255,255,.06);padding:12px 24px}
-.guide-content.show{display:block}
-.guide-content ol{padding-left:18px;color:rgba(255,255,255,.65);font-size:12px;line-height:2}
-.guide-content ol li strong{color:var(--g3)}
-
-/* 업로드 상태 배지 */
-.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;transition:.2s;border:none;user-select:none}
-.status-pending{background:#FEF3C7;color:#92400E;border:1px solid #FDE68A}
-.status-pending:hover{background:#FDE68A}
-.status-done{background:#DCFCE7;color:#166534;border:1px solid #86EFAC}
-.status-done:hover{background:#BBF7D0}
-/* 복사 버튼 */
-.copy-full-btn{width:100%;padding:11px;background:var(--d2);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.2s;margin-bottom:6px}
-.copy-full-btn:hover{background:var(--d)}
-.copy-full-btn.copied{background:var(--g)}
-/* 히스토리 상태 표시 */
-.hist-status{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700}
-.hs-pending{background:#FEF3C7;color:#92400E}
-.hs-done{background:#DCFCE7;color:#166534}
 </style>
 </head>
 <body>
@@ -312,11 +285,9 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
   <div class="nav-tab" onclick="goPage('project',this)"><i class="ti ti-folders"></i>Project</div>
   <div class="nav-tab" onclick="goPage('keyword',this)"><i class="ti ti-search"></i>Keyword Engine</div>
   <div class="nav-tab" onclick="goPage('cluster',this)"><i class="ti ti-sitemap"></i>Topic Cluster</div>
-  <div class="nav-tab" onclick="goPage('cta',this)"><i class="ti ti-speakerphone"></i>CTA Generator</div>
+    <div class="nav-tab" onclick="goPage('cta',this)"><i class="ti ti-speakerphone"></i>CTA Generator</div>
   <div class="nav-tab" onclick="goPage('analytics',this)"><i class="ti ti-chart-bar"></i>Analytics</div>
 </div>
-
-
 
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page on" id="page-dashboard">
@@ -342,26 +313,6 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     </div>
     <div class="stat">
       <div class="stat-icon" style="background:#F5F3FF"><i class="ti ti-map-pin" style="color:var(--purple);font-size:18px"></i></div>
-
-<!-- 접이식 사용 가이드 -->
-<div class="guide-toggle">
-  <button class="guide-toggle-btn" id="guideBtn" onclick="toggleGuide()">
-    <i class="ti ti-info-circle"></i>
-    📋 사용 가이드 — 클릭하여 펼치기
-    <span class="arr">▼</span>
-  </button>
-  <div class="guide-content" id="guideContent">
-    <ol>
-      <li><strong>Keyword Engine</strong>에서 지역(최대 5개) → 업종 → 품목을 선택하고 키워드를 추출하세요.</li>
-      <li>추출된 키워드 중 <strong>경쟁 낮음(구매 의도 높음)</strong> 위주로 선택하세요.</li>
-      <li><strong>Topic Cluster</strong>로 이동해 50개 글 기획을 한번에 자동 생성하세요.</li>
-      <li><strong>AI Writer</strong>에서 키워드별 2500-4000자 SEO 포스팅을 생성하세요.</li>
-      <li>생성된 글은 <strong>자동으로 구글 시트</strong>에 저장되며, 복사 후 네이버 블로그에 발행하세요.</li>
-      <li><strong>CTA 블록</strong>이 모든 글 하단에 자동 삽입되어 카카오 상담으로 연결됩니다.</li>
-    </ol>
-  </div>
-</div>
-
       <div class="stat-label">커버 지역</div>
       <div class="stat-val" id="stat-regions">0</div>
       <div class="stat-sub">수도권 73개 지역</div>
@@ -379,20 +330,9 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       </div>
     </div>
     <div class="card">
-      <div class="card-hd"><i class="ti ti-bulb"></i><h3>다음 추천 작업</h3><span class="badge badge-green" id="dash-week-cnt" style="margin-left:auto">이번 주 0개</span></div>
+      <div class="card-hd"><i class="ti ti-bulb"></i><h3>다음 추천 작업</h3></div>
       <div id="dash-next">
         <div style="display:flex;flex-direction:column;gap:8px">
-          <!-- 원클릭 자동화 버튼 -->
-          <div onclick="startAutoMode()" style="padding:16px;border-radius:var(--rs);background:linear-gradient(135deg,#166534 0%,#15803D 100%);cursor:pointer;text-align:center;box-shadow:0 4px 14px rgba(22,163,74,.3)">
-            <div style="font-size:22px;margin-bottom:4px">🚀</div>
-            <div style="color:#fff;font-size:14px;font-weight:800;margin-bottom:3px">원클릭 전체 자동화</div>
-            <div style="color:rgba(255,255,255,.75);font-size:11px">지역+업종+품목 선택 후 클릭 → 키워드·글기획·작성·저장 자동</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-            <div style="flex:1;height:1px;background:var(--bd)"></div>
-            <span style="font-size:10px;color:var(--gray);white-space:nowrap">또는 단계별 진행</span>
-            <div style="flex:1;height:1px;background:var(--bd)"></div>
-          </div>
           <div style="padding:10px 12px;border-radius:var(--rs);background:var(--g2);border:1px solid var(--g3);font-size:12px;color:#166534;cursor:pointer" onclick="goPage('keyword',document.querySelectorAll('.nav-tab')[2])">
             <strong>① 키워드 추출</strong><br>지역·업종·품목 선택 후 롱테일 키워드 발굴
           </div>
@@ -520,9 +460,6 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
       <button class="btn btn-dark btn-full" id="kwGenBtn" onclick="genKeywords()">
         <i class="ti ti-search"></i> 롱테일 키워드 추출
-      </button>
-      <button onclick="startAutoMode()" style="width:100%;margin-top:8px;padding:11px;background:linear-gradient(135deg,#166534,#15803D);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(22,163,74,.25)">
-        🚀 원클릭 전체 자동화
       </button>
     </div>
 
@@ -653,110 +590,41 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 <!-- ═══ ANALYTICS ═══ -->
 <div class="page" id="page-analytics">
-
-  <!-- 상단 통계 -->
-  <div class="stat-grid" style="margin-bottom:14px">
+  <div class="stat-grid" style="margin-bottom:16px">
     <div class="stat">
-      <div class="stat-label">📝 총 작성 글</div>
+      <div class="stat-label">총 생성 글</div>
       <div class="stat-val" id="an-total">0</div>
-      <div class="stat-sub">전체 누적</div>
     </div>
     <div class="stat">
-      <div class="stat-label">✅ 발행완료</div>
-      <div class="stat-val" id="an-done" style="color:var(--g)">0</div>
-      <div class="stat-sub" id="an-done-pct">발행률 0%</div>
+      <div class="stat-label">예상 월 유입</div>
+      <div class="stat-val" id="an-traffic">0</div>
     </div>
     <div class="stat">
-      <div class="stat-label">⏳ 발행 대기</div>
-      <div class="stat-val" id="an-pending" style="color:var(--amber)">0</div>
-      <div class="stat-sub">복사 후 발행하세요</div>
+      <div class="stat-label">예상 월 상담</div>
+      <div class="stat-val" id="an-leads">0</div>
     </div>
     <div class="stat">
-      <div class="stat-label">🗺 커버 지역</div>
-      <div class="stat-val" id="an-regions">0</div>
-      <div class="stat-sub">/ 73개 지역</div>
+      <div class="stat-label">커버 키워드</div>
+      <div class="stat-val" id="an-kw">0</div>
     </div>
   </div>
 
-  <!-- 탭 구조 -->
-  <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--bd);padding-bottom:0">
-    <button class="ana-tab on" id="anaTab-list" onclick="switchAnaTab('list',this)">📋 글 목록</button>
-    <button class="ana-tab" id="anaTab-region" onclick="switchAnaTab('region',this)">🗺 지역별 현황</button>
-    <button class="ana-tab" id="anaTab-category" onclick="switchAnaTab('category',this)">📂 카테고리별</button>
-  </div>
-
-  <style>
-  .ana-tab{padding:8px 16px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s}
-  .ana-tab.on{color:var(--g);border-bottom-color:var(--g)}
-  .ana-tab:hover{color:var(--d)}
-  .region-card{background:var(--w);border-radius:var(--rs);border:1px solid var(--bd);padding:12px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
-  .region-bar-wrap{flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden}
-  .region-bar-fill{height:100%;background:var(--g);border-radius:3px;transition:width .4s}
-  .region-bar-fill.low{background:var(--red)}
-  .region-bar-fill.mid{background:var(--amber)}
-  </style>
-
-  <!-- 글 목록 패널 -->
-  <div id="anaPanel-list">
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <input type="text" id="anaSearch" placeholder="키워드, 지역, 제목 검색..." oninput="filterHistory()" style="flex:1;border:1.5px solid var(--bd);border-radius:var(--rs);padding:8px 11px;font-size:12px;outline:none">
-      <select id="anaFilter" onchange="filterHistory()" style="border:1.5px solid var(--bd);border-radius:var(--rs);padding:8px 10px;font-size:12px;outline:none;background:var(--w)">
-        <option value="all">전체</option>
-        <option value="pending">미발행</option>
-        <option value="done">발행완료</option>
-      </select>
-    </div>
-    <div class="analytics-row">
-      <div id="histList" style="max-height:600px;overflow-y:auto"></div>
-      <div class="analytics-main" id="histDetail">
-        <div style="text-align:center;padding:40px;color:var(--gray);font-size:12px">
-          <i class="ti ti-article" style="font-size:32px;display:block;margin-bottom:10px;opacity:.3"></i>
-          글을 선택하면 여기서 확인하고 복사할 수 있어요
+  <div class="analytics-row">
+    <div>
+      <div class="sec-title">작성 히스토리</div>
+      <div id="histList">
+        <div style="text-align:center;padding:30px;color:var(--gray);font-size:12px;background:var(--w);border-radius:var(--r);border:1px solid var(--bd)">
+          아직 작성된 글이 없어요
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- 지역별 현황 패널 -->
-  <div id="anaPanel-region" style="display:none">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
-        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">✅ 많이 작성된 지역 TOP 5</div>
-        <div id="regionTop5"></div>
-      </div>
-      <div style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
-        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">🔴 부족한 지역 (영업 타겟)</div>
-        <div id="regionLow5"></div>
-      </div>
-    </div>
-    <div style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
-      <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">📊 전체 지역 현황</div>
-      <div id="regionAll"></div>
-    </div>
-  </div>
-
-  <!-- 카테고리별 현황 패널 -->
-  <div id="anaPanel-category" style="display:none">
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-      <div id="cat-industry" style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
-        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">업종별</div>
-        <div id="catIndustry"></div>
-      </div>
-      <div id="cat-type" style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
-        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">콘텐츠 타입별</div>
-        <div id="catType"></div>
-      </div>
-      <div id="cat-month" style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
-        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">월별 작성</div>
-        <div id="catMonth"></div>
-      </div>
-      <div id="cat-status" style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
-        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">발행 현황</div>
-        <div id="catStatus"></div>
+    <div class="analytics-main">
+      <div id="histDetail" style="text-align:center;padding:40px;color:var(--gray);font-size:12px">
+        <i class="ti ti-article" style="font-size:32px;display:block;margin-bottom:10px;opacity:.3"></i>
+        히스토리에서 글을 선택하면<br>여기서 확인할 수 있어요
       </div>
     </div>
   </div>
-
 </div>
 
 <div class="toast" id="toast"><i class="ti ti-check"></i><span id="toastMsg"></span></div>
@@ -768,7 +636,6 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 const KAKAO = 'https://open.kakao.com/o/shEOWEth';
 const BLOG  = 'https://blog.naver.com/yeong44';
 const SHEET_ID = '1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU';
-const CLAUDE_KEY = ['sk-ant-api03-AZfMCcz','71AK5r5E8rTjUUP4b1gcj5K1wwkTKI','mdbcnqrKIL35eVmitvmOzGbI-76leaJ4ALgqFhlCxM__S3gPA-hUuNCAAA'].join('');
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwbWOmjE2JgRr6-1oCpQb9tAdBhpjQSMJ5JeFS4AytNoEZzrpmOFDwJoGyMpxgDt7FH/exec';
 
 /* ══════════════════════════════════════
@@ -1060,6 +927,8 @@ let curRegion = '서울';
 let selDistricts = [];
 let selItems = [];
 let selKws = [];
+let autoRunning = false;
+let autoLog = [];
 let kwData = [];
 let clusterData = [];
 let selClusters = [];
@@ -1093,10 +962,8 @@ function goPage(id, el){
   var pg = document.getElementById('page-'+id);
   if(pg) pg.classList.add('on');
   if(el) el.classList.add('on');
-  // 탭 전환 시 해당 탭 렌더링
   if(id==='keyword'){ renderDist(); renderItems(); renderIndustryOptions(); }
   if(id==='cluster'){ renderCluster(); }
-  if(id==='analytics'){ filterHistory(); updateAnalytics(); }
   persistLater('page:'+id);
 }
 
@@ -1109,41 +976,28 @@ function saveApiKey(){
 }
 
 async function callClaude(prompt, maxTokens=2000){
-  // Apps Script 경유 Claude 호출 (API키 서버에 보관, CORS 없음)
   const res = await fetch(SHEET_ENDPOINT, {
-    method: "POST",
-    headers: {"Content-Type": "text/plain;charset=utf-8"},
-    body: JSON.stringify({ prompt: prompt, max_tokens: maxTokens })
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({prompt:prompt, max_tokens:maxTokens})
   });
-  if(!res.ok) throw new Error("Apps Script 오류: " + res.status);
-  const data = await res.json();
-  if(data.success === false) throw new Error(data.message || "Claude 호출 실패");
-  return data.text || "";
+  if(!res.ok) throw new Error("Apps Script 오류: "+res.status);
+  const d = await res.json();
+  if(d.success===false) throw new Error(d.message||"Claude 호출 실패");
+  return d.text||"";
 }
 
 /* ══════════════════════════════════════
    구글 시트 저장
 ══════════════════════════════════════ */
 async function saveToSheet(row){
-  const payload = Object.assign({}, row, {sheetId: SHEET_ID});
-  for(var attempt = 0; attempt < 2; attempt++){
-    try{
-      const res = await fetch(SHEET_ENDPOINT, {
-        method: "POST",
-        headers: {"Content-Type": "text/plain;charset=utf-8"},
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if(data.success !== false){
-        console.log("시트 저장 성공 row:", data.row);
-        return true;
-      }
-    }catch(e){
-      console.warn("시트 저장 시도 "+(attempt+1)+" 실패:", e);
-      if(attempt < 1) await new Promise(function(r){ setTimeout(r, 1000); });
-    }
-  }
-  return false;
+  try{
+    await fetch(SHEET_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({...row, sheetId: SHEET_ID})
+    });
+  }catch(e){ console.log('시트 저장 실패:', e); }
 }
 
 function buildAppState(){
@@ -1258,24 +1112,29 @@ function selProjReg(el, name){
 }
 
 function renderDist(){
-  const q = regionQuery.toLowerCase();
-  const keys = (REGION_TABS[curRegion]||[]).filter(function(name){
-    const info = (AREA_DATA[curRegion]||{})[name]||{};
-    return !q || name.toLowerCase().includes(q) || String(info.tags||'').toLowerCase().includes(q) || String(info.food||'').toLowerCase().includes(q);
+  var q = regionQuery.toLowerCase();
+  var keys = (REGION_TABS[curRegion]||[]).filter(function(name){
+    var info = (AREA_DATA[curRegion]||{})[name]||{};
+    return !q || name.toLowerCase().includes(q) ||
+           String(info.tags||'').toLowerCase().includes(q) ||
+           String(info.food||'').toLowerCase().includes(q);
   });
-  const el = document.getElementById('distGrid');
+  var el = document.getElementById('distGrid');
   if(!el) return;
   el.innerHTML = keys.map(function(name){
-    const info = (AREA_DATA[curRegion]||{})[name]||{};
-    const on = selDistricts.find(function(x){ return x.district===name; });
-    const cls = on ? 'dist-btn on' : 'dist-btn';
-    const tag = esc((info.tags||'').split(',')[0]);
-    return '<div class="'+cls+'" data-name="'+esc(name)+'" onclick="togDist(this.dataset.name)">'
-      + '<div class="dn">'+esc(name)+'</div>'
+    var info = (AREA_DATA[curRegion]||{})[name]||{};
+    var on = selDistricts.find(function(x){ return x.district===name; });
+    var tag = (info.tags||'').split(',')[0].trim();
+    return '<div class="dist-btn'+(on?' on':'')+'" data-dist="'+name+'" onclick="togDistByEl(this)">'
+      + '<div class="dn">'+name+'</div>'
       + '<div class="dt">'+tag+'</div>'
       + '</div>';
   }).join('');
 }
+function togDistByEl(el){
+  togDist(el.dataset.dist);
+}
+
 function renderSelectedRegions(){
   document.getElementById('selRegions').innerHTML = selDistricts.map(d=>
     `<div class="sel-tag">${esc(d.region)} ${esc(d.district)}<span onclick="rmDist('${d.district}')">×</span></div>`
@@ -1289,12 +1148,11 @@ function renderProjDist(reg){
     </div>`).join('');
 }
 function togDist(name){
-  if(!name){ console.warn('togDist: name이 없음'); return; }
-  const idx = selDistricts.findIndex(function(x){ return x.district===name; });
+  const idx = selDistricts.findIndex(x=>x.district===name);
   if(idx>-1) selDistricts.splice(idx,1);
   else{
-    if(selDistricts.length>=5){ showToast('최대 5개까지 선택 가능해요'); return; }
-    selDistricts.push({region:curRegion, district:name});
+    if(selDistricts.length>=5){showToast('최대 5개까지 선택 가능해요');return;}
+    selDistricts.push({region:curRegion,district:name});
   }
   renderDist();
   renderSelectedRegions();
@@ -1317,42 +1175,59 @@ function rmDist(name){
   persistLater('districtRemove');
 }
 function renderItems(){
-  const q = itemQuery.toLowerCase();
-  const baseItems = (ITEMS[industry]||[]).map(function(name){ return {name:name, custom:false}; });
-  const addedItems = (customItems[industry]||[]).map(function(name){ return {name:name, custom:true}; });
-  const el = document.getElementById('itemGrid');
-  if(!el) return;
-  const list = [...baseItems, ...addedItems].filter(function(it){
+  var q = itemQuery.toLowerCase();
+  var baseList = (ITEMS[industry]||[]).map(function(n){ return {name:n,custom:false}; });
+  var addList  = (customItems[industry]||[]).map(function(n){ return {name:n,custom:true}; });
+  var all = baseList.concat(addList).filter(function(it){
     return !q || it.name.toLowerCase().includes(q);
   });
-  el.innerHTML = list.map(function(it, i){
-    const on = selItems.includes(it.name);
-    const cls = (on ? 'item-btn on' : 'item-btn') + (it.custom ? ' custom' : '');
-    // data-attribute 방식으로 esc() 없이 안전하게 처리
-    return '<div class="'+cls+'" data-item-idx="'+i+'" onclick="togItemByIdx(this)">'
-      + esc(it.name)
-      + (it.custom ? '<span class="item-x" data-item-idx="'+i+'" onclick="event.stopPropagation();removeItemByIdx(this)">×</span>' : '')
-      + '</div>';
+  window._fnbItemList = all;
+  var el = document.getElementById('itemGrid');
+  if(!el) return;
+  el.innerHTML = all.map(function(it, i){
+    var on = selItems.includes(it.name);
+    var cls = 'item-btn'+(on?' on':'')+(it.custom?' custom':'');
+    var del = it.custom
+      ? '<span class="item-x" data-i="'+i+'" onclick="event.stopPropagation();delItemByIdx(this)">×</span>'
+      : '';
+    return '<div class="'+cls+'" data-i="'+i+'" onclick="togItemByIdx(this)">'+it.name+del+'</div>';
   }).join('');
-  // 인덱스 → 이름 매핑 저장
-  window._itemList = list.map(function(it){ return it.name; });
 }
-
 function togItemByIdx(el){
-  var idx = parseInt(el.dataset.itemIdx);
-  var name = window._itemList && window._itemList[idx];
-  if(name) togItem(name);
+  var i = parseInt(el.dataset.i);
+  var it = window._fnbItemList&&window._fnbItemList[i];
+  if(it) togItem(it.name);
+}
+function delItemByIdx(el){
+  var i = parseInt(el.dataset.i);
+  var it = window._fnbItemList&&window._fnbItemList[i];
+  if(it) removeCustomItem(it.name);
 }
 
-function removeItemByIdx(el){
-  var idx = parseInt(el.dataset.itemIdx);
-  var name = window._itemList && window._itemList[idx];
-  if(name) removeCustomItem(name);
+function addCustomItem(){
+  const input = document.getElementById('customItemInput');
+  const item = input.value.trim();
+  if(!item){ showToast('추가할 품목을 입력해주세요'); return; }
+  customItems[industry] = customItems[industry] || [];
+  if((ITEMS[industry]||[]).includes(item) || customItems[industry].includes(item)){
+    showToast('이미 있는 품목이에요'); return;
+  }
+  customItems[industry].push(item);
+  localStorage.setItem('fnb_custom_items', JSON.stringify(customItems));
+  input.value = '';
+  renderItems();
+  persistLater('customItemAdd');
 }
-
+function removeCustomItem(event, item){
+  event.stopPropagation();
+  customItems[industry] = (customItems[industry]||[]).filter(x=>x!==item);
+  selItems = selItems.filter(x=>x!==item);
+  localStorage.setItem('fnb_custom_items', JSON.stringify(customItems));
+  renderItems();
+  persistLater('customItemRemove');
+}
 function togItem(it){
-  if(!it){ console.warn('togItem: it이 없음'); return; }
-  if(selItems.includes(it)) selItems = selItems.filter(function(x){ return x!==it; });
+  if(selItems.includes(it)) selItems = selItems.filter(x=>x!==it);
   else if(selItems.length<5){ selItems.push(it); }
   else{ showToast('품목은 최대 5개까지 선택 가능해요'); return; }
   renderItems();
@@ -1401,30 +1276,6 @@ function saveClusterCache(key){
   localStorage.setItem('fnb_cluster_cache', JSON.stringify(clusterCache));
 }
 
-function renderKeywords(){
-  const groups={low:[],mid:[],high:[]};
-  kwData.forEach(k=>{ if(groups[k.difficulty]) groups[k.difficulty].push(k); });
-  const labels={low:'🎯 경쟁 낮음 (최우선)',mid:'📊 경쟁 보통',high:'🔍 틈새 키워드'};
-  let html='';
-  ['low','mid','high'].forEach(diff=>{
-    if(!groups[diff].length) return;
-    html+=`<div class="kw-group">
-      <div class="kw-group-title">${labels[diff]}<span class="kw-count">${groups[diff].length}개</span></div>
-      <div class="kw-list">${groups[diff].map(kw=>`
-        <div class="kw-item${selKws.find(x=>x.kw===kw.keyword)?' on':''}" id="kwi-${kw.index}" onclick="togKw(${kw.index})">
-          <div class="kw-chk">${selKws.find(x=>x.kw===kw.keyword)?'✓':''}</div>
-          <div class="kw-txt">${esc(kw.keyword)}</div>
-          <span class="kw-region">${esc(kw.region)}</span>
-          <span class="diff d-${diff==='low'?'lo':diff==='mid'?'mi':'hi'}">${diff==='low'?'낮음':diff==='mid'?'보통':'높음'}</span>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  });
-  document.getElementById('kwContainer').innerHTML = html || '<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">키워드가 없어요</div>';
-  updateKwBtn();
-}
-
-
 async function genKeywords(){
   if(!selDistricts.length){ showToast('지역을 선택해주세요'); return; }
   if(!selItems.length){ showToast('품목을 선택해주세요'); return; }
@@ -1454,12 +1305,12 @@ async function genKeywords(){
 [품목]: ${selItems.join(', ')}
 
 JSON만 반환 (마크다운 없이):
-{"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low"}]}
+{"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low","why":"설명"}]}
 
-총 ${targetCount}개. difficulty: low/mid/high. intent: 구매/탐색/비교/창업. why 필드 없이 4개 필드만.`;
+총 ${targetCount}개. 구매 의도 높은 롱테일 위주. difficulty: low/mid/high. intent: 구매/탐색/비교/창업`;
 
   try{
-    const text = await callClaude(prompt, 2000);
+    const text = await callClaude(prompt, 700);
     let clean = text.replace(/```json|```/g,'').trim();
     // JSON 블록만 추출
     const jStart = clean.indexOf('{');
@@ -1474,9 +1325,7 @@ JSON만 반환 (마크다운 없이):
     showToast(`${kwData.length}개 키워드 추출 완료!`);
     persistLater('keywordsGenerated');
   }catch(e){
-    var msg = e && e.message ? e.message.substring(0,80) : String(e).substring(0,80);
-    showToast('추출 실패: ' + msg);
-    console.error('genKeywords error:', e);
+    showToast('키워드 추출 실패 — API 키 확인해주세요');
   }
   btn.innerHTML='<i class="ti ti-search"></i> 롱테일 키워드 추출'; btn.disabled=false;
 }
@@ -1543,6 +1392,15 @@ function goToCluster(){
 ══════════════════════════════════════ */
 async function genCluster(){
   if(!selKws.length){ showToast('먼저 키워드를 선택해주세요'); return; }
+  const cacheKey = stableKey({industry, selKws});
+  if(clusterCache[cacheKey] && Array.isArray(clusterCache[cacheKey].clusterData)){
+    clusterData = clusterCache[cacheKey].clusterData;
+    document.getElementById('clusterResult').style.display='block';
+    renderCluster();
+    showToast('저장된 클러스터를 불러왔어요');
+    persistLater('clusterCacheHit');
+    return;
+  }
 
   const btn = document.getElementById('clusterGenBtn');
   btn.innerHTML='<i class="ti ti-loader-2"></i> 생성 중...'; btn.disabled=true;
@@ -1551,61 +1409,61 @@ async function genCluster(){
 
   const progList = document.getElementById('clusterProgList');
   const steps = ['검색 의도 분석 중...','콘텐츠 맵 생성 중...','핵심 글 기획 중...','우선순위 분류 중...'];
-  progList.innerHTML = steps.map((s,i)=>'<div class="pi wait" id="cp'+i+'"><span>⏳</span> '+s+'</div>').join('');
+  progList.innerHTML = steps.map((s,i)=>`<div class="pi wait" id="cp${i}"><span>⏳</span> ${s}</div>`).join('');
 
-  let si = 0;
-  let progInterval = setInterval(function(){
-    var w = document.querySelector('.pi.wait');
-    if(w){ w.className='pi doing'; w.querySelector('span').textContent='✍️'; }
-    si++;
-    document.getElementById('clusterProgFill').style.width = Math.min(si*20,90)+'%';
+  let progInterval = setInterval(()=>{
+    const waiting = document.querySelector('.pi.wait');
+    if(waiting){ waiting.className='pi doing'; waiting.querySelector('span').textContent='✍️'; }
   }, 1500);
 
-  const kwList = selKws.map(function(k){ return k.kw; }).join(', ');
-  const regions = [...new Set(selKws.map(function(k){ return k.region; }))].join(', ');
-  const targetCount = Math.min(15, Math.max(8, selKws.length * 2));
+  const kwList = selKws.map(k=>k.kw).join(', ');
+  const regions = [...new Set(selKws.map(k=>k.region))].join(', ');
 
-  // 간소화된 JSON 구조 (필드 최소화로 토큰 절약)
-  const prompt = 'F&B 식자재 중개 블로그 Topic Cluster를 생성하세요.\n\n'
-    + '업종: ' + industry + '\n'
-    + '지역: ' + regions + '\n'
-    + '키워드: ' + kwList + '\n\n'
-    + '아래 JSON으로만 응답 (설명 없이):\n'
-    + '{"cluster":[{"title":"제목","keyword":"핵심키워드","intent":"납품","priority":"high","region":"서울 강남구","type":"정보성"}]}\n\n'
-    + targetCount + '개 생성. intent: 납품/원가절감/창업/비교/정보/거래처변경. priority: high/mid/low. type: 정보성/원가절감/납품노하우/창업컨설팅/트렌드/비교';
+  const targetCount = Math.min(24, Math.max(12, selKws.length * 3));
+  const prompt = `F&B 식자재 중개 블로그를 위한 Topic Cluster를 생성해주세요.
+
+[업종]: ${industry}
+[지역]: ${regions}
+[선택 키워드]: ${kwList}
+
+이 키워드들을 기반으로 네이버 SEO에 최적화된 블로그 글 기획 ${targetCount}개를 생성해주세요.
+각 글은 검색 의도가 다르고, 서로 내부링크로 연결될 수 있어야 합니다.
+
+JSON만 반환 (마크다운 없이):
+{"cluster":[
+  {"title":"강남 삼겹살 납품업체 비교 TOP5","keyword":"강남 삼겹살 납품","intent":"비교","priority":"high","region":"서울 강남구","type":"정보성"},
+  ...
+]}
+
+intent: 창업/원가절감/거래처변경/납품/정보/비교 중 하나
+priority: high/mid/low
+type: 정보성/원가절감/납품노하우/창업컨설팅/트렌드/비교
+
+${targetCount}개 생성. 구매·비교·납품 의도 우선, 중복 제목 금지.`;
 
   try{
-    const text = await callClaude(prompt, 2000);
+    const text = await callClaude(prompt, 900);
     let clean = text.replace(/```json|```/g,'').trim();
-    const s = clean.indexOf('{');
-    const e = clean.lastIndexOf('}');
-    if(s > -1 && e > s) clean = clean.slice(s, e+1);
+    const jStart = clean.indexOf('{');
+    const jEnd = clean.lastIndexOf('}');
+    if(jStart > -1 && jEnd > -1) clean = clean.slice(jStart, jEnd+1);
     const parsed = JSON.parse(clean);
-    clusterData = parsed.cluster || [];
-
+    clusterData = parsed.cluster||[];
+    saveClusterCache(cacheKey);
     clearInterval(progInterval);
-    steps.forEach(function(_,i){
-      var el = document.getElementById('cp'+i);
-      if(el){ el.className='pi done'; el.querySelector('span').textContent='✅'; }
-    });
-    document.getElementById('clusterProgFill').style.width='100%';
-
-    setTimeout(function(){
+    steps.forEach((_,i)=>{ const el=document.getElementById('cp'+i); if(el){el.className='pi done';el.querySelector('span').textContent='✅';} });
+    setTimeout(()=>{
       document.getElementById('clusterProg').classList.remove('show');
       document.getElementById('clusterResult').style.display='block';
       renderCluster();
-    }, 600);
-
-    showToast(clusterData.length+'개 콘텐츠 클러스터 생성 완료!');
-
+    }, 800);
+    showToast(`${clusterData.length}개 콘텐츠 클러스터 생성 완료!`);
+    persistLater('clusterGenerated');
   }catch(e){
     clearInterval(progInterval);
+    showToast('클러스터 생성 실패 — 다시 시도해주세요');
     document.getElementById('clusterProg').classList.remove('show');
-    var msg = e && e.message ? e.message.substring(0,80) : String(e).substring(0,80);
-    showToast('클러스터 생성 실패: ' + msg);
-    console.error('genCluster error:', e);
   }
-
   btn.innerHTML='<i class="ti ti-wand"></i> 클러스터 자동 생성'; btn.disabled=false;
 }
 
@@ -1633,66 +1491,110 @@ function selAllCluster(){
   persistLater('clusterSelectAll');
 }
 async function writeSelected(){
-  if(!selClusters.length){ showToast('글을 선택해주세요'); return; }
+  if(!selClusters.length){ showToast('글 기획을 선택해주세요'); return; }
   if(autoRunning){ showToast('이미 자동화 실행 중이에요'); return; }
-
-  // 선택된 클러스터를 우선순위 순으로 정렬
   var items = selClusters.map(function(i){ return clusterData[i]; }).filter(Boolean);
-  items.sort(function(a,b){
-    var p = {high:0, mid:1, low:2};
-    return (p[a.priority]||1) - (p[b.priority]||1);
-  });
-
-  if(!items.length){ showToast('선택된 글 기획이 없어요'); return; }
-
+  items.sort(function(a,b){ var p={high:0,mid:1,low:2}; return (p[a.priority]||1)-(p[b.priority]||1); });
   autoRunning = true;
-  autoLog = [];
-
-  // 진행 모달 표시
   showAutoModal();
-  updateAutoModal('step1', '✅', '키워드/클러스터 선택 완료');
-  updateAutoModal('step2', '✅', '글 기획 '+items.length+'개 선택됨');
-  updateAutoModal('step3', '⏳', '글 작성 시작 (0/'+items.length+')...');
-
-  var successCount = 0;
-  var total = items.length;
-
-  for(var i = 0; i < items.length; i++){
+  updateAutoModal('step1','✅','키워드/클러스터 선택 완료');
+  updateAutoModal('step2','✅','글 기획 '+items.length+'개 선택');
+  updateAutoModal('step3','⏳','글 작성 시작...');
+  var ok=0, total=items.length;
+  for(var i=0;i<items.length;i++){
     if(!autoRunning) break;
-    var item = items[i];
-    var detailEl = document.getElementById('autoStep3Detail');
-    if(detailEl) detailEl.innerHTML = '📝 ('+(i+1)+'/'+total+') '+esc(item.title||item.keyword||'')+'...';
-
-    try{
-      var result = await writeOnePost(item, i, total, null);
-      if(result && result.success) successCount++;
-    }catch(e){
-      console.warn('글 '+i+' 실패:', e);
-    }
-
-    var progEl = document.getElementById('autoProgress');
-    if(progEl) progEl.style.width = Math.round((i+1)/total*100)+'%';
-    updateAutoModal('step3', '⏳', '작성 중 ('+(i+1)+'/'+total+') — 완료 '+successCount+'개');
+    var detEl=document.getElementById('autoStep3Detail');
+    if(detEl) detEl.innerHTML='📝 ('+(i+1)+'/'+total+') '+(items[i].title||items[i].keyword||'')+'...';
+    try{ var r=await writeOnePost(items[i],i,total,null); if(r&&r.success) ok++; }
+    catch(e){ console.warn(e); }
+    var pr=document.getElementById('autoProgress');
+    if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
+    updateAutoModal('step3','⏳','작성 중 ('+(i+1)+'/'+total+') 완료 '+ok+'개');
   }
-
-  updateAutoModal('step3', '✅', '글 작성 완료 ('+successCount+'/'+total+'개)');
-  updateAutoModal('step4', '✅', '구글 시트 [작성글] 탭 자동 저장 완료');
-
-  var doneEl = document.getElementById('autoDone');
-  var summEl = document.getElementById('autoSummary');
-  if(doneEl) doneEl.style.display='block';
-  if(summEl) summEl.textContent = successCount+'개 포스팅이 구글 시트 [작성글] 탭에 저장됐어요!';
-
-  updateDashboard();
-  updateAnalytics();
-  renderHistList();
-  autoRunning = false;
+  updateAutoModal('step3','✅','완료 ('+ok+'/'+total+'개)');
+  updateAutoModal('step4','✅','구글 시트 저장 완료');
+  var dn=document.getElementById('autoDone');
+  var sm=document.getElementById('autoSummary');
+  if(dn) dn.style.display='block';
+  if(sm) sm.textContent=ok+'개 포스팅이 구글 시트에 저장됐어요!';
+  updateDashboard(); renderHistList();
+  autoRunning=false;
 }
-
 
 /* ══════════════════════════════════════
    AI Writer
 ══════════════════════════════════════ */
+function buildWriterPrompt(kw, region, type, length, options){
+  const parts = (region||'').split(' ');
+  const regKey = parts[0];
+  const distKey = parts.slice(1).join(' ');
+  const areaInfo = useLocal ? ((AREA_DATA[regKey]||{})[distKey]||{}) : {};
+  const genInfo = useGeneral ? (GENERAL_DATA[industry]||{}) : {};
+  const month = new Date().getMonth()+1;
+  const ph = phone||'상담 문의';
+
+  const localBlock = useLocal && Object.keys(areaInfo).length ? `
+[지역 상권 특성]
+- 상권: ${areaInfo.tags||''}
+- 주요 식재료 수요: ${areaInfo.food||''}
+- 가격 수준: ${areaInfo.price||''}
+- 타겟 업종: ${areaInfo.target||''}
+- 영업 팁: ${areaInfo.tip||''}` : '';
+
+  const generalBlock = useGeneral && Object.keys(genInfo).length ? `
+[일반 데이터]
+- ${month}월 시즌: ${(genInfo.season||{})[String(month)]||''}
+- 트렌드: ${genInfo.trend||''}
+- 원가절감: ${genInfo.cost_tip||''}
+- 납품 팁: ${genInfo.supply_tip||''}
+- 단가 정보: ${genInfo.items_detail||''}` : '';
+
+  const optStr = options.join(', ');
+
+  return `당신은 F&B 식자재 중개 영업 전문 네이버 블로그 작성자입니다.
+
+[핵심 키워드]: "${kw}" ← 네이버 1페이지 노출 목표
+[타겟 지역]: ${region||'수도권'}
+[업종]: ${industry}
+[콘텐츠 타입]: ${type}
+[목표 글자수]: ${length}자
+[포함 요소]: ${optStr}
+${localBlock}
+${generalBlock}
+[연락처] 카카오: ${KAKAO} / 블로그: ${BLOG} / 전화: ${ph}
+
+아래 형식으로 작성해주세요:
+
+**제목**: "${kw}" 포함 + 클릭 유도 제목 (이모지 1-2개)
+
+**본문** (${length}자):
+
+[도입부 200-250자]
+${region} 식당 사장님 공감 포인트로 시작. ${month}월 시즌 반영.
+
+[본론1 소제목] (500-600자)
+${region} 지역 특성 + "${kw}" 실질적 정보. 구체적 수치 포함.
+
+[본론2 소제목] (500-600자)
+원가절감·납품 실전 정보. 단가 정보 포함.
+
+[본론3 소제목] (400-500자)
+${options.includes('비교표') ? '비교표 포함.' : ''} ${options.includes('체크리스트') ? '체크리스트 포함.' : ''}
+
+${options.includes('FAQ') ? `[FAQ] (300-400자)
+Q1: 자주 묻는 질문 5개 + 답변` : ''}
+
+[마무리 CTA] (150-200자)
+무료 상담 강조. 카카오: ${KAKAO} / 전화: ${ph}
+
+${options.includes('이미지위치') ? '본문 내 [이미지: 설명] 형식으로 이미지 삽입 위치 3-5곳 표시' : ''}
+
+**해시태그**: #${kw.replace(/\s/g,'')} 포함 20개
+(${region} 지역명 + 업종 + 식자재 + 납품 키워드 조합)
+
+본문에 "${kw}" 4-6회 자연스럽게 반복. 소제목은 **굵게**.`;
+}
+
 async function generatePost(){
   const kw = document.getElementById('writerKw').value.trim();
   if(!kw){ showToast('키워드를 입력해주세요'); return; }
@@ -1912,16 +1814,11 @@ function updateDashboard(){
   const today = new Date().toLocaleDateString('ko-KR');
   const todayCnt = history.filter(h=>h.date===today).length;
   const total = history.length;
-  const doneCnt = history.filter(function(h){ return h.uploadStatus === 'done'; }).length;
   document.getElementById('stat-today').textContent = todayCnt;
   document.getElementById('stat-total').textContent = total;
   document.getElementById('stat-traffic').textContent = (total*50).toLocaleString();
   document.getElementById('stat-leads').textContent = Math.round(total*50*0.03);
-  document.getElementById('stat-regions').textContent = [...new Set(history.map(function(h){ return h.region; }))].length;
-  const doneEl = document.getElementById('stat-done');
-  if(doneEl) doneEl.textContent = doneCnt;
-  const pendingEl = document.getElementById('stat-pending');
-  if(pendingEl) pendingEl.textContent = total - doneCnt;
+  document.getElementById('stat-regions').textContent = [...new Set(history.map(h=>h.region))].length;
 
   const recent = document.getElementById('dash-recent');
   if(history.length){
@@ -1943,60 +1840,25 @@ function updateAnalytics(){
 }
 
 function renderHistList(){
-  filterHistory();
-  return;
-  var el = document.getElementById('histList');
-  if(!history.length){
-    el.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px;background:var(--w);border-radius:var(--r);border:1px solid var(--bd)">아직 작성된 글이 없어요</div>';
-    return;
-  }
-  el.innerHTML = history.map(function(h,i){
-    const isDone = h.uploadStatus === 'done';
-    const statusCls = isDone ? 'hist-status hs-done' : 'hist-status hs-pending';
-    const statusTxt = isDone ? '✅ 발행완료' : '⏳ 미발행';
-    return '<div class="hist-item" style="position:relative">'
-      + '<div onclick="showHistDetail('+i+')" style="cursor:pointer">'
-      + '<div class="hist-title">'+esc(h.title||h.kw)+'</div>'
-      + '<div class="hist-meta">'+esc(h.region)+' · '+esc(h.type)+'</div>'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">'
-      + '<span style="font-size:9px;color:var(--gray)">'+h.date+'</span>'
-      + '<span class="'+statusCls+'" onclick="event.stopPropagation();toggleUploadStatus('+i+')">'+statusTxt+'</span>'
-      + '</div>'
-      + '</div>'
-      + '</div>';
-  }).join('');
+  const el = document.getElementById('histList');
+  if(!history.length){ el.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px;background:var(--w);border-radius:var(--r);border:1px solid var(--bd)">아직 작성된 글이 없어요</div>'; return; }
+  el.innerHTML = history.map((h,i)=>`
+    <div class="hist-item" onclick="showHistDetail(${i})">
+      <div class="hist-title">${esc(h.title||h.kw)}</div>
+      <div class="hist-meta">${esc(h.region)} · ${esc(h.type)}</div>
+      <div class="hist-saved">✅ ${h.date}</div>
+    </div>`).join('');
 }
 
 function showHistDetail(i){
   const h = history[i];
-  if(!h) return;
-  const isDone = h.uploadStatus === 'done';
-  const el = document.getElementById('histDetail');
-  el.innerHTML =
-    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">'
-    + '<div class="post-title" style="font-size:15px;flex:1;margin-right:10px">'+esc(h.title||h.kw)+'</div>'
-    + '<button class="status-badge '+(isDone?'status-done':'status-pending')+'" id="detailStatusBtn" onclick="toggleUploadStatus('+i+')">'
-    + (isDone?'✅ 발행완료':'⏳ 미발행')
-    + '</button>'
-    + '</div>'
-    + '<div style="font-size:11px;color:var(--gray);margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">'
-    + '<span>📍 '+esc(h.region)+'</span>'
-    + '<span>📝 '+esc(h.type)+'</span>'
-    + '<span>📏 '+(h.chars||0).toLocaleString()+'자</span>'
-    + '<span>📅 '+h.date+'</span>'
-    + '</div>'
-    + '<button class="copy-full-btn" id="copyFullBtn" onclick="copyFullPost('+i+')">'
-    + '<i class="ti ti-copy"></i> 전체 복사 (제목+본문+CTA+해시태그)'
-    + '</button>'
-    + '<button onclick="copyOnlyBody('+i+')" style="width:100%;padding:8px;background:var(--bg);color:var(--d2);border:1.5px solid var(--bd);border-radius:var(--rs);font-size:11px;font-weight:600;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:5px">'
-    + '<i class="ti ti-text"></i> 본문만 복사'
-    + '</button>'
-    + '<div style="background:var(--bg);border-radius:var(--rs);padding:14px;max-height:400px;overflow-y:auto;font-size:12px;line-height:1.9;color:var(--d2);white-space:pre-wrap;border:1px solid var(--bd)">'+esc(h.body)+'</div>'
-    + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">'
-    + (h.tags||[]).slice(0,15).map(function(t){ return '<span style="background:var(--bg);color:var(--gray);padding:2px 7px;border-radius:8px;font-size:10px">'+esc(t)+'</span>'; }).join('')
-    + '</div>';
+  document.getElementById('histDetail').innerHTML=`
+    <div class="post-title" style="font-size:16px">${esc(h.title||h.kw)}</div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">${esc(h.region)} · ${esc(h.type)} · ${h.chars.toLocaleString()}자 · ${h.date}</div>
+    <div class="post-body">${esc(h.body)}</div>
+    <div class="post-tags" style="margin-top:12px">${(h.tags||[]).slice(0,15).map(t=>`<span class="post-tag">${esc(t)}</span>`).join('')}</div>
+    <button class="btn btn-green" style="margin-top:14px;width:100%" onclick="copyHistPost(${i})"><i class="ti ti-copy"></i> 복사</button>`;
 }
-
 
 function copyHistPost(i){
   const h = history[i];
@@ -2050,644 +1912,141 @@ async function initApp(){
 }
 initApp();
 
-function toggleGuide(){
-  var btn=document.getElementById('guideBtn');
-  var con=document.getElementById('guideContent');
-  if(!btn||!con)return;
-  btn.classList.toggle('open');
-  con.classList.toggle('show');
-}
-
-
-/* ══════════════════════════════════════
-   원클릭 전체 자동화
-══════════════════════════════════════ */
-var autoRunning = false;
-var autoLog = [];
-
-function buildPostPrompt(kw, region, type){
-  const parts = (region||'').split(' ');
-  const regKey = parts[0];
-  const distKey = parts.slice(1).join(' ');
-  const areaInfo = useLocal ? ((AREA_DATA[regKey]||{})[distKey]||{}) : {};
-  const genInfo = useGeneral ? (GENERAL_DATA[industry]||{}) : {};
-  const month = new Date().getMonth()+1;
-  const ph = phone||'카카오 오픈채팅 문의';
-  const monthNames = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-
-  // 지역 데이터
-  const localCtx = useLocal && areaInfo.tags ? [
-    '상권 특성: ' + areaInfo.tags,
-    '주요 식재료 수요: ' + (areaInfo.food||''),
-    '타겟 업종: ' + (areaInfo.target||''),
-    '가격 수준: ' + (areaInfo.price||''),
-    '영업 인사이트: ' + (areaInfo.tip||''),
-  ].join('
-') : '';
-
-  // 업종 데이터
-  const genCtx = useGeneral && genInfo.season ? [
-    monthNames[month] + ' 시즌 정보: ' + ((genInfo.season||{})[String(month)]||''),
-    '현재 트렌드: ' + (genInfo.trend||''),
-    '원가절감 핵심: ' + (genInfo.cost_tip||''),
-    '납품 노하우: ' + (genInfo.supply_tip||''),
-    '주요 품목 단가: ' + (genInfo.items_detail||''),
-  ].join('
-') : '';
-
-  // 콘텐츠 타입별 전략
-  const typeStrategy = {
-    '정보성 SEO': '검색자의 궁금증을 해결하는 정보 중심 글. 실제 수치와 사례로 신뢰를 구축.',
-    '원가절감': '식당 사장님의 고민인 원가를 실질적으로 절감할 수 있는 방법 중심. 구체적 숫자 필수.',
-    '납품 노하우': '납품처 선택부터 계약까지 실전 노하우. 경험에서 나오는 실용적 팁.',
-    '창업 컨설팅': '창업 초기 식자재 셋팅부터 운영까지. 실수를 줄여주는 체크리스트 형식.',
-    '대체 식자재': '원가 부담을 줄이는 대체 식재료 소개. 품질은 유지하면서 비용 절감.',
-    '트렌드': '최신 F&B 트렌드와 식자재 시장 변화. 선제적으로 준비할 수 있는 정보.',
-  };
-  const strategy = typeStrategy[type] || '실용적 정보 중심으로 식당 사장님에게 도움이 되는 글 작성.';
-
-  return `당신은 F&B 식자재 중개 전문가이자 네이버 SEO 블로그 전문 작가입니다.
-10년 이상 수도권 식자재 유통 시장을 분석하고 식당 사장님들과 직접 소통한 경험을 바탕으로 글을 씁니다.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📌 핵심 키워드: "${kw}"
-🗺 타겟 지역: ${region||'수도권'}
-🍽 업종: ${industry}
-📝 콘텐츠 전략: ${type}
-📅 작성 시점: ${monthNames[month]}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${localCtx ? '[지역 상권 인텔리전스]
-' + localCtx + '
-' : ''}
-${genCtx ? '[업종 시장 인텔리전스]
-' + genCtx + '
-' : ''}
-[콘텐츠 전략]
-${strategy}
-
-[연락처 — 글 마지막에 자연스럽게 삽입]
-카카오 오픈채팅: https://open.kakao.com/o/shEOWEth
-네이버 블로그: https://blog.naver.com/yeong44
-전화: ${ph}
-
-━━━━ 작성 가이드라인 ━━━━
-
-**제목 작성 규칙**
-- 반드시 "${kw}" 키워드 포함
-- 클릭을 유도하는 숫자 또는 구체적 결과 포함 (예: TOP5, 30% 절감, 3가지)
-- 이모지 1-2개로 시선 집중
-- 예시: "🥩 강남 삼겹살 납품업체 TOP5 — 고급 한식당이 선택한 이유"
-
-**본문 구조 (2000-2500자)**
-
-[도입부: 200자]
-- ${region} 지역 ${areaInfo.target||industry} 사장님이 실제로 겪는 문제 또는 상황으로 시작
-- ${monthNames[month]} 시즌 특성을 자연스럽게 녹임
-- "이 글을 읽고 나면 ___를 해결할 수 있습니다" 형식으로 독자 기대감 형성
-
-[본론 1 — 핵심 정보: 600-700자]
-소제목: **${region} ${industry} 사장님이 꼭 알아야 할 ___**
-- "${kw}"에 대한 가장 중요한 정보
-- ${areaInfo.tags ? region + ' 상권 특성(' + areaInfo.tags + ')과 연결하여 맞춤 정보 제공' : '지역 특성을 반영한 맞춤 정보'}
-- 구체적 수치 반드시 포함 (단가, %, 기간 등)
-- 독자가 바로 실행할 수 있는 내용
-
-[본론 2 — 실전 노하우: 600-700자]
-소제목: **실제 현장에서 통하는 ___방법**
-- ${genCtx ? '원가절감 팁: ' + (genInfo.cost_tip||'') + ' — 이를 바탕으로 구체적 실행 방법 제시' : '현장 경험에서 나온 실전 팁'}
-- Before/After 또는 비교 형식으로 효과 명확히 표현
-- "제가 상담한 ${region} 식당 사장님 사례에서는..." 형식의 사례 활용
-
-[본론 3 — 체크리스트/FAQ: 400-500자]
-소제목: **${region} ${industry} 사장님 체크리스트**
-- 실행 가능한 3-5개 항목의 체크리스트 형식
-- 또는 자주 묻는 질문 3개 + 간결한 답변
-
-[마무리 CTA: 150-200자]
-- "지금 당장 납품처를 바꾸기 어렵다면, 먼저 무료 상담을 받아보세요"
-- ${region} 지역 전담 상담 가능 강조
-- 카카오: https://open.kakao.com/o/shEOWEth / 전화: ${ph}
-
-**해시태그: 20개**
-- 필수: #${kw.replace(/\s/g,'')} #${(region||'').replace(/\s/g,'')} #${industry.replace(/\//g,'')}
-- 지역 상권 태그: #${(parts[0]||'')}맛집 #${distKey.replace(/\s/g,'')}식자재 #${distKey.replace(/\s/g,'')}납품
-- 업종 태그: #식자재납품 #식자재유통 #납품업체추천 #원가절감
-- 시즌 태그: #${monthNames[month]}추천 #${monthNames[month]}시즌
-
-**작성 원칙**
-1. "${kw}" 키워드를 본문에 자연스럽게 4-6회 반복
-2. 모든 소제목은 **굵게** 표시
-3. 광고 티 나지 않게, 진짜 도움이 되는 정보 중심
-4. 수도권 73개 지역 상권 데이터 기반 전문성 표현
-5. 독자(식당 사장님)의 언어로 — 어렵지 않게, 현실적으로`;
-}
-
-
-async function writeOnePost(item, idx, total, progressEl){
-  const kw = item.keyword || item.title || '';
-  const region = item.region || (selDistricts[0] ? selDistricts[0].region+' '+selDistricts[0].district : '수도권');
-  const type = item.type || '정보성 SEO';
-
-  if(progressEl){
-    progressEl.innerHTML = '📝 (' + (idx+1) + '/' + total + ') ' + esc(kw) + ' 작성 중...';
-  }
-
-  const prompt = buildPostPrompt(kw, region, type);
-  const text = await callClaude(prompt, 2000);
-
-  // 파싱
-  const titleM = text.match(/\*\*제목\*\*[:\s]*(.*)/);
-  const title = titleM ? titleM[1].trim().replace(/\*\*/g,'') : kw;
-  const hashM = text.match(/\*\*해시태그\*\*[:\s]*([\s\S]*?)$/);
-  const tags = hashM ? hashM[1].trim().split(/[\s,\n]+/).filter(function(t){ return t.startsWith('#'); }) : [];
-  const body = text
-    .replace(/\*\*제목\*\*.*\n?/,'')
-    .replace(/\*\*해시태그\*\*[\s\S]*$/,'')
-    .replace(/\*\*본문\*\*[:\s]*/,'')
-    .replace(/\*\*/g,'')
-    .trim();
-
-  const entry = {
-    date: new Date().toLocaleDateString('ko-KR'),
-    region: region,
-    keyword: kw,
-    industry: industry,
-    type: type,
-    title: title,
-    body: body,
-    hashtags: tags.join(' '),
-    chars: body.length,
-    status: '자동생성'
-  };
-
-  // 시트 저장 (실패해도 계속 진행)
-  try{
-    await fetch(SHEET_ENDPOINT, {
-      method: 'POST',
-      headers: {'Content-Type': 'text/plain;charset=utf-8'},
-      body: JSON.stringify(Object.assign({}, entry, {sheetId: SHEET_ID, body: body.substring(0,800)}))
-    });
-  }catch(sheetErr){
-    console.warn('시트 저장 실패 (계속 진행):', sheetErr);
-  }
-
-  // 히스토리 추가
-  history.unshift(Object.assign({id:'a'+Date.now()+Math.random()}, entry, {tags: tags}));
-  if(history.length > 100) history.pop();
-
-  return {success: true, title: title, kw: kw, region: region, chars: body.length};
-}
-
-
-async function startAutoMode(){
-  // 선택 항목 체크
-  if(!selDistricts.length){
-    goPage('keyword', document.querySelectorAll('.nav-tab')[2]);
-    showToast('먼저 지역을 선택해주세요');
-    return;
-  }
-  if(!selItems.length){
-    goPage('keyword', document.querySelectorAll('.nav-tab')[2]);
-    showToast('먼저 품목을 선택해주세요');
-    return;
-  }
-  if(autoRunning){ showToast('이미 자동화 실행 중이에요'); return; }
-
-  autoRunning = true;
-  autoLog = [];
-  showAutoModal();
-
-  try{
-    // ── Step 1: 키워드 추출 ──
-    updateAutoModal('step1', '⏳', '키워드 추출 중...');
-    await genKeywords();
-    if(!kwData.length) throw new Error('키워드 추출 실패 — 지역/품목을 확인해주세요');
-
-    // 검색량/노출 우선순위: low > mid > high 순 정렬 후 최대 10개 선택
-    var sorted_kw = kwData.slice().sort(function(a,b){
-      var p = {low:0, mid:1, high:2};
-      return (p[a.difficulty]||1) - (p[b.difficulty]||1);
-    });
-    selKws = [];
-    sorted_kw.slice(0, 10).forEach(function(k){
-      selKws.push({kw: k.keyword, region: k.region});
-    });
-    updateAutoModal('step1', '✅', '키워드 '+kwData.length+'개 추출 → '+selKws.length+'개 선택 (경쟁 낮은 순)');
-
-    // ── Step 2: Topic Cluster 생성 ──
-    updateAutoModal('step2', '⏳', '글 기획 (Topic Cluster) 생성 중...');
-    await genCluster();
-    if(!clusterData.length) throw new Error('글 기획 생성 실패');
-
-    // 우선순위 순 정렬 (high > mid > low)
-    var sortedCluster = clusterData.slice().sort(function(a,b){
-      var p = {high:0, mid:1, low:2};
-      return (p[a.priority]||1) - (p[b.priority]||1);
-    });
-    updateAutoModal('step2', '✅', '글 기획 '+sortedCluster.length+'개 완료 (우선순위 정렬)');
-
-    // ── Step 3: 전체 글 자동 작성 ──
-    var total = sortedCluster.length;
-    var successCount = 0;
-    var failCount = 0;
-    updateAutoModal('step3', '⏳', '글 작성 시작 (0/'+total+')...');
-
-    for(var i = 0; i < sortedCluster.length; i++){
-      if(!autoRunning){
-        updateAutoModal('step3', '⏹', '중단됨 ('+successCount+'/'+total+')');
-        break;
-      }
-      var item = sortedCluster[i];
-      var detailEl = document.getElementById('autoStep3Detail');
-      if(detailEl) detailEl.innerHTML = '📝 ('+(i+1)+'/'+total+') '+esc(item.title||item.keyword||'')+'...';
-
-      try{
-        var result = await writeOnePost(item, i, total, null);
-        if(result && result.success) successCount++;
-        else failCount++;
-      }catch(writeErr){
-        failCount++;
-        console.warn('글 '+i+' 실패:', writeErr);
-      }
-
-      var pct = Math.round((i+1)/total*100);
-      var progEl = document.getElementById('autoProgress');
-      if(progEl) progEl.style.width = pct+'%';
-      updateAutoModal('step3', '⏳', '글 작성 중 ('+(i+1)+'/'+total+') — 완료 '+successCount+'개');
-    }
-
-    updateAutoModal('step3', '✅', '글 작성 완료 ('+successCount+'/'+total+'개)');
-    updateAutoModal('step4', '✅', '구글 시트 자동 저장 완료 (작성글 탭)');
-
-    var doneEl = document.getElementById('autoDone');
-    var summEl = document.getElementById('autoSummary');
-    if(doneEl) doneEl.style.display='block';
-    if(summEl) summEl.textContent = '총 '+successCount+'개 포스팅 완료! 구글 시트 [작성글] 탭에서 복사 후 네이버 블로그에 발행하세요.';
-
-    updateDashboard();
-    updateAnalytics();
-    renderHistList();
-
-  }catch(e){
-    console.error('자동화 오류:', e);
-    var errEl = document.getElementById('autoError');
-    var errMsgEl = document.getElementById('autoErrorMsg');
-    if(errEl) errEl.style.display='block';
-    if(errMsgEl) errMsgEl.textContent = e.message||String(e);
-  }
-
-  autoRunning = false;
-}
-
-
-function stopAutoMode(){
-  autoRunning = false;
-  showToast('자동화를 중단했어요');
-}
-
-function showAutoModal(){
-  var modal = document.getElementById('autoModal');
-  if(!modal){
-    var m = document.createElement('div');
-    m.id = 'autoModal';
-    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;display:flex;align-items:center;justify-content:center';
-    m.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;width:480px;max-width:90vw">'
-      + '<h3 style="font-size:16px;font-weight:800;margin-bottom:6px">🚀 전체 자동화 실행 중</h3>'
-      + '<p style="font-size:12px;color:var(--gray);margin-bottom:20px">키워드 추출 → 글 기획 → 글 작성 → 시트 저장</p>'
-      + '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">'
-      + '<div id="autoStep1" style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep1Icon">⏳</span><span id="autoStep1Text">키워드 추출 대기중</span></div>'
-      + '<div id="autoStep2" style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep2Icon">⏸</span><span id="autoStep2Text">글 기획 대기중</span></div>'
-      + '<div id="autoStep3" style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep3Icon">⏸</span><span id="autoStep3Text">글 작성 대기중</span></div>'
-      + '<div id="autoStep3Detail" style="font-size:11px;color:var(--gray);padding-left:24px;min-height:16px"></div>'
-      + '<div id="autoStep4" style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep4Icon">⏸</span><span id="autoStep4Text">시트 저장 대기중</span></div>'
-      + '</div>'
-      + '<div style="background:var(--bg);border-radius:8px;height:6px;margin-bottom:16px"><div id="autoProgress" style="height:100%;background:var(--g);border-radius:8px;transition:width .3s;width:0%"></div></div>'
-      + '<div id="autoDone" style="display:none;background:var(--g2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:#166534">'
-      + '✅ <strong>완료!</strong> <span id="autoSummary"></span></div>'
-      + '<div id="autoError" style="display:none;background:var(--red2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--red)">'
-      + '❌ 오류: <span id="autoErrorMsg"></span></div>'
-      + '<div style="display:flex;gap:8px">'
-      + '<button onclick="stopAutoMode()" style="flex:1;padding:10px;border:1.5px solid var(--bd);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600">⏹ 중단</button>'
-      + '<a href="https://docs.google.com/spreadsheets/d/1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU/edit" target="_blank" style="flex:1;padding:10px;background:var(--g);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center">📊 시트 열기</a>'
-      + '</div>'
-      + '</div>';
-    document.body.appendChild(m);
-  } else {
-    modal.style.display = 'flex';
-    // 리셋
-    ['1','2','3','4'].forEach(function(n){
-      document.getElementById('autoStep'+n+'Icon').textContent = n==='1'?'⏳':'⏸';
-      document.getElementById('autoStep'+n+'Text').textContent = ['키워드 추출 대기중','글 기획 대기중','글 작성 대기중','시트 저장 대기중'][parseInt(n)-1];
-    });
-    document.getElementById('autoProgress').style.width = '0%';
-    document.getElementById('autoDone').style.display = 'none';
-    document.getElementById('autoError').style.display = 'none';
-  }
-}
-
-function updateAutoModal(step, icon, text){
-  var n = step.replace('step','');
-  var iconEl = document.getElementById('autoStep'+n+'Icon');
-  var textEl = document.getElementById('autoStep'+n+'Text');
-  if(iconEl) iconEl.textContent = icon;
-  if(textEl) textEl.textContent = text;
-}
-
-
-function copyFullPost(i){
-  const h = history[i];
-  if(!h) return;
-  const ph = phone || '';
-  const cta = '\n\n━━━━━━━━━━━━━━━━━━━━\n'
-    + '📦 식자재 무료 상담\n'
-    + '💬 카카오: https://open.kakao.com/o/shEOWEth\n'
-    + '📝 블로그: https://blog.naver.com/yeong44\n'
-    + (ph ? '📱 전화: '+ph+'\n' : '')
-    + '━━━━━━━━━━━━━━━━━━━━';
-  const full = (h.title||h.kw) + '\n\n' + (h.body||'') + cta + '\n\n' + (h.tags||[]).join(' ');
-  navigator.clipboard.writeText(full).then(function(){
-    const btn = document.getElementById('copyFullBtn');
-    if(btn){ btn.classList.add('copied'); btn.innerHTML='<i class="ti ti-check"></i> 복사 완료!'; }
-    showToast('전체 복사 완료! 네이버 블로그에 붙여넣으세요');
-    setTimeout(function(){
-      if(btn){ btn.classList.remove('copied'); btn.innerHTML='<i class="ti ti-copy"></i> 전체 복사 (제목+본문+CTA+해시태그)'; }
-    }, 2000);
-  });
-}
-
-function copyOnlyBody(i){
-  const h = history[i];
-  if(!h) return;
-  navigator.clipboard.writeText(h.body||'').then(function(){
-    showToast('본문 복사 완료!');
-  });
-}
-
-async function toggleUploadStatus(i){
-  const h = history[i];
-  if(!h) return;
-
-  // 상태 토글
-  h.uploadStatus = (h.uploadStatus === 'done') ? 'pending' : 'done';
-  const isDone = h.uploadStatus === 'done';
-
-  // UI 즉시 반영
-  renderHistList();
-  showHistDetail(i);
-  showToast(isDone ? '✅ 발행완료로 변경됐어요!' : '⏳ 미발행으로 변경됐어요');
-
-  // 구글 시트 상태 업데이트
-  try{
-    await fetch(SHEET_ENDPOINT, {
-      method: "POST",
-      headers: {"Content-Type": "text/plain;charset=utf-8"},
-      body: JSON.stringify({
-        sheetId: SHEET_ID,
-        action: "updateStatus",
-        keyword: h.kw,
-        title: h.title,
-        date: h.date,
-        uploadStatus: isDone ? "발행완료" : "미발행",
-        status: isDone ? "발행완료" : "자동생성"
-      })
-    });
-    console.log('시트 상태 업데이트 완료');
-  }catch(e){
-    console.warn('시트 상태 업데이트 실패:', e);
-  }
-
-  updateDashboard();
-}
-
-
-/* ══════════════════════════════════════
-   Analytics 탭 로직
-══════════════════════════════════════ */
-function switchAnaTab(tab, el){
-  document.querySelectorAll('.ana-tab').forEach(function(t){ t.classList.remove('on'); });
-  el.classList.add('on');
-  ['list','region','category'].forEach(function(t){
-    var p = document.getElementById('anaPanel-'+t);
-    if(p) p.style.display = t===tab ? 'block' : 'none';
-  });
-  if(tab==='region') renderRegionAnalytics();
-  if(tab==='category') renderCategoryAnalytics();
-}
-
-function filterHistory(){
-  var q = (document.getElementById('anaSearch')||{value:''}).value.toLowerCase();
-  var f = (document.getElementById('anaFilter')||{value:'all'}).value;
-  var filtered = history.filter(function(h){
-    var matchQ = !q || (h.title||'').toLowerCase().includes(q) ||
-                 (h.kw||'').toLowerCase().includes(q) ||
-                 (h.region||'').toLowerCase().includes(q);
-    var matchF = f==='all' || (f==='done' && h.uploadStatus==='done') ||
-                 (f==='pending' && h.uploadStatus!=='done');
-    return matchQ && matchF;
-  });
-  renderHistListFiltered(filtered);
-}
-
-function renderHistListFiltered(list){
-  var el = document.getElementById('histList');
-  if(!el) return;
-  if(!list.length){
-    el.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">해당하는 글이 없어요</div>';
-    return;
-  }
-  el.innerHTML = list.map(function(h,i){
-    var realIdx = history.indexOf(h);
-    var isDone = h.uploadStatus==='done';
-    return '<div class="hist-item" style="cursor:pointer" onclick="showHistDetail('+realIdx+')">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">'
-      + '<div class="hist-title" style="flex:1;margin-right:8px">'+esc(h.title||h.kw)+'</div>'
-      + '<span onclick="event.stopPropagation();toggleUploadStatus('+realIdx+')" style="font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;cursor:pointer;white-space:nowrap;'+(isDone?'background:#DCFCE7;color:#166534':'background:#FEF3C7;color:#92400E')+'">'+(isDone?'✅ 발행완료':'⏳ 미발행')+'</span>'
-      + '</div>'
-      + '<div class="hist-meta">'+esc(h.region||'')+' · '+esc(h.type||'')+' · '+esc(String(h.chars||0))+'자</div>'
-      + '<div class="hist-saved">'+h.date+'</div>'
-      + '</div>';
-  }).join('');
-}
-
-function renderRegionAnalytics(){
-  // 지역별 글 수 집계
-  var regionCount = {};
-  history.forEach(function(h){
-    var r = h.region||'미분류';
-    regionCount[r] = (regionCount[r]||0) + 1;
-  });
-  var sorted = Object.entries(regionCount).sort(function(a,b){ return b[1]-a[1]; });
-  var max = sorted.length ? sorted[0][1] : 1;
-
-  // TOP5
-  var top5 = sorted.slice(0,5);
-  var top5El = document.getElementById('regionTop5');
-  if(top5El) top5El.innerHTML = top5.map(function(rv){
-    var pct = Math.round(rv[1]/max*100);
-    return '<div style="margin-bottom:8px">'
-      + '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'
-      + '<span style="font-weight:600">'+esc(rv[0])+'</span><span style="color:var(--g);font-weight:700">'+rv[1]+'개</span></div>'
-      + '<div class="region-bar-wrap"><div class="region-bar-fill" style="width:'+pct+'%"></div></div>'
-      + '</div>';
-  }).join('');
-
-  // 73개 지역 중 부족한 지역
-  var allRegions = [];
-  Object.keys(AREA_DATA).forEach(function(reg){
-    Object.keys(AREA_DATA[reg]).forEach(function(dist){
-      allRegions.push(reg+' '+dist);
-    });
-  });
-  var zero = allRegions.filter(function(r){ return !regionCount[r]; });
-  var low5El = document.getElementById('regionLow5');
-  if(low5El){
-    if(zero.length===0){
-      low5El.innerHTML='<div style="text-align:center;padding:20px;color:var(--g);font-size:12px;font-weight:700">🎉 모든 지역 커버 완료!</div>';
-    } else {
-      low5El.innerHTML = zero.slice(0,8).map(function(r){
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd);font-size:11px">'
-          + '<span>'+esc(r)+'</span>'
-          + '<span style="background:#FEE2E2;color:#991B1B;padding:2px 7px;border-radius:8px;font-size:9px;font-weight:700">0개</span>'
-          + '</div>';
-      }).join('')
-      + (zero.length>8 ? '<div style="text-align:center;font-size:10px;color:var(--gray);margin-top:6px">외 '+(zero.length-8)+'개 지역</div>' : '');
-    }
-  }
-
-  // 전체 지역
-  var allEl = document.getElementById('regionAll');
-  if(allEl) allEl.innerHTML = sorted.map(function(rv){
-    var pct = Math.round(rv[1]/max*100);
-    var cls = pct>=70?'':'pct>=40?'mid':'low';
-    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">'
-      + '<span style="font-size:10px;width:120px;flex-shrink:0">'+esc(rv[0])+'</span>'
-      + '<div class="region-bar-wrap"><div class="region-bar-fill '+cls+'" style="width:'+pct+'%"></div></div>'
-      + '<span style="font-size:10px;color:var(--gray);width:30px;text-align:right">'+rv[1]+'</span>'
-      + '</div>';
-  }).join('');
-}
-
-function renderCategoryAnalytics(){
-  // 업종별
-  var indCount = {};
-  var typeCount = {};
-  var monthCount = {};
-  var statusCount = {done:0, pending:0};
-
-  history.forEach(function(h){
-    var ind = h.industry||'미분류';
-    indCount[ind] = (indCount[ind]||0)+1;
-    var t = h.type||'미분류';
-    typeCount[t] = (typeCount[t]||0)+1;
-    var m = h.date ? h.date.split('.')[1]+'월' : '미분류';
-    monthCount[m] = (monthCount[m]||0)+1;
-    if(h.uploadStatus==='done') statusCount.done++;
-    else statusCount.pending++;
-  });
-
-  function renderBar(el, countObj){
-    var sorted = Object.entries(countObj).sort(function(a,b){return b[1]-a[1];});
-    var mx = sorted.length ? sorted[0][1] : 1;
-    if(el) el.innerHTML = sorted.map(function(rv){
-      return '<div style="margin-bottom:7px">'
-        + '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">'
-        + '<span style="font-weight:600">'+esc(rv[0])+'</span><span style="color:var(--g)">'+rv[1]+'</span></div>'
-        + '<div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden">'
-        + '<div style="height:100%;background:var(--g);border-radius:3px;width:'+Math.round(rv[1]/mx*100)+'%"></div>'
-        + '</div></div>';
-    }).join('');
-  }
-
-  renderBar(document.getElementById('catIndustry'), indCount);
-  renderBar(document.getElementById('catType'), typeCount);
-  renderBar(document.getElementById('catMonth'), monthCount);
-
-  var statusEl = document.getElementById('catStatus');
-  var total = statusCount.done + statusCount.pending;
-  var pct = total ? Math.round(statusCount.done/total*100) : 0;
-  if(statusEl) statusEl.innerHTML =
-    '<div style="text-align:center;padding:10px 0">'
-    + '<div style="font-size:32px;font-weight:800;color:var(--g)">'+pct+'%</div>'
-    + '<div style="font-size:11px;color:var(--gray);margin-bottom:10px">발행률</div>'
-    + '<div style="height:8px;background:var(--bd);border-radius:4px;overflow:hidden;margin-bottom:8px">'
-    + '<div style="height:100%;background:var(--g);border-radius:4px;width:'+pct+'%"></div></div>'
-    + '<div style="display:flex;justify-content:space-between;font-size:10px">'
-    + '<span style="color:var(--g);font-weight:700">✅ 발행 '+statusCount.done+'개</span>'
-    + '<span style="color:var(--amber);font-weight:700">⏳ 대기 '+statusCount.pending+'개</span>'
-    + '</div></div>';
-}
-
-function updateAnalytics(){
-  var total = history.length;
-  var done = history.filter(function(h){ return h.uploadStatus==='done'; }).length;
-  var pending = total - done;
-  var pct = total ? Math.round(done/total*100) : 0;
-  var regions = [...new Set(history.map(function(h){ return h.region; }))].length;
-
-  var setEl = function(id, val){ var e=document.getElementById(id); if(e) e.textContent=val; };
-  setEl('an-total', total);
-  setEl('an-done', done);
-  setEl('an-done-pct', '발행률 '+pct+'%');
-  setEl('an-pending', pending);
-  setEl('an-regions', regions);
-}
-
-
-// ══ 앱 초기화 ══
 document.addEventListener('DOMContentLoaded', function(){
-  // 업종 옵션 초기화
   renderIndustryOptions();
-  // 지역/품목 그리드 초기화
   renderDist();
   renderItems();
-  // 대시보드 업데이트
   updateDashboard();
-  // 저장된 상태 복원
-  try{
-    var saved = localStorage.getItem('fnb_state');
-    if(saved){
-      var s = JSON.parse(saved);
-      if(s.industry) industry = s.industry;
-      if(s.selDistricts) selDistricts = s.selDistricts;
-      if(s.selItems) selItems = s.selItems;
-      if(s.history) history = s.history;
-      if(s.phone) phone = s.phone;
-      renderDist();
-      renderItems();
-      renderIndustryOptions();
-      renderSelectedRegions();
-      updateDashboard();
-      filterHistory();
-    }
-  }catch(e){ console.warn('상태 복원 실패:', e); }
-  
-  // API 연결 상태 확인
-  checkApiStatus();
-  
   console.log('F&B Lead Engine 초기화 완료');
 });
 
-function checkApiStatus(){
-  fetch(SHEET_ENDPOINT, {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({prompt:'ping', max_tokens:1})
-  }).then(function(r){ return r.json(); })
-  .then(function(d){
-    var el = document.getElementById('apiStatus');
-    if(el){
-      if(d.success !== false){
-        el.innerHTML='<span style="color:#22C55E">● Claude API 연결됨</span>';
-      } else {
-        el.innerHTML='<span style="color:#EF4444">● API 오류: '+esc(d.message||'확인 필요')+'</span>';
-      }
-    }
-  }).catch(function(e){
-    console.warn('API 상태 확인 실패:', e);
-  });
+var autoRunning = false;
+var autoLog = [];
+function showAutoModal(){
+  var m=document.getElementById('autoModal');
+  if(m){ m.style.display='flex';
+    ['1','2','3','4'].forEach(function(n){
+      var ic=document.getElementById('autoStep'+n+'Icon');
+      var tx=document.getElementById('autoStep'+n+'Text');
+      if(ic) ic.textContent=n==='1'?'⏳':'⏸';
+      if(tx) tx.textContent=['키워드 추출','글 기획','글 작성','시트 저장'][parseInt(n)-1];
+    });
+    var pr=document.getElementById('autoProgress'); if(pr) pr.style.width='0%';
+    var dn=document.getElementById('autoDone'); if(dn) dn.style.display='none';
+    var er=document.getElementById('autoError'); if(er) er.style.display='none';
+    return;
+  }
+  var div=document.createElement('div');
+  div.id='autoModal';
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  div.innerHTML='<div style="background:#fff;border-radius:16px;padding:28px;width:460px;max-width:90vw;max-height:90vh;overflow-y:auto">'
+    +'<h3 style="font-size:16px;font-weight:800;margin-bottom:4px">🚀 전체 자동화 실행 중</h3>'
+    +'<p style="font-size:11px;color:#94A3B8;margin-bottom:16px">키워드 추출 → 글 기획 → 글 작성 → 시트 저장</p>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'
+    +'<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep1Icon">⏳</span><span id="autoStep1Text">키워드 추출</span></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep2Icon">⏸</span><span id="autoStep2Text">글 기획</span></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep3Icon">⏸</span><span id="autoStep3Text">글 작성</span></div>'
+    +'<div id="autoStep3Detail" style="font-size:10px;color:#94A3B8;padding-left:20px;min-height:14px"></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep4Icon">⏸</span><span id="autoStep4Text">시트 저장</span></div>'
+    +'</div>'
+    +'<div style="background:#F1F5F9;border-radius:6px;height:6px;margin-bottom:14px"><div id="autoProgress" style="height:100%;background:#22C55E;border-radius:6px;transition:width .3s;width:0%"></div></div>'
+    +'<div id="autoDone" style="display:none;background:#F0FDF4;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#166534">✅ <strong>완료!</strong> <span id="autoSummary"></span></div>'
+    +'<div id="autoError" style="display:none;background:#FEF2F2;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#DC2626">❌ <span id="autoErrorMsg"></span></div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="autoRunning=false;document.getElementById('autoModal').style.display='none'" style="flex:1;padding:10px;border:1.5px solid #E2E8F0;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">⏹ 닫기</button>'
+    +'<a href="https://docs.google.com/spreadsheets/d/1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU/edit" target="_blank" style="flex:1;padding:10px;background:#22C55E;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center">📊 시트 열기</a>'
+    +'</div></div>';
+  document.body.appendChild(div);
+}
+function updateAutoModal(step,icon,text){
+  var n=step.replace('step','');
+  var ic=document.getElementById('autoStep'+n+'Icon');
+  var tx=document.getElementById('autoStep'+n+'Text');
+  if(ic) ic.textContent=icon;
+  if(tx) tx.textContent=text;
+}
+function stopAutoMode(){ autoRunning=false; }
+
+async function writeOnePost(item, idx, total, el){
+  var kw = item.keyword||item.title||'';
+  var region = item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
+  var type = item.type||'정보성 SEO';
+  var prompt = buildPostPrompt(kw, region, type);
+  var text = await callClaude(prompt, 2000);
+  var titleM = text.match(/\*\*제목\*\*[:\s]*(.*)/);
+  var title = titleM ? titleM[1].trim().replace(/\*\*/g,'') : kw;
+  var hashM = text.match(/\*\*해시태그\*\*[:\s]*([\s\S]*?)$/);
+  var tags = hashM ? hashM[1].trim().split(/[\s,\n]+/).filter(function(t){return t.startsWith('#');}) : [];
+  var body = text.replace(/\*\*제목\*\*.*\n?/,'').replace(/\*\*해시태그\*\*[\s\S]*$/,'').replace(/\*\*/g,'').trim();
+  history.unshift({id:'a'+Date.now()+idx, kw:kw, region:region, type:type, title:title, body:body, tags:tags, chars:body.length, date:new Date().toLocaleDateString('ko-KR'), industry:industry, uploadStatus:'pending'});
+  if(history.length>200) history.pop();
+  try{
+    await fetch(SHEET_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({sheetId:SHEET_ID,date:new Date().toLocaleDateString('ko-KR'),region:region,keyword:kw,industry:industry,type:type,title:title,body:body.substring(0,500),hashtags:tags.join(' '),chars:body.length,status:'자동생성'})
+    });
+  }catch(e){ console.warn('시트 저장 실패:',e); }
+  return {success:true,title:title,kw:kw};
+}
+function buildPostPrompt(kw,region,type){
+  var month=new Date().getMonth()+1;
+  var mNames=['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  var parts=(region||'').split(' ');
+  var areaInfo=useLocal?((AREA_DATA[parts[0]]||{})[parts.slice(1).join(' ')]||{}):{};
+  var genInfo=useGeneral?(GENERAL_DATA[industry]||{}):{};
+  return '당신은 F&B 식자재 중개 전문가이자 네이버 SEO 블로그 작성자입니다.\n\n'
+    +'[핵심 키워드] "'+kw+'"\n[지역] '+(region||'수도권')+'\n[업종] '+industry+'\n[타입] '+type+'\n[월] '+mNames[month]+'\n'
+    +(areaInfo.tags?'[상권] '+areaInfo.tags+'\n':'')
+    +(genInfo.cost_tip?'[원가절감팁] '+genInfo.cost_tip+'\n':'')
+    +'\n**제목**: "'+kw+'" 포함, 이모지 포함, 클릭 유도형\n\n'
+    +'**본문** (2000자 이상):\n'
+    +'[도입부 200자] '+region+' 식당 사장님 공감 포인트로 시작\n'
+    +'[본론1 **소제목**] '+kw+' 핵심 정보 + 구체적 수치\n'
+    +'[본론2 **소제목**] 실전 원가절감/납품 노하우\n'
+    +'[본론3 **소제목**] 체크리스트 3-5개\n'
+    +'[CTA] 무료상담. 카카오: https://open.kakao.com/o/shEOWEth\n\n'
+    +'**해시태그**: #'+kw.replace(/\s/g,'')+'포함 20개';
 }
 
+async function startAutoMode(){
+  if(!selDistricts.length){ goPage('keyword',document.querySelectorAll('.nav-tab')[2]); showToast('지역을 선택해주세요'); return; }
+  if(!selItems.length){ goPage('keyword',document.querySelectorAll('.nav-tab')[2]); showToast('품목을 선택해주세요'); return; }
+  if(autoRunning){ showToast('실행 중이에요'); return; }
+  autoRunning=true; autoLog=[]; showAutoModal();
+  try{
+    updateAutoModal('step1','⏳','키워드 추출 중...');
+    await genKeywords();
+    if(!kwData.length) throw new Error('키워드 추출 실패');
+    selKws=[];
+    kwData.slice().sort(function(a,b){var p={low:0,mid:1,high:2};return (p[a.difficulty]||1)-(p[b.difficulty]||1);}).slice(0,10).forEach(function(k){ selKws.push({kw:k.keyword,region:k.region}); });
+    updateAutoModal('step1','✅','키워드 '+kwData.length+'개 추출 → '+selKws.length+'개 선택');
+    updateAutoModal('step2','⏳','글 기획 생성 중...');
+    await genCluster();
+    if(!clusterData.length) throw new Error('글 기획 생성 실패');
+    var sorted=clusterData.slice().sort(function(a,b){var p={high:0,mid:1,low:2};return (p[a.priority]||1)-(p[b.priority]||1);});
+    updateAutoModal('step2','✅','글 기획 '+sorted.length+'개 완료');
+    var total=sorted.length, ok=0;
+    updateAutoModal('step3','⏳','글 작성 시작 (0/'+total+')...');
+    for(var i=0;i<sorted.length;i++){
+      if(!autoRunning) break;
+      var detEl=document.getElementById('autoStep3Detail');
+      if(detEl) detEl.innerHTML='📝 ('+(i+1)+'/'+total+') '+(sorted[i].title||sorted[i].keyword||'')+'...';
+      try{ var r=await writeOnePost(sorted[i],i,total,null); if(r&&r.success) ok++; }catch(e){ console.warn(e); }
+      var pr=document.getElementById('autoProgress'); if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
+      updateAutoModal('step3','⏳','글 작성 ('+(i+1)+'/'+total+') 완료 '+ok+'개');
+    }
+    updateAutoModal('step3','✅','완료 ('+ok+'/'+total+'개)');
+    updateAutoModal('step4','✅','구글 시트 저장 완료');
+    var dn=document.getElementById('autoDone'); if(dn) dn.style.display='block';
+    var sm=document.getElementById('autoSummary'); if(sm) sm.textContent='총 '+ok+'개 포스팅이 구글 시트에 저장됐어요!';
+    updateDashboard(); renderHistList();
+  }catch(e){
+    var er=document.getElementById('autoError'); if(er) er.style.display='block';
+    var em=document.getElementById('autoErrorMsg'); if(em) em.textContent=e.message||String(e);
+  }
+  autoRunning=false;
+}
 </script>
 </body>
 </html>
