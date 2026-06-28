@@ -373,62 +373,6 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 </div>
 
-<!-- ═══ PROJECT ═══ -->
-<div class="page" id="page-project">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <h2 style="font-size:16px;font-weight:800">프로젝트 관리</h2>
-    <button class="btn btn-green" onclick="createProject()"><i class="ti ti-plus"></i> 새 프로젝트</button>
-  </div>
-
-  <div class="proj-grid" id="projGrid">
-    <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--gray);font-size:12px;background:var(--w);border-radius:var(--r);border:1px dashed var(--bd)">
-      <i class="ti ti-folders" style="font-size:32px;display:block;margin-bottom:10px;opacity:.3"></i>
-      프로젝트가 없어요<br>새 프로젝트를 만들어보세요
-    </div>
-  </div>
-
-  <!-- 프로젝트 생성 모달 -->
-  <div id="projModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center">
-    <div style="background:var(--w);border-radius:var(--r);padding:24px;width:480px;max-width:90vw">
-      <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">새 프로젝트 생성</h3>
-      <div class="field"><label>프로젝트명</label><input type="text" id="projName" placeholder="예: 서울 강남 고깃집 프로젝트"></div>
-      <div class="field"><label>타겟 지역</label>
-        <div class="r-tabs">
-          <div class="r-tab on" onclick="selProjReg(this,'서울')">서울</div>
-          <div class="r-tab" onclick="selProjReg(this,'경기')">경기</div>
-          <div class="r-tab" onclick="selProjReg(this,'인천')">인천</div>
-        </div>
-        <div class="dist-grid" id="projDistGrid"></div>
-        <div class="sel-tags" id="projSelRegions"></div>
-      </div>
-      <div class="field"><label>업종</label>
-        <div class="ind-grid" id="projIndGrid">
-          <div class="ind on" onclick="selProjInd(this,'한식/축산')"><em>🥩</em>한식/축산</div>
-          <div class="ind" onclick="selProjInd(this,'일식/수산')"><em>🍣</em>일식/수산</div>
-          <div class="ind" onclick="selProjInd(this,'중식')"><em>🥢</em>중식</div>
-          <div class="ind" onclick="selProjInd(this,'양식/샐러드')"><em>🥗</em>양식/샐러드</div>
-          <div class="ind" onclick="selProjInd(this,'주류')"><em>🍺</em>주류</div>
-          <div class="ind" onclick="selProjInd(this,'소스/가공')"><em>🫙</em>소스/가공</div>
-          <div class="ind" onclick="selProjInd(this,'카페/베이커리')"><em>☕</em>카페/베이커리</div>
-          <div class="ind" onclick="selProjInd(this,'신규창업')"><em>🏪</em>신규창업</div>
-        </div>
-      </div>
-      <div class="field"><label>목표 글 수</label>
-        <select id="projGoal">
-          <option value="10">10개 (소규모)</option>
-          <option value="30" selected>30개 (기본)</option>
-          <option value="50">50개 (집중)</option>
-          <option value="100">100개 (대규모)</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button class="btn btn-outline" style="flex:1" onclick="closeProjModal()">취소</button>
-        <button class="btn btn-green" style="flex:2" onclick="saveProjModal()"><i class="ti ti-check"></i> 프로젝트 생성</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ═══ KEYWORD ENGINE ═══ -->
 <div class="page" id="page-keyword">
   <div class="grid2" style="align-items:start">
@@ -957,10 +901,18 @@ function jsArg(v){ return esc(JSON.stringify(String(v||''))); }
    네비게이션
 ══════════════════════════════════════ */
 function goPage(id, el){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('on'));
-  document.getElementById('page-'+id).classList.add('on');
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('on'); });
+  var pg = document.getElementById('page-'+id);
+  if(pg) pg.classList.add('on');
   if(el) el.classList.add('on');
+  if(id==='keyword'){
+    renderIndustryOptions();
+    renderDist();
+    renderItems();
+  }
+  if(id==='cluster'){ renderCluster(); }
+  if(id==='analytics'){ updateAnalytics(); filterHistory('all'); }
   persistLater('page:'+id);
 }
 
@@ -1972,6 +1924,7 @@ async function writeOnePost(item, idx, total){
   return {success:true,title:title,kw:kw};
 }
 let autoRunning = false;
+var _priceCache = {};
 var currentFilter = 'all';
 async function startAutoMode(){
   if(!selDistricts.length){
@@ -2184,6 +2137,46 @@ function updateAnalytics(){
   s('an-total', total); s('an-done', done);
   s('an-done-pct', '발행률 '+pct+'%');
   s('an-pending', pending); s('an-regions', regions);
+}
+
+
+/* ═══ 누락 함수 보완 ═══ */
+function closeAutoModal(){
+  autoRunning = false;
+  var m = document.getElementById('autoModal');
+  if(m) m.style.display = 'none';
+}
+function setStep(n, icon, text){
+  var ic = document.getElementById('as'+n+'i');
+  var tx = document.getElementById('as'+n+'t');
+  if(ic) ic.textContent = icon;
+  if(tx) tx.textContent = text;
+}
+function updateAutoModal(step, icon, text){
+  setStep(step.replace('step',''), icon, text);
+}
+function selIndByEl(el){
+  selInd(el, el.getAttribute('data-ind'));
+}
+async function fetchRealtimePrice(ind){
+  var k = ind || industry;
+  if(_priceCache && _priceCache[k] && (Date.now()-_priceCache[k].ts < 3600000)){
+    return _priceCache[k].data;
+  }
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'fetchPrice', industry: k})
+    });
+    var d = await res.json();
+    if(d.success){
+      if(!window._priceCache) window._priceCache = {};
+      window._priceCache[k] = {data:d, ts:Date.now()};
+      return d;
+    }
+  }catch(e){ console.warn('단가 조회 실패:', e); }
+  return null;
 }
 
 </script>
