@@ -1373,6 +1373,7 @@ function renderKeywords(){
   updateKwBtn();
 }
 
+function togKwByEl(el){ togKw(parseInt(el.dataset.ki||0)); }
 function togKw(index){
   const item = kwData[index];
   if(!item) return;
