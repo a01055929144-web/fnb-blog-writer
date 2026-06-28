@@ -334,6 +334,16 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <div id="dash-next">
         <div style="display:flex;flex-direction:column;gap:8px">
           <div onclick="startAutoMode()" style="padding:16px;border-radius:var(--rs);background:linear-gradient(135deg,#166534,#15803D);cursor:pointer;text-align:center;box-shadow:0 4px 14px rgba(22,163,74,.3);margin-bottom:4px">
+            <div style="font-size:22px;margin-bottom:4px">🚀</div>
+            <div style="color:#fff;font-size:14px;font-weight:800;margin-bottom:3px">원클릭 전체 자동화</div>
+            <div style="color:rgba(255,255,255,.75);font-size:11px">실시간 단가 조회 → 키워드 → 글기획 → 작성 → 저장</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin:2px 0">
+            <div style="flex:1;height:1px;background:var(--bd)"></div>
+            <span style="font-size:10px;color:var(--gray)">또는 단계별</span>
+            <div style="flex:1;height:1px;background:var(--bd)"></div>
+          </div>
+          <div onclick="startAutoMode()" style="padding:16px;border-radius:var(--rs);background:linear-gradient(135deg,#166534,#15803D);cursor:pointer;text-align:center;box-shadow:0 4px 14px rgba(22,163,74,.3);margin-bottom:4px">
             <div style="font-size:22px;margin-bottom:4px">&#x1F680;</div>
             <div style="color:#fff;font-size:14px;font-weight:800;margin-bottom:3px">&#xC6D0;&#xD074;&#xB9AD; &#xC804;&#xCCB4; &#xC790;&#xB3D9;&#xD654;</div>
             <div style="color:rgba(255,255,255,.75);font-size:11px">&#xC9C0;&#xC5ED;+&#xC5C5;&#xC885;+&#xD488;&#xBAA9; &#xC120;&#xD0DD; &#xD6C4; &#xD074;&#xB9AD; &#x2192; &#xD0A4;&#xC6CC;&#xB4DC;&#xC73C;&#xB85C; &#xAE00; &#xC791;&#xC131;+&#xC800;&#xC7A5; &#xC790;&#xB3D9;</div>
@@ -2049,6 +2059,28 @@ async function startAutoMode(){
   }
   autoRunning=false;
 }
+
+/* ═══ 공공데이터 실시간 단가 조회 ═══ */
+var _priceCache = {};
+async function fetchRealtimePrice(ind){
+  if(_priceCache[ind] && (Date.now()-_priceCache[ind].ts < 3600000))
+    return _priceCache[ind].data;
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'fetchPrice', industry: ind||industry})
+    });
+    var d = await res.json();
+    if(d.success && d.prices && d.prices.length){
+      _priceCache[ind] = {data:d, ts:Date.now()};
+      return d;
+    }
+  }catch(e){ console.warn('단가 조회 실패:',e); }
+  return null;
+}
+
+/* ═══ 팩트 기반 buildPostPrompt ═══ */
 function buildPostPrompt(kw, region, type){
   var month = new Date().getMonth()+1;
   var mn = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -2056,54 +2088,172 @@ function buildPostPrompt(kw, region, type){
   var aI = useLocal ? ((AREA_DATA[parts[0]]||{})[parts.slice(1).join(' ')]||{}) : {};
   var gI = useGeneral ? (GENERAL_DATA[industry]||{}) : {};
   var si = gI.season ? (gI.season[String(month)]||'') : '';
-  return '당신은 F&B 식자재 중개 10년 전문가이자 네이버 SEO 블로그 작성자입니다.'
-    +'\n\n아래 팩트 데이터를 반드시 활용하세요.\n\n'
+  var priceData = _priceCache[industry];
+  var priceStr = priceData && priceData.data && priceData.data.summary
+    ? priceData.data.summary : (gI.items_detail||'');
+
+  return '당신은 F&B 식자재 중개 10년 전문가이자 네이버 SEO 블로그 작성자입니다.\n\n'
+    +'아래 팩트 데이터를 반드시 활용하여 실제 도움이 되는 글을 작성하세요.\n\n'
     +'[핵심키워드] "'+kw+'"\n'
-    +'[지역] '+(region||'수도권')+' / 상권: '+(aI.tags||'일반 상권')+'\n'
+    +'[지역] '+(region||'수도권')+' / 상권: '+(aI.tags||'일반상권')+'\n'
     +'[업종] '+industry+'\n[타입] '+type+'\n[시점] 2025년 '+mn[month]+'\n'
     +(si?'[이달 시장상황] '+si+'\n':'')
-    +(gI.items_detail?'[실제 도매 단가] '+gI.items_detail+'\n':'')
+    +(priceStr?'[실시간 도매 단가] '+priceStr+'\n':'')
     +(gI.cost_tip?'[원가절감 팁] '+gI.cost_tip+'\n':'')
     +(gI.supply_tip?'[납품 노하우] '+gI.supply_tip+'\n':'')
-    +(gI.source?'[데이터 출처] '+gI.source+'\n':'')
-    +'\n[글 작성 규칙]\n'
-    +'1. 단가는 반드시 위 제공 수치를 그대로 사용\n'
-    +'2. 수치 언급 시 "2025년 기준", "가락시장 기준" 등 출처 명시\n'
-    +'3. 모호한 표현 금지 — 구체적 수치 필수\n'
-    +'4. 임의로 단가를 만들지 말 것\n'
-    +'\n**제목**: "'+kw+'" 포함, 이모지, 구체적 수치 (예: 30% 절감, TOP5)\n\n'
+    +(gI.source?'[출처] '+gI.source+'\n':'')
+    +'\n[작성 규칙]\n'
+    +'1. 단가는 반드시 위 제공 데이터 수치 사용 (임의 생성 금지)\n'
+    +'2. 수치 언급 시 "2025년 기준", "가락시장/노량진 기준" 등 출처 명시\n'
+    +'3. 모호한 표현("~정도","대략") 금지\n'
+    +'\n**제목**: "'+kw+'" 포함, 이모지, 구체적 수치\n\n'
     +'**본문** (2000자 이상):\n'
-    +'[도입부 200자] '+(region||'')+' 식당 사장님 실제 고민으로 시작. '+mn[month]+' 시즌 반영.\n'
-    +'[**소제목1** 600자] '+kw+' 핵심 정보. 실제 단가와 출처 포함.\n'
-    +'[**소제목2** 600자] 원가절감 Before/After 수치 비교.\n'
+    +'[도입부 200자] 식당 사장님 실제 고민으로 시작. '+mn[month]+' 시즌 반영.\n'
+    +'[**소제목1** 600자] 핵심 정보 + 실제 단가 수치 + 출처.\n'
+    +'[**소제목2** 600자] 원가절감 Before/After 구체적 수치 비교.\n'
     +'[**소제목3** 400자] 체크리스트 3-5개.\n'
     +'[CTA 200자] 무료상담. 카카오: https://open.kakao.com/o/shEOWEth\n\n'
     +'**해시태그**: #'+kw.replace(/\s/g,'')+'포함 20개';
 }
 
-var KAMIS_API_KEY='';
-var KAMIS_CERT_ID='';
-async function fetchKamisPrice(itemCode, itemName){
-  if(!KAMIS_API_KEY) return null;
-  try{
-    var t=new Date(), ed=t.toISOString().slice(0,10);
-    var sd=new Date(t-7*864e5).toISOString().slice(0,10);
-    var url='https://www.kamis.or.kr/service/price/xml.do?action=periodProductList'
-      +'&p_startday='+sd+'&p_endday='+ed+'&p_itemcode='+itemCode
-      +'&p_kindcode=01&p_productrankcode=04&p_countrycode=1101'
-      +'&p_convert_kg_yn=N&p_cert_key='+KAMIS_API_KEY+'&p_cert_id='+KAMIS_CERT_ID+'&p_returntype=json';
-    var res=await fetch(url);
-    var d=await res.json();
-    if(d&&d.data&&d.data.item){
-      var it=d.data.item, last=it[it.length-1];
-      return {price:last.dpr1, date:last.regday, name:itemName};
-    }
-  }catch(e){ console.warn('KAMIS API 오류:',e); }
-  return null;
+/* ═══ 원클릭 자동화 ═══ */
+function showAutoModal(){
+  var m = document.getElementById('autoModal');
+  if(!m){
+    m = document.createElement('div');
+    m.id='autoModal';
+    m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+    m.innerHTML='<div style="background:#fff;border-radius:16px;padding:28px;width:460px;max-width:90vw">'
+      +'<h3 style="font-size:16px;font-weight:800;margin-bottom:4px">🚀 전체 자동화 실행 중</h3>'
+      +'<p style="font-size:11px;color:#94A3B8;margin-bottom:16px">실시간 단가 조회 → 키워드 추출 → 글 기획 → 글 작성 → 시트 저장</p>'
+      +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'
+      +'<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep0Icon">⏳</span><span id="autoStep0Text">실시간 단가 조회</span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep1Icon">⏸</span><span id="autoStep1Text">키워드 추출</span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep2Icon">⏸</span><span id="autoStep2Text">글 기획</span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep3Icon">⏸</span><span id="autoStep3Text">글 작성</span></div>'
+      +'<div id="autoStep3Detail" style="font-size:10px;color:#94A3B8;padding-left:20px;min-height:14px"></div>'
+      +'<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span id="autoStep4Icon">⏸</span><span id="autoStep4Text">시트 저장</span></div>'
+      +'</div>'
+      +'<div style="background:#F1F5F9;border-radius:6px;height:6px;margin-bottom:14px"><div id="autoProgress" style="height:100%;background:#22C55E;border-radius:6px;transition:width .3s;width:0%"></div></div>'
+      +'<div id="autoDone" style="display:none;background:#F0FDF4;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#166534">✅ <strong>완료!</strong> <span id="autoSummary"></span></div>'
+      +'<div id="autoError" style="display:none;background:#FEF2F2;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#DC2626">❌ <span id="autoErrorMsg"></span></div>'
+      +'<button onclick="autoRunning=false;document.getElementById('autoModal').style.display='none'" style="width:100%;padding:10px;border:1.5px solid #E2E8F0;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">닫기</button>'
+      +'</div>';
+    document.body.appendChild(m);
+  } else {
+    m.style.display='flex';
+    [0,1,2,3,4].forEach(function(n){
+      var ic=document.getElementById('autoStep'+n+'Icon');
+      var tx=document.getElementById('autoStep'+n+'Text');
+      if(ic) ic.textContent=n===0?'⏳':'⏸';
+    });
+    var pr=document.getElementById('autoProgress'); if(pr) pr.style.width='0%';
+    var dn=document.getElementById('autoDone'); if(dn) dn.style.display='none';
+    var er=document.getElementById('autoError'); if(er) er.style.display='none';
+  }
 }
-function setKamisKey(apiKey, certId){
-  KAMIS_API_KEY=apiKey; KAMIS_CERT_ID=certId;
-  showToast('KAMIS API 키 설정 완료!');
+function updateAutoModal(step,icon,text){
+  var n=step.replace('step','');
+  var ic=document.getElementById('autoStep'+n+'Icon');
+  var tx=document.getElementById('autoStep'+n+'Text');
+  if(ic) ic.textContent=icon;
+  if(tx) tx.textContent=text;
+}
+async function writeOnePost(item,idx,total){
+  var kw=item.keyword||item.title||'';
+  var region=item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
+  var type=item.type||'정보성 SEO';
+  var text=await callClaude(buildPostPrompt(kw,region,type),2000);
+  var titleM=text.match(/\*\*제목\*\*[:\s]*(.*)/);
+  var title=titleM?titleM[1].trim().replace(/\*\*/g,''):kw;
+  var hashM=text.match(/\*\*해시태그\*\*[\s\S]*?$/);
+  var tags=hashM?hashM[0].replace(/\*\*해시태그\*\*/,'').trim():'';
+  var body=text.replace(/\*\*제목\*\*.*?\n/,'').replace(/\*\*해시태그\*\*[\s\S]*$/,'').replace(/\*\*/g,'').trim();
+  history.unshift({id:'a'+Date.now()+idx,kw:kw,region:region,type:type,title:title,body:body,tags:tags.split(/\s+/).filter(function(t){return t.startsWith('#');}),chars:body.length,date:new Date().toLocaleDateString('ko-KR'),industry:industry,uploadStatus:'pending'});
+  if(history.length>200) history.pop();
+  try{
+    await fetch(SHEET_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({sheetId:SHEET_ID,date:new Date().toLocaleDateString('ko-KR'),region:region,keyword:kw,industry:industry,type:type,title:title,body:body.substring(0,500),hashtags:tags,chars:body.length,status:'자동생성'})});
+  }catch(e){console.warn('시트저장실패:',e);}
+  return {success:true,title:title,kw:kw};
+}
+async function startAutoMode(){
+  if(!selDistricts.length){goPage('keyword',document.querySelectorAll('.nav-tab')[2]);showToast('지역을 선택해주세요');return;}
+  if(!selItems.length){goPage('keyword',document.querySelectorAll('.nav-tab')[2]);showToast('품목을 선택해주세요');return;}
+  if(autoRunning){showToast('이미 실행 중이에요');return;}
+  autoRunning=true; showAutoModal();
+  try{
+    // Step 0: 실시간 단가 조회
+    updateAutoModal('step0','⏳','실시간 단가 조회 중...');
+    var priceData = await fetchRealtimePrice(industry);
+    if(priceData && priceData.summary){
+      updateAutoModal('step0','✅','단가 조회 완료: '+priceData.summary.substring(0,50)+'...');
+    } else {
+      updateAutoModal('step0','⚠️','단가 조회 실패 — 기본 데이터 사용');
+    }
+    // Step 1: 키워드 추출
+    updateAutoModal('step1','⏳','키워드 추출 중...');
+    await genKeywords();
+    if(!kwData.length) throw new Error('키워드 추출 실패');
+    selKws=[];
+    kwData.slice().sort(function(a,b){var p={low:0,mid:1,high:2};return (p[a.difficulty]||1)-(p[b.difficulty]||1);}).slice(0,10).forEach(function(k){selKws.push({kw:k.keyword,region:k.region});});
+    updateAutoModal('step1','✅','키워드 '+kwData.length+'개 → '+selKws.length+'개 선택');
+    // Step 2: 클러스터
+    updateAutoModal('step2','⏳','글 기획 생성 중...');
+    await genCluster();
+    if(!clusterData.length) throw new Error('글 기획 실패');
+    var sorted=clusterData.slice().sort(function(a,b){var p={high:0,mid:1,low:2};return (p[a.priority]||1)-(p[b.priority]||1);});
+    updateAutoModal('step2','✅','글 기획 '+sorted.length+'개');
+    // Step 3: 글 작성
+    var total=sorted.length,ok=0;
+    updateAutoModal('step3','⏳','글 작성 시작...');
+    for(var i=0;i<sorted.length;i++){
+      if(!autoRunning) break;
+      var det=document.getElementById('autoStep3Detail');
+      if(det) det.innerHTML='📝('+(i+1)+'/'+total+') '+(sorted[i].title||sorted[i].keyword||'')+'...';
+      try{var r=await writeOnePost(sorted[i],i,total);if(r&&r.success)ok++;}catch(e){console.warn(e);}
+      var pr=document.getElementById('autoProgress');
+      if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
+      updateAutoModal('step3','⏳','작성중('+(i+1)+'/'+total+') 완료 '+ok+'개');
+    }
+    updateAutoModal('step3','✅','완료('+ok+'/'+total+'개)');
+    updateAutoModal('step4','✅','구글 시트 저장 완료');
+    var dn=document.getElementById('autoDone');if(dn)dn.style.display='block';
+    var sm=document.getElementById('autoSummary');if(sm)sm.textContent='총 '+ok+'개 포스팅 저장 완료!';
+    updateDashboard();renderHistList();
+  }catch(e){
+    var er=document.getElementById('autoError');if(er)er.style.display='block';
+    var em=document.getElementById('autoErrorMsg');if(em)em.textContent=e.message||String(e);
+  }
+  autoRunning=false;
+}
+async function writeSelected(){
+  if(!selClusters.length){showToast('글 기획을 선택해주세요');return;}
+  if(autoRunning){showToast('이미 실행 중이에요');return;}
+  autoRunning=true;
+  var items=selClusters.map(function(i){return clusterData[i];}).filter(Boolean);
+  items.sort(function(a,b){var p={high:0,mid:1,low:2};return (p[a.priority]||1)-(p[b.priority]||1);});
+  showAutoModal();
+  updateAutoModal('step0','✅','클러스터 선택 완료');
+  updateAutoModal('step1','✅','키워드 준비됨');
+  updateAutoModal('step2','✅','글 기획 '+items.length+'개');
+  updateAutoModal('step3','⏳','글 작성 시작...');
+  var ok=0,total=items.length;
+  for(var i=0;i<items.length;i++){
+    if(!autoRunning) break;
+    var det=document.getElementById('autoStep3Detail');
+    if(det) det.innerHTML='📝('+(i+1)+'/'+total+') '+(items[i].title||'')+'...';
+    try{var r=await writeOnePost(items[i],i,total);if(r&&r.success)ok++;}catch(e){console.warn(e);}
+    var pr=document.getElementById('autoProgress');
+    if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
+    updateAutoModal('step3','⏳','작성중('+(i+1)+'/'+total+') 완료 '+ok+'개');
+  }
+  updateAutoModal('step3','✅','완료('+ok+'/'+total+'개)');
+  updateAutoModal('step4','✅','구글 시트 저장 완료');
+  var dn=document.getElementById('autoDone');if(dn)dn.style.display='block';
+  var sm=document.getElementById('autoSummary');if(sm)sm.textContent=ok+'개 포스팅 저장!';
+  updateDashboard();renderHistList();
+  autoRunning=false;
 }
 </script>
 </body>
