@@ -312,7 +312,6 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
   <div class="nav-tab" onclick="goPage('project',this)"><i class="ti ti-folders"></i>Project</div>
   <div class="nav-tab" onclick="goPage('keyword',this)"><i class="ti ti-search"></i>Keyword Engine</div>
   <div class="nav-tab" onclick="goPage('cluster',this)"><i class="ti ti-sitemap"></i>Topic Cluster</div>
-  <div class="nav-tab" onclick="goPage('writer',this)"><i class="ti ti-pencil"></i>AI Writer</div>
   <div class="nav-tab" onclick="goPage('cta',this)"><i class="ti ti-speakerphone"></i>CTA Generator</div>
   <div class="nav-tab" onclick="goPage('analytics',this)"><i class="ti ti-chart-bar"></i>Analytics</div>
 </div>
@@ -380,7 +379,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       </div>
     </div>
     <div class="card">
-      <div class="card-hd"><i class="ti ti-bulb"></i><h3>다음 추천 작업</h3></div>
+      <div class="card-hd"><i class="ti ti-bulb"></i><h3>다음 추천 작업</h3><span class="badge badge-green" id="dash-week-cnt" style="margin-left:auto">이번 주 0개</span></div>
       <div id="dash-next">
         <div style="display:flex;flex-direction:column;gap:8px">
           <!-- 원클릭 자동화 버튼 -->
@@ -588,83 +587,6 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
   </div>
 </div>
 
-<!-- ═══ AI WRITER ═══ -->
-<div class="page" id="page-writer">
-  <div class="grid2" style="align-items:start">
-
-    <!-- 왼쪽: 설정 -->
-    <div>
-      <div class="card">
-        <div class="card-hd"><i class="ti ti-pencil"></i><h3>AI Writer 설정</h3></div>
-
-        <div class="field">
-          <label>핵심 키워드 *</label>
-          <input type="text" id="writerKw" placeholder="예: 강남 삼겹살 납품업체 추천">
-        </div>
-        <div class="field">
-          <label>타겟 지역</label>
-          <input type="text" id="writerRegion" placeholder="예: 서울 강남구">
-        </div>
-        <div class="field">
-          <label>콘텐츠 타입</label>
-          <select id="writerType">
-            <option value="정보성 SEO">정보성 SEO 글</option>
-            <option value="원가절감">원가절감 정보</option>
-            <option value="대체 식자재">대체 식자재 소개</option>
-            <option value="납품 노하우">납품 노하우</option>
-            <option value="창업 컨설팅">창업 컨설팅</option>
-            <option value="트렌드">트렌드/신상품</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>글 길이</label>
-          <select id="writerLength">
-            <option value="2500">2500자 (기본)</option>
-            <option value="3500" selected>3500자 (상세)</option>
-            <option value="4000">4000자 (심층)</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>추가 내용 (선택)</label>
-          <textarea id="writerDetail" placeholder="특별히 포함할 내용, 강조할 포인트"></textarea>
-        </div>
-
-        <div class="sec-title" style="margin-top:4px">포함 요소</div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px" id="writerOptions">
-          <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:5px 9px;border-radius:6px;border:1px solid var(--bd);background:var(--bg)">
-            <input type="checkbox" checked value="FAQ"> FAQ 5개
-          </label>
-          <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:5px 9px;border-radius:6px;border:1px solid var(--bd);background:var(--bg)">
-            <input type="checkbox" checked value="표"> 비교표 포함
-          </label>
-          <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:5px 9px;border-radius:6px;border:1px solid var(--bd);background:var(--bg)">
-            <input type="checkbox" checked value="체크리스트"> 체크리스트
-          </label>
-          <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:5px 9px;border-radius:6px;border:1px solid var(--bd);background:var(--bg)">
-            <input type="checkbox" checked value="이미지위치"> 이미지 위치 표시
-          </label>
-        </div>
-
-        <button class="btn btn-green btn-full" id="writerBtn" onclick="generatePost()">
-          <i class="ti ti-wand"></i> 포스팅 자동 생성
-        </button>
-      </div>
-    </div>
-
-    <!-- 오른쪽: 결과 -->
-    <div>
-      <div class="prog-wrap" id="writerProg">
-        <div class="prog-title"><i class="ti ti-loader-2" style="color:var(--blue)"></i> 포스팅 생성 중...</div>
-        <div class="prog-list" id="writerProgList"></div>
-        <div class="prog-bar"><div class="prog-fill" id="writerProgFill" style="width:0%"></div></div>
-      </div>
-
-      <div id="writerResults"></div>
-    </div>
-
-  </div>
-</div>
-
 <!-- ═══ CTA GENERATOR ═══ -->
 <div class="page" id="page-cta">
   <div class="grid2" style="align-items:start">
@@ -731,41 +653,110 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 <!-- ═══ ANALYTICS ═══ -->
 <div class="page" id="page-analytics">
-  <div class="stat-grid" style="margin-bottom:16px">
+
+  <!-- 상단 통계 -->
+  <div class="stat-grid" style="margin-bottom:14px">
     <div class="stat">
-      <div class="stat-label">총 생성 글</div>
+      <div class="stat-label">📝 총 작성 글</div>
       <div class="stat-val" id="an-total">0</div>
+      <div class="stat-sub">전체 누적</div>
     </div>
     <div class="stat">
-      <div class="stat-label">예상 월 유입</div>
-      <div class="stat-val" id="an-traffic">0</div>
+      <div class="stat-label">✅ 발행완료</div>
+      <div class="stat-val" id="an-done" style="color:var(--g)">0</div>
+      <div class="stat-sub" id="an-done-pct">발행률 0%</div>
     </div>
     <div class="stat">
-      <div class="stat-label">예상 월 상담</div>
-      <div class="stat-val" id="an-leads">0</div>
+      <div class="stat-label">⏳ 발행 대기</div>
+      <div class="stat-val" id="an-pending" style="color:var(--amber)">0</div>
+      <div class="stat-sub">복사 후 발행하세요</div>
     </div>
     <div class="stat">
-      <div class="stat-label">커버 키워드</div>
-      <div class="stat-val" id="an-kw">0</div>
+      <div class="stat-label">🗺 커버 지역</div>
+      <div class="stat-val" id="an-regions">0</div>
+      <div class="stat-sub">/ 73개 지역</div>
     </div>
   </div>
 
-  <div class="analytics-row">
-    <div>
-      <div class="sec-title">작성 히스토리</div>
-      <div id="histList">
-        <div style="text-align:center;padding:30px;color:var(--gray);font-size:12px;background:var(--w);border-radius:var(--r);border:1px solid var(--bd)">
-          아직 작성된 글이 없어요
+  <!-- 탭 구조 -->
+  <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--bd);padding-bottom:0">
+    <button class="ana-tab on" id="anaTab-list" onclick="switchAnaTab('list',this)">📋 글 목록</button>
+    <button class="ana-tab" id="anaTab-region" onclick="switchAnaTab('region',this)">🗺 지역별 현황</button>
+    <button class="ana-tab" id="anaTab-category" onclick="switchAnaTab('category',this)">📂 카테고리별</button>
+  </div>
+
+  <style>
+  .ana-tab{padding:8px 16px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s}
+  .ana-tab.on{color:var(--g);border-bottom-color:var(--g)}
+  .ana-tab:hover{color:var(--d)}
+  .region-card{background:var(--w);border-radius:var(--rs);border:1px solid var(--bd);padding:12px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+  .region-bar-wrap{flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden}
+  .region-bar-fill{height:100%;background:var(--g);border-radius:3px;transition:width .4s}
+  .region-bar-fill.low{background:var(--red)}
+  .region-bar-fill.mid{background:var(--amber)}
+  </style>
+
+  <!-- 글 목록 패널 -->
+  <div id="anaPanel-list">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input type="text" id="anaSearch" placeholder="키워드, 지역, 제목 검색..." oninput="filterHistory()" style="flex:1;border:1.5px solid var(--bd);border-radius:var(--rs);padding:8px 11px;font-size:12px;outline:none">
+      <select id="anaFilter" onchange="filterHistory()" style="border:1.5px solid var(--bd);border-radius:var(--rs);padding:8px 10px;font-size:12px;outline:none;background:var(--w)">
+        <option value="all">전체</option>
+        <option value="pending">미발행</option>
+        <option value="done">발행완료</option>
+      </select>
+    </div>
+    <div class="analytics-row">
+      <div id="histList" style="max-height:600px;overflow-y:auto"></div>
+      <div class="analytics-main" id="histDetail">
+        <div style="text-align:center;padding:40px;color:var(--gray);font-size:12px">
+          <i class="ti ti-article" style="font-size:32px;display:block;margin-bottom:10px;opacity:.3"></i>
+          글을 선택하면 여기서 확인하고 복사할 수 있어요
         </div>
       </div>
     </div>
-    <div class="analytics-main">
-      <div id="histDetail" style="text-align:center;padding:40px;color:var(--gray);font-size:12px">
-        <i class="ti ti-article" style="font-size:32px;display:block;margin-bottom:10px;opacity:.3"></i>
-        히스토리에서 글을 선택하면<br>여기서 확인할 수 있어요
+  </div>
+
+  <!-- 지역별 현황 패널 -->
+  <div id="anaPanel-region" style="display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
+        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">✅ 많이 작성된 지역 TOP 5</div>
+        <div id="regionTop5"></div>
+      </div>
+      <div style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
+        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">🔴 부족한 지역 (영업 타겟)</div>
+        <div id="regionLow5"></div>
+      </div>
+    </div>
+    <div style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
+      <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">📊 전체 지역 현황</div>
+      <div id="regionAll"></div>
+    </div>
+  </div>
+
+  <!-- 카테고리별 현황 패널 -->
+  <div id="anaPanel-category" style="display:none">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+      <div id="cat-industry" style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
+        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">업종별</div>
+        <div id="catIndustry"></div>
+      </div>
+      <div id="cat-type" style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
+        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">콘텐츠 타입별</div>
+        <div id="catType"></div>
+      </div>
+      <div id="cat-month" style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
+        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">월별 작성</div>
+        <div id="catMonth"></div>
+      </div>
+      <div id="cat-status" style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px">
+        <div style="font-size:11px;color:var(--gray);font-weight:600;margin-bottom:10px">발행 현황</div>
+        <div id="catStatus"></div>
       </div>
     </div>
   </div>
+
 </div>
 
 <div class="toast" id="toast"><i class="ti ti-check"></i><span id="toastMsg"></span></div>
@@ -1937,7 +1928,9 @@ function updateAnalytics(){
 }
 
 function renderHistList(){
-  const el = document.getElementById('histList');
+  filterHistory();
+  return;
+  var el = document.getElementById('histList');
   if(!history.length){
     el.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px;background:var(--w);border-radius:var(--r);border:1px solid var(--bd)">아직 작성된 글이 없어요</div>';
     return;
@@ -2065,60 +2058,114 @@ function buildPostPrompt(kw, region, type){
   const genInfo = useGeneral ? (GENERAL_DATA[industry]||{}) : {};
   const month = new Date().getMonth()+1;
   const ph = phone||'카카오 오픈채팅 문의';
+  const monthNames = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
-  var localSection = '';
-  if(useLocal && areaInfo.tags){
-    localSection = '[지역 상권 특성]\n'
-      + '- 상권: ' + (areaInfo.tags||'') + '\n'
-      + '- 주요 수요: ' + (areaInfo.food||'') + '\n'
-      + '- 타겟 업종: ' + (areaInfo.target||'') + '\n'
-      + '- 가격대: ' + (areaInfo.price||'') + '\n'
-      + '- 영업 팁: ' + (areaInfo.tip||'') + '\n\n';
-  }
+  // 지역 데이터
+  const localCtx = useLocal && areaInfo.tags ? [
+    '상권 특성: ' + areaInfo.tags,
+    '주요 식재료 수요: ' + (areaInfo.food||''),
+    '타겟 업종: ' + (areaInfo.target||''),
+    '가격 수준: ' + (areaInfo.price||''),
+    '영업 인사이트: ' + (areaInfo.tip||''),
+  ].join('
+') : '';
 
-  var generalSection = '';
-  if(useGeneral && genInfo.season){
-    generalSection = '[업종 정보]\n'
-      + '- ' + month + '월 시즌: ' + ((genInfo.season||{})[String(month)]||'') + '\n'
-      + '- 트렌드: ' + (genInfo.trend||'') + '\n'
-      + '- 원가절감: ' + (genInfo.cost_tip||'') + '\n'
-      + '- 납품 팁: ' + (genInfo.supply_tip||'') + '\n'
-      + '- 주요 단가: ' + (genInfo.items_detail||'') + '\n\n';
-  }
+  // 업종 데이터
+  const genCtx = useGeneral && genInfo.season ? [
+    monthNames[month] + ' 시즌 정보: ' + ((genInfo.season||{})[String(month)]||''),
+    '현재 트렌드: ' + (genInfo.trend||''),
+    '원가절감 핵심: ' + (genInfo.cost_tip||''),
+    '납품 노하우: ' + (genInfo.supply_tip||''),
+    '주요 품목 단가: ' + (genInfo.items_detail||''),
+  ].join('
+') : '';
 
-  return '당신은 F&B 식자재 중개 전문 네이버 블로그 작성자입니다.\n'
-    + '아래 정보를 바탕으로 실제 식당 사장님에게 도움이 되는 SEO 최적화 블로그 글을 작성해주세요.\n\n'
-    + '[핵심 키워드]: "' + kw + '" ← 제목과 본문에 자연스럽게 3-5회 포함\n'
-    + '[타겟 지역]: ' + (region||'수도권') + '\n'
-    + '[업종]: ' + industry + '\n'
-    + '[콘텐츠 타입]: ' + type + '\n'
-    + '[현재 월]: ' + month + '월\n\n'
-    + localSection
-    + generalSection
-    + '[연락처]\n'
-    + '- 카카오 오픈채팅: https://open.kakao.com/o/shEOWEth\n'
-    + '- 네이버 블로그: https://blog.naver.com/yeong44\n'
-    + '- 전화: ' + ph + '\n\n'
-    + '=== 작성 형식 (반드시 이 순서로) ===\n\n'
-    + '**제목**: 이모지 포함, "' + kw + '" 키워드 반드시 포함, 클릭 유도형 (예: 🍖 강남 삼겹살 납품업체 선택 전 꼭 읽어야 할 5가지)\n\n'
-    + '**본문**:\n\n'
-    + '[도입부 - 200자 내외]\n'
-    + (region||'') + ' 지역 ' + (areaInfo.target||'식당') + ' 사장님이라면 공감할 실제 고민으로 시작.\n'
-    + month + '월 시즌 특성을 자연스럽게 언급.\n\n'
-    + '[**소제목1** - 400-500자]\n'
-    + '"' + kw + '"에 대한 핵심 정보. ' + (region||'') + ' 지역 특성 반영. 구체적 수치 포함.\n\n'
-    + '[**소제목2** - 400-500자]\n'
-    + '원가절감 방법 또는 납품처 선택 기준. 실제 단가 정보 포함.\n\n'
-    + '[**소제목3** - 300-400자]\n'
-    + (region||'') + ' ' + industry + ' 사장님을 위한 체크리스트 또는 자주 묻는 질문 3가지.\n\n'
-    + '[마무리 CTA - 150자]\n'
-    + '무료 상담 강조. 카카오: https://open.kakao.com/o/shEOWEth / 전화: ' + ph + '\n\n'
-    + '**해시태그**: #' + kw.replace(/\s/g,'') + ' 포함 총 15-20개 (지역명+업종+식자재+납품 키워드 조합)\n\n'
-    + '주의사항:\n'
-    + '- 소제목은 반드시 **굵게** 표시\n'
-    + '- 총 글자수 1800-2500자\n'
-    + '- 광고성 표현 과도하지 않게, 실제 유용한 정보 중심\n'
-    + '- "' + kw + '" 키워드를 자연스럽게 3-5회 반복';
+  // 콘텐츠 타입별 전략
+  const typeStrategy = {
+    '정보성 SEO': '검색자의 궁금증을 해결하는 정보 중심 글. 실제 수치와 사례로 신뢰를 구축.',
+    '원가절감': '식당 사장님의 고민인 원가를 실질적으로 절감할 수 있는 방법 중심. 구체적 숫자 필수.',
+    '납품 노하우': '납품처 선택부터 계약까지 실전 노하우. 경험에서 나오는 실용적 팁.',
+    '창업 컨설팅': '창업 초기 식자재 셋팅부터 운영까지. 실수를 줄여주는 체크리스트 형식.',
+    '대체 식자재': '원가 부담을 줄이는 대체 식재료 소개. 품질은 유지하면서 비용 절감.',
+    '트렌드': '최신 F&B 트렌드와 식자재 시장 변화. 선제적으로 준비할 수 있는 정보.',
+  };
+  const strategy = typeStrategy[type] || '실용적 정보 중심으로 식당 사장님에게 도움이 되는 글 작성.';
+
+  return `당신은 F&B 식자재 중개 전문가이자 네이버 SEO 블로그 전문 작가입니다.
+10년 이상 수도권 식자재 유통 시장을 분석하고 식당 사장님들과 직접 소통한 경험을 바탕으로 글을 씁니다.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 핵심 키워드: "${kw}"
+🗺 타겟 지역: ${region||'수도권'}
+🍽 업종: ${industry}
+📝 콘텐츠 전략: ${type}
+📅 작성 시점: ${monthNames[month]}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${localCtx ? '[지역 상권 인텔리전스]
+' + localCtx + '
+' : ''}
+${genCtx ? '[업종 시장 인텔리전스]
+' + genCtx + '
+' : ''}
+[콘텐츠 전략]
+${strategy}
+
+[연락처 — 글 마지막에 자연스럽게 삽입]
+카카오 오픈채팅: https://open.kakao.com/o/shEOWEth
+네이버 블로그: https://blog.naver.com/yeong44
+전화: ${ph}
+
+━━━━ 작성 가이드라인 ━━━━
+
+**제목 작성 규칙**
+- 반드시 "${kw}" 키워드 포함
+- 클릭을 유도하는 숫자 또는 구체적 결과 포함 (예: TOP5, 30% 절감, 3가지)
+- 이모지 1-2개로 시선 집중
+- 예시: "🥩 강남 삼겹살 납품업체 TOP5 — 고급 한식당이 선택한 이유"
+
+**본문 구조 (2000-2500자)**
+
+[도입부: 200자]
+- ${region} 지역 ${areaInfo.target||industry} 사장님이 실제로 겪는 문제 또는 상황으로 시작
+- ${monthNames[month]} 시즌 특성을 자연스럽게 녹임
+- "이 글을 읽고 나면 ___를 해결할 수 있습니다" 형식으로 독자 기대감 형성
+
+[본론 1 — 핵심 정보: 600-700자]
+소제목: **${region} ${industry} 사장님이 꼭 알아야 할 ___**
+- "${kw}"에 대한 가장 중요한 정보
+- ${areaInfo.tags ? region + ' 상권 특성(' + areaInfo.tags + ')과 연결하여 맞춤 정보 제공' : '지역 특성을 반영한 맞춤 정보'}
+- 구체적 수치 반드시 포함 (단가, %, 기간 등)
+- 독자가 바로 실행할 수 있는 내용
+
+[본론 2 — 실전 노하우: 600-700자]
+소제목: **실제 현장에서 통하는 ___방법**
+- ${genCtx ? '원가절감 팁: ' + (genInfo.cost_tip||'') + ' — 이를 바탕으로 구체적 실행 방법 제시' : '현장 경험에서 나온 실전 팁'}
+- Before/After 또는 비교 형식으로 효과 명확히 표현
+- "제가 상담한 ${region} 식당 사장님 사례에서는..." 형식의 사례 활용
+
+[본론 3 — 체크리스트/FAQ: 400-500자]
+소제목: **${region} ${industry} 사장님 체크리스트**
+- 실행 가능한 3-5개 항목의 체크리스트 형식
+- 또는 자주 묻는 질문 3개 + 간결한 답변
+
+[마무리 CTA: 150-200자]
+- "지금 당장 납품처를 바꾸기 어렵다면, 먼저 무료 상담을 받아보세요"
+- ${region} 지역 전담 상담 가능 강조
+- 카카오: https://open.kakao.com/o/shEOWEth / 전화: ${ph}
+
+**해시태그: 20개**
+- 필수: #${kw.replace(/\s/g,'')} #${(region||'').replace(/\s/g,'')} #${industry.replace(/\//g,'')}
+- 지역 상권 태그: #${(parts[0]||'')}맛집 #${distKey.replace(/\s/g,'')}식자재 #${distKey.replace(/\s/g,'')}납품
+- 업종 태그: #식자재납품 #식자재유통 #납품업체추천 #원가절감
+- 시즌 태그: #${monthNames[month]}추천 #${monthNames[month]}시즌
+
+**작성 원칙**
+1. "${kw}" 키워드를 본문에 자연스럽게 4-6회 반복
+2. 모든 소제목은 **굵게** 표시
+3. 광고 티 나지 않게, 진짜 도움이 되는 정보 중심
+4. 수도권 73개 지역 상권 데이터 기반 전문성 표현
+5. 독자(식당 사장님)의 언어로 — 어렵지 않게, 현실적으로`;
 }
 
 
@@ -2396,6 +2443,179 @@ async function toggleUploadStatus(i){
   }
 
   updateDashboard();
+}
+
+
+/* ══════════════════════════════════════
+   Analytics 탭 로직
+══════════════════════════════════════ */
+function switchAnaTab(tab, el){
+  document.querySelectorAll('.ana-tab').forEach(function(t){ t.classList.remove('on'); });
+  el.classList.add('on');
+  ['list','region','category'].forEach(function(t){
+    var p = document.getElementById('anaPanel-'+t);
+    if(p) p.style.display = t===tab ? 'block' : 'none';
+  });
+  if(tab==='region') renderRegionAnalytics();
+  if(tab==='category') renderCategoryAnalytics();
+}
+
+function filterHistory(){
+  var q = (document.getElementById('anaSearch')||{value:''}).value.toLowerCase();
+  var f = (document.getElementById('anaFilter')||{value:'all'}).value;
+  var filtered = history.filter(function(h){
+    var matchQ = !q || (h.title||'').toLowerCase().includes(q) ||
+                 (h.kw||'').toLowerCase().includes(q) ||
+                 (h.region||'').toLowerCase().includes(q);
+    var matchF = f==='all' || (f==='done' && h.uploadStatus==='done') ||
+                 (f==='pending' && h.uploadStatus!=='done');
+    return matchQ && matchF;
+  });
+  renderHistListFiltered(filtered);
+}
+
+function renderHistListFiltered(list){
+  var el = document.getElementById('histList');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">해당하는 글이 없어요</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(h,i){
+    var realIdx = history.indexOf(h);
+    var isDone = h.uploadStatus==='done';
+    return '<div class="hist-item" style="cursor:pointer" onclick="showHistDetail('+realIdx+')">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">'
+      + '<div class="hist-title" style="flex:1;margin-right:8px">'+esc(h.title||h.kw)+'</div>'
+      + '<span onclick="event.stopPropagation();toggleUploadStatus('+realIdx+')" style="font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;cursor:pointer;white-space:nowrap;'+(isDone?'background:#DCFCE7;color:#166534':'background:#FEF3C7;color:#92400E')+'">'+(isDone?'✅ 발행완료':'⏳ 미발행')+'</span>'
+      + '</div>'
+      + '<div class="hist-meta">'+esc(h.region||'')+' · '+esc(h.type||'')+' · '+esc(String(h.chars||0))+'자</div>'
+      + '<div class="hist-saved">'+h.date+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+function renderRegionAnalytics(){
+  // 지역별 글 수 집계
+  var regionCount = {};
+  history.forEach(function(h){
+    var r = h.region||'미분류';
+    regionCount[r] = (regionCount[r]||0) + 1;
+  });
+  var sorted = Object.entries(regionCount).sort(function(a,b){ return b[1]-a[1]; });
+  var max = sorted.length ? sorted[0][1] : 1;
+
+  // TOP5
+  var top5 = sorted.slice(0,5);
+  var top5El = document.getElementById('regionTop5');
+  if(top5El) top5El.innerHTML = top5.map(function(rv){
+    var pct = Math.round(rv[1]/max*100);
+    return '<div style="margin-bottom:8px">'
+      + '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'
+      + '<span style="font-weight:600">'+esc(rv[0])+'</span><span style="color:var(--g);font-weight:700">'+rv[1]+'개</span></div>'
+      + '<div class="region-bar-wrap"><div class="region-bar-fill" style="width:'+pct+'%"></div></div>'
+      + '</div>';
+  }).join('');
+
+  // 73개 지역 중 부족한 지역
+  var allRegions = [];
+  Object.keys(AREA_DATA).forEach(function(reg){
+    Object.keys(AREA_DATA[reg]).forEach(function(dist){
+      allRegions.push(reg+' '+dist);
+    });
+  });
+  var zero = allRegions.filter(function(r){ return !regionCount[r]; });
+  var low5El = document.getElementById('regionLow5');
+  if(low5El){
+    if(zero.length===0){
+      low5El.innerHTML='<div style="text-align:center;padding:20px;color:var(--g);font-size:12px;font-weight:700">🎉 모든 지역 커버 완료!</div>';
+    } else {
+      low5El.innerHTML = zero.slice(0,8).map(function(r){
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd);font-size:11px">'
+          + '<span>'+esc(r)+'</span>'
+          + '<span style="background:#FEE2E2;color:#991B1B;padding:2px 7px;border-radius:8px;font-size:9px;font-weight:700">0개</span>'
+          + '</div>';
+      }).join('')
+      + (zero.length>8 ? '<div style="text-align:center;font-size:10px;color:var(--gray);margin-top:6px">외 '+(zero.length-8)+'개 지역</div>' : '');
+    }
+  }
+
+  // 전체 지역
+  var allEl = document.getElementById('regionAll');
+  if(allEl) allEl.innerHTML = sorted.map(function(rv){
+    var pct = Math.round(rv[1]/max*100);
+    var cls = pct>=70?'':'pct>=40?'mid':'low';
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">'
+      + '<span style="font-size:10px;width:120px;flex-shrink:0">'+esc(rv[0])+'</span>'
+      + '<div class="region-bar-wrap"><div class="region-bar-fill '+cls+'" style="width:'+pct+'%"></div></div>'
+      + '<span style="font-size:10px;color:var(--gray);width:30px;text-align:right">'+rv[1]+'</span>'
+      + '</div>';
+  }).join('');
+}
+
+function renderCategoryAnalytics(){
+  // 업종별
+  var indCount = {};
+  var typeCount = {};
+  var monthCount = {};
+  var statusCount = {done:0, pending:0};
+
+  history.forEach(function(h){
+    var ind = h.industry||'미분류';
+    indCount[ind] = (indCount[ind]||0)+1;
+    var t = h.type||'미분류';
+    typeCount[t] = (typeCount[t]||0)+1;
+    var m = h.date ? h.date.split('.')[1]+'월' : '미분류';
+    monthCount[m] = (monthCount[m]||0)+1;
+    if(h.uploadStatus==='done') statusCount.done++;
+    else statusCount.pending++;
+  });
+
+  function renderBar(el, countObj){
+    var sorted = Object.entries(countObj).sort(function(a,b){return b[1]-a[1];});
+    var mx = sorted.length ? sorted[0][1] : 1;
+    if(el) el.innerHTML = sorted.map(function(rv){
+      return '<div style="margin-bottom:7px">'
+        + '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">'
+        + '<span style="font-weight:600">'+esc(rv[0])+'</span><span style="color:var(--g)">'+rv[1]+'</span></div>'
+        + '<div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden">'
+        + '<div style="height:100%;background:var(--g);border-radius:3px;width:'+Math.round(rv[1]/mx*100)+'%"></div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  renderBar(document.getElementById('catIndustry'), indCount);
+  renderBar(document.getElementById('catType'), typeCount);
+  renderBar(document.getElementById('catMonth'), monthCount);
+
+  var statusEl = document.getElementById('catStatus');
+  var total = statusCount.done + statusCount.pending;
+  var pct = total ? Math.round(statusCount.done/total*100) : 0;
+  if(statusEl) statusEl.innerHTML =
+    '<div style="text-align:center;padding:10px 0">'
+    + '<div style="font-size:32px;font-weight:800;color:var(--g)">'+pct+'%</div>'
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:10px">발행률</div>'
+    + '<div style="height:8px;background:var(--bd);border-radius:4px;overflow:hidden;margin-bottom:8px">'
+    + '<div style="height:100%;background:var(--g);border-radius:4px;width:'+pct+'%"></div></div>'
+    + '<div style="display:flex;justify-content:space-between;font-size:10px">'
+    + '<span style="color:var(--g);font-weight:700">✅ 발행 '+statusCount.done+'개</span>'
+    + '<span style="color:var(--amber);font-weight:700">⏳ 대기 '+statusCount.pending+'개</span>'
+    + '</div></div>';
+}
+
+function updateAnalytics(){
+  var total = history.length;
+  var done = history.filter(function(h){ return h.uploadStatus==='done'; }).length;
+  var pending = total - done;
+  var pct = total ? Math.round(done/total*100) : 0;
+  var regions = [...new Set(history.map(function(h){ return h.region; }))].length;
+
+  var setEl = function(id, val){ var e=document.getElementById(id); if(e) e.textContent=val; };
+  setEl('an-total', total);
+  setEl('an-done', done);
+  setEl('an-done-pct', '발행률 '+pct+'%');
+  setEl('an-pending', pending);
+  setEl('an-regions', regions);
 }
 
 </script>
