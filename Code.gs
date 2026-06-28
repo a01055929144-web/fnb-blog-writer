@@ -1,65 +1,71 @@
 // F&B Lead Engine — Apps Script
-// 기능: Claude API 호출 + 시트 저장 + 매주 2회 자동 글 작성 트리거
-// 스크립트 속성 설정 필요:
-//   ANTHROPIC_API_KEY = Claude API 키
-//   SHEET_ID = Google Sheet ID
+// 기능: Claude API + 시트 저장 + 공공데이터 농수산물 단가 조회 + 주간 자동 발행
+// 스크립트 속성 필요: ANTHROPIC_API_KEY, SHEET_ID
 
 const DEFAULT_SHEET_ID = '1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_MODEL = 'claude-sonnet-4-6';
+const PRICE_API_KEY = 'b8ea502c6a13435db5d67932aa833a5d247d74be30c63b319f047b9907b42cdc';
+const PRICE_API_BASE = 'https://apis.data.go.kr/B552845/perDay';
 
-// 시트 탭 구조
 const SHEETS = {
-  posts:    '작성글',
-  keywords: '키워드',
-  clusters: '토픽클러스터',
-  projects: '프로젝트',
-  schedule: '발행스케줄',
-  regions:  '지역현황',
+  posts:   '작성글',
+  price:   '단가데이터',
+  regions: '지역현황',
+  schedule:'발행스케줄',
 };
 
 const POST_HEADERS = [
-  '번호','날짜','지역','시/구','업종','콘텐츠타입',
+  '번호','날짜','지역(시도)','시/구','업종','콘텐츠타입',
   '제목','본문(500자)','해시태그','글자수','저장상태','블로그업로드'
 ];
 
 /* ══════════════════════════════════════
-   웹앱 엔드포인트
+   웹앱 라우터
 ══════════════════════════════════════ */
 function doPost(e) {
-  const output = ContentService.createTextOutput();
-  output.setMimeType(ContentService.MimeType.JSON);
+  const out = ContentService.createTextOutput();
+  out.setMimeType(ContentService.MimeType.JSON);
   try {
     const data = JSON.parse((e.postData && e.postData.contents) || '{}');
 
     // Claude API 호출
-    if (data.prompt) return output.setContent(JSON.stringify(callClaude_(data)));
-
-    // 상태 업데이트
-    if (data.action === 'updateStatus') return output.setContent(JSON.stringify(updatePostStatus_(data)));
-
-    // 발행 스케줄 저장
-    if (data.action === 'saveSchedule') return output.setContent(JSON.stringify(saveSchedule_(data)));
-
+    if (data.prompt !== undefined) {
+      return out.setContent(JSON.stringify(callClaude_(data)));
+    }
+    // 단가 조회
+    if (data.action === 'fetchPrice') {
+      return out.setContent(JSON.stringify(fetchPriceData_(data)));
+    }
+    // 발행 상태 업데이트
+    if (data.action === 'updateStatus') {
+      return out.setContent(JSON.stringify(updateStatus_(data)));
+    }
     // 글 저장
-    return output.setContent(JSON.stringify(appendPost_(data)));
-
+    return out.setContent(JSON.stringify(savePost_(data)));
   } catch (err) {
-    return output.setContent(JSON.stringify({ success: false, message: err.toString() }));
+    return out.setContent(JSON.stringify({ success: false, message: err.toString() }));
   }
 }
 
 function doGet(e) {
-  const output = ContentService.createTextOutput();
-  output.setMimeType(ContentService.MimeType.JSON);
+  const out = ContentService.createTextOutput();
+  out.setMimeType(ContentService.MimeType.JSON);
   const props = PropertiesService.getScriptProperties();
-  ensureAllSheets_();
-  return output.setContent(JSON.stringify({
+  ensureSheets_();
+
+  // 단가 조회 GET
+  if (e && e.parameter && e.parameter.action === 'fetchPrice') {
+    return out.setContent(JSON.stringify(fetchPriceData_(e.parameter)));
+  }
+
+  return out.setContent(JSON.stringify({
     success: true,
     service: 'fnb-blog-writer',
     message: 'F&B Lead Engine API 작동 중',
     hasAnthropicKey: !!props.getProperty('ANTHROPIC_API_KEY'),
     hasSheetId: !!getSheetId_(),
+    hasPriceApi: !!PRICE_API_KEY,
     sheets: Object.values(SHEETS),
     time: new Date().toISOString()
   }));
@@ -70,7 +76,7 @@ function doGet(e) {
 ══════════════════════════════════════ */
 function callClaude_(data) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY가 스크립트 속성에 없습니다.');
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY가 없습니다.');
 
   const response = UrlFetchApp.fetch(ANTHROPIC_API_URL, {
     method: 'post',
@@ -86,24 +92,140 @@ function callClaude_(data) {
 
   const status = response.getResponseCode();
   const body = JSON.parse(response.getContentText());
-  if (status < 200 || status >= 300) throw new Error('Claude API 오류 ' + status + ': ' + JSON.stringify(body));
+  if (status < 200 || status >= 300) throw new Error('Claude API 오류 ' + status);
   return { success: true, text: (body.content && body.content[0] && body.content[0].text) || '' };
+}
+
+/* ══════════════════════════════════════
+   공공데이터 농수산물 단가 조회
+   한국농수산식품유통공사_일별 도소매 가격정보
+══════════════════════════════════════ */
+function fetchPriceData_(params) {
+  var industry = params.industry || '한식/축산';
+  var today = new Date();
+  var endDay = Utilities.formatDate(today, 'Asia/Seoul', 'yyyyMMdd');
+  var startDay = Utilities.formatDate(new Date(today - 7*24*60*60*1000), 'Asia/Seoul', 'yyyyMMdd');
+
+  // 업종별 품목 코드 매핑
+  var itemMap = {
+    '한식/축산': [
+      {code:'231', name:'돼지고기', part:'삼겹살'},
+      {code:'211', name:'쇠고기', part:'등심'},
+      {code:'241', name:'닭고기', part:'육계'},
+    ],
+    '일식/수산': [
+      {code:'511', name:'고등어', part:''},
+      {code:'512', name:'갈치', part:''},
+      {code:'521', name:'오징어', part:''},
+    ],
+    '카페/베이커리': [
+      {code:'121', name:'딸기', part:''},
+      {code:'214', name:'방울토마토', part:''},
+      {code:'131', name:'사과', part:''},
+    ],
+    '중식': [
+      {code:'111', name:'배추', part:''},
+      {code:'112', name:'무', part:''},
+      {code:'221', name:'양파', part:''},
+    ],
+    '주류': [
+      {code:'111', name:'배추', part:''},
+      {code:'131', name:'사과', part:''},
+    ],
+    '양식/샐러드': [
+      {code:'121', name:'딸기', part:''},
+      {code:'214', name:'방울토마토', part:''},
+      {code:'211', name:'파프리카', part:''},
+    ],
+    '신규창업': [
+      {code:'231', name:'돼지고기', part:'삼겹살'},
+      {code:'111', name:'배추', part:''},
+    ],
+    '소스/가공': [
+      {code:'111', name:'배추', part:''},
+      {code:'221', name:'양파', part:''},
+    ]
+  };
+
+  var items = itemMap[industry] || itemMap['한식/축산'];
+  var results = [];
+  var savedToSheet = [];
+
+  for (var i = 0; i < items.length; i++) {
+    try {
+      var item = items[i];
+      var url = PRICE_API_BASE
+        + '?serviceKey=' + PRICE_API_KEY
+        + '&startDay=' + startDay
+        + '&endDay=' + endDay
+        + '&type=json'
+        + '&itemCode=' + item.code;
+
+      var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+      var status = response.getResponseCode();
+
+      if (status === 200) {
+        var body = JSON.parse(response.getContentText());
+        var priceItems = body && body.data && body.data.item ? body.data.item : [];
+
+        if (priceItems.length > 0) {
+          // 최신 데이터
+          var latest = priceItems[priceItems.length - 1];
+          var priceInfo = {
+            name: item.name + (item.part ? ' ' + item.part : ''),
+            wholesale: latest.dpr1 || '정보없음',  // 도매가
+            retail: latest.dpr2 || '정보없음',      // 소매가
+            date: latest.regday || endDay,
+            unit: latest.unit || 'kg'
+          };
+          results.push(priceInfo);
+          savedToSheet.push(priceInfo);
+        }
+      }
+    } catch (e) {
+      Logger.log('단가 조회 실패: ' + item.name + ' - ' + e);
+    }
+    Utilities.sleep(200); // API 호출 간격
+  }
+
+  // 단가 데이터 시트에 저장
+  if (savedToSheet.length > 0) {
+    try {
+      var ss = SpreadsheetApp.openById(getSheetId_());
+      var sheet = ensureSheet_(ss, SHEETS.price, ['날짜','품목','도매가','소매가','단위','업종']);
+      var today_str = Utilities.formatDate(today, 'Asia/Seoul', 'yyyy-MM-dd');
+      savedToSheet.forEach(function(p) {
+        sheet.appendRow([today_str, p.name, p.wholesale, p.retail, p.unit, industry]);
+      });
+    } catch (e) {
+      Logger.log('단가 시트 저장 실패: ' + e);
+    }
+  }
+
+  return {
+    success: true,
+    industry: industry,
+    date: endDay,
+    prices: results,
+    summary: results.map(function(p) {
+      return p.name + ': 도매 ' + p.wholesale + '원/' + p.unit;
+    }).join(', ')
+  };
 }
 
 /* ══════════════════════════════════════
    글 저장
 ══════════════════════════════════════ */
-function appendPost_(data) {
-  const ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
-  const sheet = ensureSheet_(ss, SHEETS.posts, POST_HEADERS);
+function savePost_(data) {
+  var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var sheet = ensureSheet_(ss, SHEETS.posts, POST_HEADERS);
 
-  const rowNum = Math.max(sheet.getLastRow(), 1);
-  const regionParts = (data.region || '').split(' ');
-  const row = [
-    rowNum,
+  var region = (data.region || '').split(' ');
+  var row = [
+    sheet.getLastRow(),
     data.date || new Date().toLocaleDateString('ko-KR'),
-    regionParts[0] || '',                          // 시/도
-    regionParts.slice(1).join(' ') || '',          // 구/군
+    region[0] || '',
+    region.slice(1).join(' ') || '',
     data.industry || '',
     data.type || '',
     data.title || '',
@@ -113,40 +235,34 @@ function appendPost_(data) {
     data.status || '자동생성',
     '미발행'
   ];
-
   sheet.appendRow(row);
-  const newRow = sheet.getLastRow();
 
-  // 행 스타일
-  const rowRange = sheet.getRange(newRow, 1, 1, POST_HEADERS.length);
-  if (newRow % 2 === 0) rowRange.setBackground('#F8FAFC');
+  var newRow = sheet.getLastRow();
+  if (newRow % 2 === 0) sheet.getRange(newRow, 1, 1, POST_HEADERS.length).setBackground('#F8FAFC');
   sheet.getRange(newRow, 12).setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
 
   // 지역 현황 업데이트
-  updateRegionSheet_(ss, data.region, data.industry, data.type);
+  updateRegion_(ss, data.region, data.industry);
 
   return { success: true, row: newRow };
 }
 
 /* ══════════════════════════════════════
-   블로그 업로드 상태 업데이트
+   발행 상태 업데이트
 ══════════════════════════════════════ */
-function updatePostStatus_(data) {
-  const ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
-  const sheet = ensureSheet_(ss, SHEETS.posts, POST_HEADERS);
-  const lastRow = sheet.getLastRow();
-
-  for (let r = 2; r <= lastRow; r++) {
-    const cellTitle = sheet.getRange(r, 7).getValue();
-    const cellKeyword = sheet.getRange(r, 4).getValue();
-    if (cellTitle === data.title || cellKeyword === data.keyword) {
-      const statusCell = sheet.getRange(r, 12);
-      const newStatus = data.uploadStatus || '미발행';
-      statusCell.setValue(newStatus);
-      if (newStatus === '발행완료') {
-        statusCell.setBackground('#DCFCE7').setFontColor('#166534').setFontWeight('bold');
+function updateStatus_(data) {
+  var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var sheet = ensureSheet_(ss, SHEETS.posts, POST_HEADERS);
+  var lastRow = sheet.getLastRow();
+  for (var r = 2; r <= lastRow; r++) {
+    if (sheet.getRange(r, 7).getValue() === data.title) {
+      var cell = sheet.getRange(r, 12);
+      var status = data.uploadStatus || '미발행';
+      cell.setValue(status);
+      if (status === '발행완료') {
+        cell.setBackground('#DCFCE7').setFontColor('#166534').setFontWeight('bold');
       } else {
-        statusCell.setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('normal');
+        cell.setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('normal');
       }
       return { success: true, updated: true, row: r };
     }
@@ -157,219 +273,147 @@ function updatePostStatus_(data) {
 /* ══════════════════════════════════════
    지역 현황 시트 업데이트
 ══════════════════════════════════════ */
-function updateRegionSheet_(ss, region, industry, type) {
+function updateRegion_(ss, region, industry) {
   try {
-    const sheet = ensureSheet_(ss, SHEETS.regions, ['지역','시도','구군','총글수','업종별현황','최종업데이트']);
-    const lastRow = sheet.getLastRow();
-    const regionParts = (region || '').split(' ');
-    const sido = regionParts[0] || '';
-    const gugun = regionParts.slice(1).join(' ') || '';
-
-    // 기존 지역 찾기
-    for (let r = 2; r <= lastRow; r++) {
+    var sheet = ensureSheet_(ss, SHEETS.regions,
+      ['지역','시도','구군','총글수','업종','최종업데이트']);
+    var lastRow = sheet.getLastRow();
+    for (var r = 2; r <= lastRow; r++) {
       if (sheet.getRange(r, 1).getValue() === region) {
-        const cnt = parseInt(sheet.getRange(r, 4).getValue() || 0) + 1;
-        sheet.getRange(r, 4).setValue(cnt);
+        sheet.getRange(r, 4).setValue(parseInt(sheet.getRange(r, 4).getValue() || 0) + 1);
         sheet.getRange(r, 6).setValue(new Date().toLocaleDateString('ko-KR'));
         return;
       }
     }
-    // 새 지역 추가
-    sheet.appendRow([region, sido, gugun, 1, industry, new Date().toLocaleDateString('ko-KR')]);
-  } catch(e) { Logger.log('지역현황 업데이트 실패: ' + e); }
+    var parts = (region || '').split(' ');
+    sheet.appendRow([region, parts[0] || '', parts.slice(1).join(' ') || '',
+      1, industry, new Date().toLocaleDateString('ko-KR')]);
+  } catch (e) { Logger.log('지역현황 오류: ' + e); }
 }
 
 /* ══════════════════════════════════════
-   발행 스케줄 저장
-══════════════════════════════════════ */
-function saveSchedule_(data) {
-  const ss = SpreadsheetApp.openById(getSheetId_());
-  const sheet = ensureSheet_(ss, SHEETS.schedule, ['예약일','요일','업종','지역','키워드전략','상태','생성일']);
-  sheet.appendRow([
-    data.scheduleDate || '',
-    data.dayOfWeek || '',
-    data.industry || '',
-    data.region || '',
-    data.strategy || '',
-    '대기중',
-    new Date().toLocaleDateString('ko-KR')
-  ]);
-  return { success: true };
-}
-
-/* ══════════════════════════════════════
-   ★ 매주 자동 글 작성 트리거 ★
-   Apps Script 트리거로 실행:
-   - 화요일 오전 9시
-   - 금요일 오전 9시
+   매주 자동 글 작성 (화/금 오전 9시)
 ══════════════════════════════════════ */
 function weeklyAutoWrite() {
-  const props = PropertiesService.getScriptProperties();
-  const apiKey = props.getProperty('ANTHROPIC_API_KEY');
-  if (!apiKey) { Logger.log('API 키 없음'); return; }
+  var props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('ANTHROPIC_API_KEY')) return;
 
-  const ss = SpreadsheetApp.openById(getSheetId_());
-  const postSheet = ensureSheet_(ss, SHEETS.posts, POST_HEADERS);
+  var ss = SpreadsheetApp.openById(getSheetId_());
+  var postSheet = ensureSheet_(ss, SHEETS.posts, POST_HEADERS);
 
-  // 기존 작성된 키워드 수집 (중복 방지)
-  const usedKeywords = new Set();
-  const lastRow = postSheet.getLastRow();
-  for (let r = 2; r <= lastRow; r++) {
-    const kw = postSheet.getRange(r, 7).getValue(); // 제목
-    if (kw) usedKeywords.add(kw.toLowerCase());
+  // 기존 제목 수집 (중복 방지)
+  var usedTitles = new Set();
+  for (var r = 2; r <= postSheet.getLastRow(); r++) {
+    var t = postSheet.getRange(r, 7).getValue();
+    if (t) usedTitles.add(t.toLowerCase());
   }
 
-  // 이번 주 작성할 키워드 전략
-  // 지역 현황 시트에서 글이 부족한 지역 우선 선택
-  const regionSheet = ss.getSheetByName(SHEETS.regions);
-  let targetRegions = ['서울 강남구', '서울 마포구', '서울 송파구', '경기 수원시 팔달구', '인천 연수구'];
-
+  // 글 부족한 지역 우선 선택
+  var regionSheet = ss.getSheetByName(SHEETS.regions);
+  var targets = ['서울 강남구', '서울 마포구', '서울 송파구', '경기 수원시', '인천 연수구'];
   if (regionSheet && regionSheet.getLastRow() > 1) {
-    // 글 수가 적은 지역 우선
-    const regionData = regionSheet.getRange(2, 1, regionSheet.getLastRow()-1, 4).getValues();
-    const sorted = regionData.sort(function(a,b){ return a[3]-b[3]; });
-    targetRegions = sorted.slice(0,5).map(function(r){ return r[0]; });
+    var rData = regionSheet.getRange(2, 1, regionSheet.getLastRow()-1, 4).getValues();
+    targets = rData.sort(function(a,b){ return a[3]-b[3]; }).slice(0,5).map(function(r){ return r[0]; });
   }
 
-  // 이번 주 작성 전략 (화요일=창업/신규, 금요일=원가절감/납품)
-  const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=일,1=월,2=화,3=수,4=목,5=금,6=토
-  const isTuesday = dayOfWeek === 2;
+  // 요일별 전략
+  var day = new Date().getDay();
+  var isTuesday = day === 2;
+  var strategies = isTuesday
+    ? ['창업 컨설팅', '정보성 SEO']
+    : ['창업 컨설팅', '납품 노하우'];
 
-  const strategies = isTuesday
-    ? ['창업 컨설팅', '정보성 SEO']   // 화요일: 창업/신규 오픈 타겟
-    : ['창업 컨설팅', '창업 컨설팅']; // 금요일: 신규 창업자 타겟
+  var industries = ['한식/축산', '일식/수산', '카페/베이커리', '중식', '주류'];
+  var writeCount = 0;
+  var maxWrite = 4;
 
-  const industries = ['한식/축산', '일식/수산', '카페/베이커리', '중식', '주류'];
+  for (var ri = 0; ri < targets.length && writeCount < maxWrite; ri++) {
+    var region = targets[ri];
+    var industry = industries[ri % industries.length];
 
-  let writeCount = 0;
-  const maxPerRun = 4; // 1회 실행당 최대 4개 (API 비용 고려)
+    // 실시간 단가 조회
+    var priceResult = fetchPriceData_({ industry: industry });
+    var priceContext = priceResult.success && priceResult.summary
+      ? '\n[오늘 시세 ' + priceResult.date + '기준] ' + priceResult.summary
+      : '';
 
-  for (let ri = 0; ri < targetRegions.length && writeCount < maxPerRun; ri++) {
-    const region = targetRegions[ri];
-    for (let si = 0; si < strategies.length && writeCount < maxPerRun; si++) {
-      const type = strategies[si];
-      const industry = industries[ri % industries.length];
+    for (var si = 0; si < strategies.length && writeCount < maxWrite; si++) {
+      var type = strategies[si];
 
       // 키워드 생성
-      const kwPrompt = '다음 조합으로 네이버 SEO 롱테일 키워드 1개만 생성해줘. 키워드만 답해줘.\n'
+      var kwPrompt = '네이버 SEO 롱테일 키워드 1개만 답해줘 (키워드만).\n'
         + '지역: ' + region + '\n업종: ' + industry + '\n타입: ' + type
-        + '\n예시: "강남 삼겹살 납품업체 추천"';
+        + (isTuesday ? '\n창업, 신규오픈 관련' : '\n신규창업자가 알면 좋은 정보');
 
-      const kwResult = callClaude_({ prompt: kwPrompt, max_tokens: 50 });
-      const kw = (kwResult.text || '').trim();
-      if (!kw) continue;
+      var kwResult = callClaude_({ prompt: kwPrompt, max_tokens: 30 });
+      var kw = (kwResult.text || '').trim();
+      if (!kw || usedTitles.has(kw.toLowerCase())) continue;
 
-      // 중복 체크
-      if (usedKeywords.has(kw.toLowerCase())) continue;
-      usedKeywords.add(kw.toLowerCase());
+      // 글 작성 (실시간 단가 포함)
+      var postPrompt = '당신은 F&B 식자재 전문가입니다.\n\n'
+        + '[키워드] "' + kw + '"\n[지역] ' + region + '\n[업종] ' + industry + '\n[타입] ' + type
+        + priceContext
+        + '\n\n**제목**: "'+kw+'" 포함, 이모지, 구체적 수치\n\n'
+        + '**본문** (2000자):\n[도입부][소제목1 단가정보+출처][소제목2 절감방법][소제목3 체크리스트][CTA]\n\n'
+        + '**해시태그**: 20개\n\n단가는 제공된 실시간 시세 데이터 기반으로 작성.';
 
-      // 글 작성
-      const postPrompt = buildAutoPrompt_(kw, region, industry, type);
-      const postResult = callClaude_({ prompt: postPrompt, max_tokens: 2000 });
-      const text = postResult.text || '';
+      var postResult = callClaude_({ prompt: postPrompt, max_tokens: 2000 });
+      var text = postResult.text || '';
       if (!text) continue;
 
-      // 파싱
-      const titleM = text.match(/\*\*제목\*\*[:\s]*(.*)/);
-      const title = titleM ? titleM[1].trim().replace(/\*\*/g,'') : kw;
-      const hashM = text.match(/\*\*해시태그\*\*[:\s]*([\s\S]*?)$/);
-      const tags = hashM ? hashM[1].trim().split(/[\s,\n]+/).filter(function(t){ return t.startsWith('#'); }).join(' ') : '';
-      const body = text.replace(/\*\*제목\*\*.*\n?/,'').replace(/\*\*해시태그\*\*[\s\S]*$/,'').replace(/\*\*본문\*\*[:\s]*/,'').replace(/\*\*/g,'').trim();
+      var titleM = text.match(/\*\*제목\*\*[:\s]*(.*)/);
+      var title = titleM ? titleM[1].trim().replace(/\*\*/g, '') : kw;
+      var hashM = text.match(/\*\*해시태그\*\*[\s\S]*?$/);
+      var tags = hashM ? hashM[0].replace(/\*\*해시태그\*\*/,'').trim() : '';
+      var body = text.replace(/\*\*제목\*\*.*\n?/,'').replace(/\*\*해시태그\*\*[\s\S]*$/,'').replace(/\*\*/g,'').trim();
 
-      appendPost_({
-        sheetId: getSheetId_(),
-        date: today.toLocaleDateString('ko-KR'),
-        region: region,
-        industry: industry,
-        type: type,
-        title: title,
-        body: body,
-        hashtags: tags,
-        chars: body.length,
-        status: '자동예약'
+      savePost_({
+        date: new Date().toLocaleDateString('ko-KR'),
+        region: region, industry: industry, type: type,
+        title: title, body: body, hashtags: tags,
+        chars: body.length, status: '자동예약'
       });
 
+      usedTitles.add(title.toLowerCase());
       writeCount++;
-      Logger.log('자동 작성 완료: ' + title);
-      Utilities.sleep(2000); // API 딜레이
+      Logger.log('자동 작성: ' + title);
+      Utilities.sleep(2000);
     }
   }
-
-  Logger.log('이번 주 자동 작성 완료: ' + writeCount + '개');
-}
-
-function buildAutoPrompt_(kw, region, industry, type) {
-  const month = new Date().getMonth() + 1;
-  const monthNames = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-
-  return '당신은 F&B 식자재 중개 전문가이자 네이버 SEO 블로그 전문 작가입니다.\n\n'
-    + '핵심 키워드: "' + kw + '"\n'
-    + '지역: ' + region + '\n'
-    + '업종: ' + industry + '\n'
-    + '콘텐츠 타입: ' + type + '\n'
-    + '작성 시점: ' + monthNames[month] + '\n\n'
-    + '**제목**: "' + kw + '" 포함, 이모지 1-2개, 클릭 유도형\n\n'
-    + '**본문** (2000자 이상):\n'
-    + '[도입부 200자] ' + region + ' 식당 사장님 공감 포인트로 시작. ' + monthNames[month] + ' 시즌 반영.\n'
-    + '[본론1 600자] ' + kw + ' 핵심 정보. 창업 초기 비용, 구체적 수치 포함.\n'
-    + '[본론2 600자] 실전 원가절감/납품 노하우.\n'
-    + '[본론3 400자] 체크리스트 3-5개.\n'
-    + '[CTA 200자] 무료상담 강조. 카카오: https://open.kakao.com/o/shEOWEth\n\n'
-    + '**해시태그**: #' + kw.replace(/\s/g,'') + ' 포함 20개\n\n'
-    + '"' + kw + '" 키워드 4-6회 자연스럽게 반복. 소제목 **굵게**.';
+  Logger.log('주간 자동화 완료: ' + writeCount + '개');
 }
 
 /* ══════════════════════════════════════
-   트리거 설정 함수 (최초 1회 실행)
-   Apps Script 편집기에서 수동 실행 필요
+   트리거 설정 (최초 1회 수동 실행)
 ══════════════════════════════════════ */
 function setupWeeklyTriggers() {
-  // 기존 트리거 모두 삭제
-  ScriptApp.getProjectTriggers().forEach(function(t) {
-    ScriptApp.deleteTrigger(t);
-  });
-
-  // 화요일 오전 9시
-  ScriptApp.newTrigger('weeklyAutoWrite')
-    .timeBased()
-    .onWeekDay(ScriptApp.WeekDay.TUESDAY)
-    .atHour(9)
-    .create();
-
-  // 금요일 오전 9시
-  ScriptApp.newTrigger('weeklyAutoWrite')
-    .timeBased()
-    .onWeekDay(ScriptApp.WeekDay.FRIDAY)
-    .atHour(9)
-    .create();
-
-  Logger.log('트리거 설정 완료: 매주 화/금 오전 9시');
-}
-
-function deleteAllTriggers() {
   ScriptApp.getProjectTriggers().forEach(function(t) { ScriptApp.deleteTrigger(t); });
-  Logger.log('모든 트리거 삭제 완료');
+
+  ScriptApp.newTrigger('weeklyAutoWrite').timeBased()
+    .onWeekDay(ScriptApp.WeekDay.TUESDAY).atHour(9).create();
+  ScriptApp.newTrigger('weeklyAutoWrite').timeBased()
+    .onWeekDay(ScriptApp.WeekDay.FRIDAY).atHour(9).create();
+
+  Logger.log('✅ 트리거 설정 완료: 매주 화/금 오전 9시');
 }
 
 /* ══════════════════════════════════════
-   시트 유틸리티
+   유틸리티
 ══════════════════════════════════════ */
-function ensureAllSheets_() {
-  const ss = SpreadsheetApp.openById(getSheetId_());
-  Object.keys(SHEETS).forEach(function(key) {
-    if (key === 'posts') ensureSheet_(ss, SHEETS[key], POST_HEADERS);
-    else ensureSheet_(ss, SHEETS[key], ['데이터']);
-  });
+function ensureSheets_() {
+  var ss = SpreadsheetApp.openById(getSheetId_());
+  ensureSheet_(ss, SHEETS.posts, POST_HEADERS);
+  ensureSheet_(ss, SHEETS.price, ['날짜','품목','도매가','소매가','단위','업종']);
+  ensureSheet_(ss, SHEETS.regions, ['지역','시도','구군','총글수','업종','최종업데이트']);
+  ensureSheet_(ss, SHEETS.schedule, ['예약일','요일','업종','지역','키워드','상태']);
 }
 
 function ensureSheet_(ss, name, headers) {
-  let sheet = ss.getSheetByName(name);
-  if (!sheet) {
-    sheet = ss.insertSheet(name);
+  var sheet = ss.getSheetByName(name) || ss.insertSheet(name);
+  if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
-    const hRange = sheet.getRange(1, 1, 1, headers.length);
-    hRange.setBackground('#0F172A').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
+    var h = sheet.getRange(1, 1, 1, headers.length);
+    h.setBackground('#0F172A').setFontColor('#fff').setFontWeight('bold').setHorizontalAlignment('center');
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -377,8 +421,4 @@ function ensureSheet_(ss, name, headers) {
 
 function getSheetId_() {
   return PropertiesService.getScriptProperties().getProperty('SHEET_ID') || DEFAULT_SHEET_ID;
-}
-
-function json_(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
