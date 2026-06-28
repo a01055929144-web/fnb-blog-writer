@@ -2049,130 +2049,61 @@ async function startAutoMode(){
   }
   autoRunning=false;
 }
-</script>
-</body>
-</html>function buildPostPrompt(kw,region,type){
-  var month=new Date().getMonth()+1;
-  var mn=["","1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
-  var parts=(region||"").split(" ");
-  var aI=useLocal?((AREA_DATA[parts[0]]||{})[parts.slice(1).join(" ")]||{}):\{\};
-  var gI=useGeneral?(GENERAL_DATA[industry]||{}):\{\};
-  var si=gI.season?(gI.season[String(month)]||""):"";
-  return "당신은 F&B 식자재 중개 10년 전문가이자 네이버 SEO 블로그 작성자입니다.\n\n"
-    +"아래 팩트 데이터를 반드시 활용하여 실제 도움이 되는 블로그 글을 작성하세요.\n\n"
-    +"[핵심키워드] \""+kw+"\"\n"
-    +"[지역] "+(region||"수도권")+" / 상권: "+(aI.tags||"일반 상권")+"\n"
-    +"[업종] "+industry+"\n"
-    +"[타입] "+type+"\n"
-    +"[시점] 2025년 "+mn[month]+"\n"
-    +(si?"[이달 시장상황] "+si+"\n":"")
-    +(gI.items_detail?"[실제 도매 단가] "+gI.items_detail+"\n":"")
-    +(gI.cost_tip?"[원가절감 팁] "+gI.cost_tip+"\n":"")
-    +(gI.supply_tip?"[납품 노하우] "+gI.supply_tip+"\n":"")
-    +(gI.source?"[데이터 출처] "+gI.source+"\n":"")
-    +"\n[글 작성 규칙]\n"
-    +"1. 단가는 반드시 위 [실제 도매 단가] 수치를 그대로 사용\n"
-    +"2. 수치 언급 시 \"2025년 기준\", \"가락시장 기준\" 등 출처 명시\n"
-    +"3. 모호한 표현(\"~정도\", \"대략\") 금지 — 구체적 수치 필수\n"
-    +"4. 임의로 단가를 만들지 말 것\n"
-    +"\n**제목**: \""+kw+"\" 포함, 이모지, 구체적 수치 (예: 30% 절감, TOP5)\n\n"
-    +"**본문** (2000자 이상):\n"
-    +"[도입부 200자] "+(region||"")+" 식당 사장님 실제 고민으로 시작. "+mn[month]+" 시즌 반영.\n"
-    +"[**소제목1** 600자] "+kw+" 핵심 정보. 실제 단가 수치와 출처 포함.\n"
-    +"[**소제목2** 600자] 원가절감 Before/After 수치 비교. 실제 절감액 제시.\n"
-    +"[**소제목3** 400자] 체크리스트 3-5개 또는 FAQ.\n"
-    +"[CTA 200자] 무료상담. 카카오: https://open.kakao.com/o/shEOWEth\n\n"
-    +"**해시태그**: #"+kw.replace(/\\s/g,"")+"포함 20개";
+function buildPostPrompt(kw, region, type){
+  var month = new Date().getMonth()+1;
+  var mn = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  var parts = (region||'').split(' ');
+  var aI = useLocal ? ((AREA_DATA[parts[0]]||{})[parts.slice(1).join(' ')]||{}) : {};
+  var gI = useGeneral ? (GENERAL_DATA[industry]||{}) : {};
+  var si = gI.season ? (gI.season[String(month)]||'') : '';
+  return '당신은 F&B 식자재 중개 10년 전문가이자 네이버 SEO 블로그 작성자입니다.'
+    +'\n\n아래 팩트 데이터를 반드시 활용하세요.\n\n'
+    +'[핵심키워드] "'+kw+'"\n'
+    +'[지역] '+(region||'수도권')+' / 상권: '+(aI.tags||'일반 상권')+'\n'
+    +'[업종] '+industry+'\n[타입] '+type+'\n[시점] 2025년 '+mn[month]+'\n'
+    +(si?'[이달 시장상황] '+si+'\n':'')
+    +(gI.items_detail?'[실제 도매 단가] '+gI.items_detail+'\n':'')
+    +(gI.cost_tip?'[원가절감 팁] '+gI.cost_tip+'\n':'')
+    +(gI.supply_tip?'[납품 노하우] '+gI.supply_tip+'\n':'')
+    +(gI.source?'[데이터 출처] '+gI.source+'\n':'')
+    +'\n[글 작성 규칙]\n'
+    +'1. 단가는 반드시 위 제공 수치를 그대로 사용\n'
+    +'2. 수치 언급 시 "2025년 기준", "가락시장 기준" 등 출처 명시\n'
+    +'3. 모호한 표현 금지 — 구체적 수치 필수\n'
+    +'4. 임의로 단가를 만들지 말 것\n'
+    +'\n**제목**: "'+kw+'" 포함, 이모지, 구체적 수치 (예: 30% 절감, TOP5)\n\n'
+    +'**본문** (2000자 이상):\n'
+    +'[도입부 200자] '+(region||'')+' 식당 사장님 실제 고민으로 시작. '+mn[month]+' 시즌 반영.\n'
+    +'[**소제목1** 600자] '+kw+' 핵심 정보. 실제 단가와 출처 포함.\n'
+    +'[**소제목2** 600자] 원가절감 Before/After 수치 비교.\n'
+    +'[**소제목3** 400자] 체크리스트 3-5개.\n'
+    +'[CTA 200자] 무료상담. 카카오: https://open.kakao.com/o/shEOWEth\n\n'
+    +'**해시태그**: #'+kw.replace(/\s/g,'')+'포함 20개';
 }
 
-async function writeOnePost(item, idx, total){
-  var kw = item.keyword||item.title||'';
-  var region = item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
-  var type = item.type||'정보성 SEO';
-  var text = await callClaude(buildPostPrompt(kw,region,type), 2000);
-  var titleM = text.match(/\*\*제목\*\*[:\s]*(.*)/);
-  var title = titleM ? titleM[1].trim().replace(/\*\*/g,'') : kw;
-  var hashM = text.match(/\*\*해시태그\*\*[:\s]*([\s\S]*?)$/);
-  var tags = hashM ? hashM[1].trim().split(/[\s,\n]+/).filter(function(t){return t.startsWith('#');}) : [];
-  var body = text.replace(/\*\*제목\*\*.*?\n/,'').replace(/\*\*해시태그\*\*[\s\S]*$/,'').replace(/\*\*/g,'').trim();
-  history.unshift({id:'a'+Date.now()+idx,kw:kw,region:region,type:type,title:title,body:body,tags:tags,chars:body.length,date:new Date().toLocaleDateString('ko-KR'),industry:industry,uploadStatus:'pending'});
-  if(history.length>200) history.pop();
-  try{
-    await fetch(SHEET_ENDPOINT,{
-      method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({sheetId:SHEET_ID,date:new Date().toLocaleDateString('ko-KR'),region:region,keyword:kw,industry:industry,type:type,title:title,body:body.substring(0,500),hashtags:tags.join(' '),chars:body.length,status:'자동생성'})
-    });
-  }catch(e){ console.warn('시트 저장 실패:',e); }
-  return {success:true,title:title,kw:kw};
-}
-let autoRunning = false;
-async function startAutoMode(){
-  if(!selDistricts.length){ goPage('keyword',document.querySelectorAll('.nav-tab')[2]); showToast('지역을 선택해주세요'); return; }
-  if(!selItems.length){ goPage('keyword',document.querySelectorAll('.nav-tab')[2]); showToast('품목을 선택해주세요'); return; }
-  if(autoRunning){ showToast('이미 실행 중이에요'); return; }
-  autoRunning=true; showAutoModal();
-  try{
-    updateAutoModal('step1','⏳','키워드 추출 중...');
-    await genKeywords();
-    if(!kwData.length) throw new Error('키워드 추출 실패');
-    selKws=[];
-    kwData.slice().sort(function(a,b){var p={low:0,mid:1,high:2};return (p[a.difficulty]||1)-(p[b.difficulty]||1);}).slice(0,10).forEach(function(k){selKws.push({kw:k.keyword,region:k.region});});
-    updateAutoModal('step1','✅','키워드 '+kwData.length+'개 → '+selKws.length+'개 선택');
-    updateAutoModal('step2','⏳','글 기획 생성 중...');
-    await genCluster();
-    if(!clusterData.length) throw new Error('글 기획 생성 실패');
-    var sorted=clusterData.slice().sort(function(a,b){var p={high:0,mid:1,low:2};return (p[a.priority]||1)-(p[b.priority]||1);});
-    updateAutoModal('step2','✅','글 기획 '+sorted.length+'개');
-    var total=sorted.length,ok=0;
-    updateAutoModal('step3','⏳','글 작성 시작 (0/'+total+')...');
-    for(var i=0;i<sorted.length;i++){
-      if(!autoRunning) break;
-      var det=document.getElementById('autoStep3Detail');
-      if(det) det.innerHTML='📝 ('+(i+1)+'/'+total+') '+(sorted[i].title||sorted[i].keyword||'')+'...';
-      try{ var r=await writeOnePost(sorted[i],i,total); if(r&&r.success) ok++; }catch(e){ console.warn(e); }
-      var pr=document.getElementById('autoProgress'); if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
-      updateAutoModal('step3','⏳','작성 중('+(i+1)+'/'+total+') 완료 '+ok+'개');
-    }
-    updateAutoModal('step3','✅','완료('+ok+'/'+total+'개)');
-    updateAutoModal('step4','✅','구글 시트 저장 완료');
-    var dn=document.getElementById('autoDone'); if(dn) dn.style.display='block';
-    var sm=document.getElementById('autoSummary'); if(sm) sm.textContent='총 '+ok+'개 포스팅이 저장됐어요!';
-    updateDashboard(); renderHistList();
-  }catch(e){
-    var er=document.getElementById('autoError'); if(er) er.style.display='block';
-    var em=document.getElementById('autoErrorMsg'); if(em) em.textContent=e.message||String(e);
-  }
-  autoRunning=false;
-}
-
-/* KAMIS 실시간 단가 API — 키 발급 후 KAMIS_API_KEY 입력 */
-var KAMIS_API_KEY="";
-var KAMIS_CERT_ID="";
-async function fetchKamisPrice(itemCode,itemName){
+var KAMIS_API_KEY='';
+var KAMIS_CERT_ID='';
+async function fetchKamisPrice(itemCode, itemName){
   if(!KAMIS_API_KEY) return null;
   try{
-    var t=new Date();
-    var ed=t.toISOString().slice(0,10);
+    var t=new Date(), ed=t.toISOString().slice(0,10);
     var sd=new Date(t-7*864e5).toISOString().slice(0,10);
-    var url="https://www.kamis.or.kr/service/price/xml.do?action=periodProductList"
-      +"&p_startday="+sd+"&p_endday="+ed
-      +"&p_itemcategorycode=200&p_itemcode="+itemCode
-      +"&p_kindcode=01&p_productrankcode=04&p_countrycode=1101"
-      +"&p_convert_kg_yn=N&p_cert_key="+KAMIS_API_KEY+"&p_cert_id="+KAMIS_CERT_ID+"&p_returntype=json";
+    var url='https://www.kamis.or.kr/service/price/xml.do?action=periodProductList'
+      +'&p_startday='+sd+'&p_endday='+ed+'&p_itemcode='+itemCode
+      +'&p_kindcode=01&p_productrankcode=04&p_countrycode=1101'
+      +'&p_convert_kg_yn=N&p_cert_key='+KAMIS_API_KEY+'&p_cert_id='+KAMIS_CERT_ID+'&p_returntype=json';
     var res=await fetch(url);
     var d=await res.json();
     if(d&&d.data&&d.data.item){
-      var it=d.data.item;
-      var last=it[it.length-1];
-      return {price:last.dpr1,date:last.regday,name:itemName};
+      var it=d.data.item, last=it[it.length-1];
+      return {price:last.dpr1, date:last.regday, name:itemName};
     }
-  }catch(e){console.warn("KAMIS:",e);}
+  }catch(e){ console.warn('KAMIS API 오류:',e); }
   return null;
 }
-async function setKamisKey(apiKey,certId){
-  KAMIS_API_KEY=apiKey;
-  KAMIS_CERT_ID=certId;
-  showToast("KAMIS API 키 설정 완료!");
+function setKamisKey(apiKey, certId){
+  KAMIS_API_KEY=apiKey; KAMIS_CERT_ID=certId;
+  showToast('KAMIS API 키 설정 완료!');
 }
 </script>
 </body>
