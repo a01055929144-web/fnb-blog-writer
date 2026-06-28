@@ -1320,7 +1320,35 @@ JSON만 반환 (마크다운 없이):
     saveKeywordCache(cacheKey);
     renderKeywords();
     document.getElementById('kwTotalBadge').textContent = kwData.length+'개';
-    showToast(`${kwData.length}개 키워드 추출 완료!`);
+    showToast(kwData.length+'개 키워드 추출 완료! 글기획 자동 생성 중...');
+
+    // 자동으로 selKws 세팅 (low 경쟁 우선 상위 8개, 중복 제외)
+    var usedKws = new Set(history.map(function(h){ return (h.kw||'').toLowerCase(); }));
+    selKws = [];
+    kwData.slice().sort(function(a,b){
+      var p={low:0,mid:1,high:2};
+      return (p[a.difficulty]||1)-(p[b.difficulty]||1);
+    }).filter(function(k){
+      return !usedKws.has((k.keyword||'').toLowerCase());
+    }).slice(0,8).forEach(function(k){
+      selKws.push({kw:k.keyword, keyword:k.keyword, region:k.region||''});
+    });
+
+    // 자동으로 글기획 생성
+    var statusEl = document.getElementById('autoClusterStatus');
+    var msgEl    = document.getElementById('autoClusterMsg');
+    if(statusEl) statusEl.style.display='block';
+    if(msgEl)    msgEl.textContent='⏳ 글기획 생성 중...';
+    await genCluster();
+    var badgeEl = document.getElementById('clusterAutobadge');
+    var btnEl   = document.getElementById('goClusterBtn');
+    if(clusterData.length){
+      if(msgEl)   msgEl.textContent='✅ 글기획 '+clusterData.length+'개 생성 완료!';
+      if(badgeEl) badgeEl.textContent=clusterData.length+'개';
+      if(btnEl)   btnEl.style.display='block';
+    } else {
+      if(msgEl) msgEl.textContent='⚠️ 글기획 생성 실패 — Topic Cluster에서 재시도해주세요.';
+    }
     persistLater('keywordsGenerated');
   }catch(e){
     const em = e&&e.message ? e.message.substring(0,60) : String(e).substring(0,60);
