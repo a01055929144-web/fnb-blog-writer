@@ -387,7 +387,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
           <div onclick="startAutoMode()" style="padding:16px;border-radius:var(--rs);background:linear-gradient(135deg,#166534 0%,#15803D 100%);cursor:pointer;text-align:center;box-shadow:0 4px 14px rgba(22,163,74,.3)">
             <div style="font-size:22px;margin-bottom:4px">🚀</div>
             <div style="color:#fff;font-size:14px;font-weight:800;margin-bottom:3px">원클릭 전체 자동화</div>
-            <div style="color:rgba(255,255,255,.75);font-size:11px">키워드 추출 → 글 기획 → 글 작성 → 시트 저장</div>
+            <div style="color:rgba(255,255,255,.75);font-size:11px">지역+업종+품목 선택 후 클릭 → 키워드·글기획·작성·저장 자동</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
             <div style="flex:1;height:1px;background:var(--bd)"></div>
@@ -1626,14 +1626,63 @@ function selAllCluster(){
   document.querySelectorAll('.cluster-card').forEach(el=>el.classList.add('on'));
   persistLater('clusterSelectAll');
 }
-function writeSelected(){
+async function writeSelected(){
   if(!selClusters.length){ showToast('글을 선택해주세요'); return; }
-  const first = clusterData[selClusters[0]];
-  document.getElementById('writerKw').value = first.keyword||first.title;
-  document.getElementById('writerRegion').value = first.region||'';
-  goPage('writer', document.querySelectorAll('.nav-tab')[4]);
-  showToast(`AI Writer에서 "${first.title}" 작성 준비 완료!`);
+  if(autoRunning){ showToast('이미 자동화 실행 중이에요'); return; }
+
+  // 선택된 클러스터를 우선순위 순으로 정렬
+  var items = selClusters.map(function(i){ return clusterData[i]; }).filter(Boolean);
+  items.sort(function(a,b){
+    var p = {high:0, mid:1, low:2};
+    return (p[a.priority]||1) - (p[b.priority]||1);
+  });
+
+  if(!items.length){ showToast('선택된 글 기획이 없어요'); return; }
+
+  autoRunning = true;
+  autoLog = [];
+
+  // 진행 모달 표시
+  showAutoModal();
+  updateAutoModal('step1', '✅', '키워드/클러스터 선택 완료');
+  updateAutoModal('step2', '✅', '글 기획 '+items.length+'개 선택됨');
+  updateAutoModal('step3', '⏳', '글 작성 시작 (0/'+items.length+')...');
+
+  var successCount = 0;
+  var total = items.length;
+
+  for(var i = 0; i < items.length; i++){
+    if(!autoRunning) break;
+    var item = items[i];
+    var detailEl = document.getElementById('autoStep3Detail');
+    if(detailEl) detailEl.innerHTML = '📝 ('+(i+1)+'/'+total+') '+esc(item.title||item.keyword||'')+'...';
+
+    try{
+      var result = await writeOnePost(item, i, total, null);
+      if(result && result.success) successCount++;
+    }catch(e){
+      console.warn('글 '+i+' 실패:', e);
+    }
+
+    var progEl = document.getElementById('autoProgress');
+    if(progEl) progEl.style.width = Math.round((i+1)/total*100)+'%';
+    updateAutoModal('step3', '⏳', '작성 중 ('+(i+1)+'/'+total+') — 완료 '+successCount+'개');
+  }
+
+  updateAutoModal('step3', '✅', '글 작성 완료 ('+successCount+'/'+total+'개)');
+  updateAutoModal('step4', '✅', '구글 시트 [작성글] 탭 자동 저장 완료');
+
+  var doneEl = document.getElementById('autoDone');
+  var summEl = document.getElementById('autoSummary');
+  if(doneEl) doneEl.style.display='block';
+  if(summEl) summEl.textContent = successCount+'개 포스팅이 구글 시트 [작성글] 탭에 저장됐어요!';
+
+  updateDashboard();
+  updateAnalytics();
+  renderHistList();
+  autoRunning = false;
 }
+
 
 /* ══════════════════════════════════════
    AI Writer
@@ -2130,8 +2179,17 @@ async function writeOnePost(item, idx, total, progressEl){
 
 
 async function startAutoMode(){
-  if(!selDistricts.length){ goPage('keyword', document.querySelectorAll('.nav-tab')[2]); showToast('먼저 지역을 선택해주세요'); return; }
-  if(!selItems.length){ goPage('keyword', document.querySelectorAll('.nav-tab')[2]); showToast('먼저 품목을 선택해주세요'); return; }
+  // 선택 항목 체크
+  if(!selDistricts.length){
+    goPage('keyword', document.querySelectorAll('.nav-tab')[2]);
+    showToast('먼저 지역을 선택해주세요');
+    return;
+  }
+  if(!selItems.length){
+    goPage('keyword', document.querySelectorAll('.nav-tab')[2]);
+    showToast('먼저 품목을 선택해주세요');
+    return;
+  }
   if(autoRunning){ showToast('이미 자동화 실행 중이에요'); return; }
 
   autoRunning = true;
@@ -2143,59 +2201,67 @@ async function startAutoMode(){
     updateAutoModal('step1', '⏳', '키워드 추출 중...');
     await genKeywords();
     if(!kwData.length) throw new Error('키워드 추출 실패 — 지역/품목을 확인해주세요');
-    selKws = [];
-    kwData.slice(0, 10).forEach(function(k){ selKws.push({kw: k.keyword, region: k.region}); });
-    updateAutoModal('step1', '✅', '키워드 ' + kwData.length + '개 추출 완료 (' + selKws.length + '개 선택)');
 
-    // ── Step 2: 클러스터 생성 ──
-    updateAutoModal('step2', '⏳', '글 기획(Topic Cluster) 생성 중...');
+    // 검색량/노출 우선순위: low > mid > high 순 정렬 후 최대 10개 선택
+    var sorted_kw = kwData.slice().sort(function(a,b){
+      var p = {low:0, mid:1, high:2};
+      return (p[a.difficulty]||1) - (p[b.difficulty]||1);
+    });
+    selKws = [];
+    sorted_kw.slice(0, 10).forEach(function(k){
+      selKws.push({kw: k.keyword, region: k.region});
+    });
+    updateAutoModal('step1', '✅', '키워드 '+kwData.length+'개 추출 → '+selKws.length+'개 선택 (경쟁 낮은 순)');
+
+    // ── Step 2: Topic Cluster 생성 ──
+    updateAutoModal('step2', '⏳', '글 기획 (Topic Cluster) 생성 중...');
     await genCluster();
     if(!clusterData.length) throw new Error('글 기획 생성 실패');
-    updateAutoModal('step2', '✅', '글 기획 ' + clusterData.length + '개 완료');
 
-    // ── Step 3: 글 작성 (우선순위 순, 전체) ──
-    const sorted = clusterData.slice().sort(function(a,b){
+    // 우선순위 순 정렬 (high > mid > low)
+    var sortedCluster = clusterData.slice().sort(function(a,b){
       var p = {high:0, mid:1, low:2};
       return (p[a.priority]||1) - (p[b.priority]||1);
     });
-    const total = sorted.length;
+    updateAutoModal('step2', '✅', '글 기획 '+sortedCluster.length+'개 완료 (우선순위 정렬)');
+
+    // ── Step 3: 전체 글 자동 작성 ──
+    var total = sortedCluster.length;
     var successCount = 0;
     var failCount = 0;
+    updateAutoModal('step3', '⏳', '글 작성 시작 (0/'+total+')...');
 
-    updateAutoModal('step3', '⏳', '글 작성 시작 (0/' + total + ')...');
-
-    for(var i = 0; i < sorted.length; i++){
+    for(var i = 0; i < sortedCluster.length; i++){
       if(!autoRunning){
-        updateAutoModal('step3', '⏹', '중단됨 (' + successCount + '/' + total + ')');
+        updateAutoModal('step3', '⏹', '중단됨 ('+successCount+'/'+total+')');
         break;
       }
+      var item = sortedCluster[i];
+      var detailEl = document.getElementById('autoStep3Detail');
+      if(detailEl) detailEl.innerHTML = '📝 ('+(i+1)+'/'+total+') '+esc(item.title||item.keyword||'')+'...';
+
       try{
-        var result = await writeOnePost(sorted[i], i, total, document.getElementById('autoStep3Detail'));
-        if(result.success){
-          successCount++;
-          autoLog.push({success:true, title:result.title, kw:result.kw});
-        }
+        var result = await writeOnePost(item, i, total, null);
+        if(result && result.success) successCount++;
+        else failCount++;
       }catch(writeErr){
         failCount++;
-        autoLog.push({success:false, kw: sorted[i].keyword||sorted[i].title, error: String(writeErr)});
-        console.warn('글 작성 실패 (계속 진행):', writeErr);
+        console.warn('글 '+i+' 실패:', writeErr);
       }
 
-      // 진행률 업데이트
       var pct = Math.round((i+1)/total*100);
       var progEl = document.getElementById('autoProgress');
-      if(progEl) progEl.style.width = pct + '%';
-      updateAutoModal('step3', '⏳', '글 작성 중 (' + (i+1) + '/' + total + ') — 완료 ' + successCount + '개');
+      if(progEl) progEl.style.width = pct+'%';
+      updateAutoModal('step3', '⏳', '글 작성 중 ('+(i+1)+'/'+total+') — 완료 '+successCount+'개');
     }
 
-    updateAutoModal('step3', '✅', '글 작성 완료 (' + successCount + '/' + total + '개)');
-    updateAutoModal('step4', '✅', '구글 시트 자동 저장 완료');
+    updateAutoModal('step3', '✅', '글 작성 완료 ('+successCount+'/'+total+'개)');
+    updateAutoModal('step4', '✅', '구글 시트 자동 저장 완료 (작성글 탭)');
 
-    // 완료 표시
     var doneEl = document.getElementById('autoDone');
     var summEl = document.getElementById('autoSummary');
-    if(doneEl) doneEl.style.display = 'block';
-    if(summEl) summEl.textContent = '총 ' + successCount + '개 포스팅이 구글 시트에 저장됐어요. 시트에서 복사 후 네이버 블로그에 발행하세요!';
+    if(doneEl) doneEl.style.display='block';
+    if(summEl) summEl.textContent = '총 '+successCount+'개 포스팅 완료! 구글 시트 [작성글] 탭에서 복사 후 네이버 블로그에 발행하세요.';
 
     updateDashboard();
     updateAnalytics();
@@ -2205,8 +2271,8 @@ async function startAutoMode(){
     console.error('자동화 오류:', e);
     var errEl = document.getElementById('autoError');
     var errMsgEl = document.getElementById('autoErrorMsg');
-    if(errEl) errEl.style.display = 'block';
-    if(errMsgEl) errMsgEl.textContent = e.message || String(e);
+    if(errEl) errEl.style.display='block';
+    if(errMsgEl) errMsgEl.textContent = e.message||String(e);
   }
 
   autoRunning = false;
