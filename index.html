@@ -318,6 +318,22 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <div class="stat-sub">수도권 73개 지역</div>
     </div>
   </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+    <div style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:10px;color:var(--gray);font-weight:600;margin-bottom:4px">✅ 발행완료</div>
+        <div style="font-size:24px;font-weight:800;color:var(--g)" id="stat-done">0</div>
+      </div>
+      <i class="ti ti-check-circle" style="font-size:28px;color:var(--g);opacity:.25"></i>
+    </div>
+    <div style="background:var(--w);border-radius:var(--r);border:1px solid var(--bd);padding:14px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:10px;color:var(--gray);font-weight:600;margin-bottom:4px">⏳ 발행 대기</div>
+        <div style="font-size:24px;font-weight:800;color:var(--amber)" id="stat-pending">0</div>
+      </div>
+      <i class="ti ti-clock" style="font-size:28px;color:var(--amber);opacity:.25"></i>
+    </div>
+  </div>
 
   <div class="grid2">
     <div class="card">
@@ -325,7 +341,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <div id="dash-recent">
         <div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">
           <i class="ti ti-pencil" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3"></i>
-          아직 생성된 포스팅이 없어요<br>AI Writer에서 시작해보세요
+          아직 생성된 포스팅이 없어요<br>원클릭 자동화로 시작해보세요
         </div>
       </div>
     </div>
@@ -333,34 +349,24 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <div class="card-hd"><i class="ti ti-bulb"></i><h3>다음 추천 작업</h3></div>
       <div id="dash-next">
         <div style="display:flex;flex-direction:column;gap:8px">
-          <div onclick="startAutoMode()" style="padding:16px;border-radius:var(--rs);background:linear-gradient(135deg,#166534,#15803D);cursor:pointer;text-align:center;margin-bottom:4px">
-            <div style="font-size:20px;margin-bottom:3px">🚀</div>
-            <div style="color:#fff;font-size:14px;font-weight:800;margin-bottom:2px">원클릭 전체 자동화</div>
-            <div style="color:rgba(255,255,255,.75);font-size:11px">단가조회→키워드→글기획→SEO글작성→시트저장</div>
+          <div onclick="startAutoMode()" style="padding:18px 16px;border-radius:var(--rs);background:linear-gradient(135deg,#166534,#15803D);cursor:pointer;text-align:center">
+            <div style="font-size:24px;margin-bottom:4px">🚀</div>
+            <div style="color:#fff;font-size:14px;font-weight:800;margin-bottom:3px">원클릭 전체 자동화</div>
+            <div style="color:rgba(255,255,255,.75);font-size:11px">단가조회 → 키워드 → 글기획 → SEO글작성 → 시트저장</div>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;margin:2px 0">
+          <div style="display:flex;align-items:center;gap:6px;margin:4px 0">
             <div style="flex:1;height:1px;background:var(--bd)"></div>
-            <span style="font-size:10px;color:var(--gray)">또는 단계별</span>
-            <div style="flex:1;height:1px;background:var(--bd)"></div>
-          </div>
-          <div onclick="startAutoMode()" style="padding:16px;border-radius:var(--rs);background:linear-gradient(135deg,#166534,#15803D);cursor:pointer;text-align:center;box-shadow:0 4px 14px rgba(22,163,74,.3);margin-bottom:4px">
-            <div style="font-size:22px;margin-bottom:4px">&#x1F680;</div>
-            <div style="color:#fff;font-size:14px;font-weight:800;margin-bottom:3px">&#xC6D0;&#xD074;&#xB9AD; &#xC804;&#xCCB4; &#xC790;&#xB3D9;&#xD654;</div>
-            <div style="color:rgba(255,255,255,.75);font-size:11px">&#xC9C0;&#xC5ED;+&#xC5C5;&#xC885;+&#xD488;&#xBAA9; &#xC120;&#xD0DD; &#xD6C4; &#xD074;&#xB9AD; &#x2192; &#xD0A4;&#xC6CC;&#xB4DC;&#xC73C;&#xB85C; &#xAE00; &#xC791;&#xC131;+&#xC800;&#xC7A5; &#xC790;&#xB3D9;</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;margin:2px 0">
-            <div style="flex:1;height:1px;background:var(--bd)"></div>
-            <span style="font-size:10px;color:var(--gray)">&#xB610;&#xB294; &#xB2E8;&#xACC4;&#xBCC4; &#xC9C4;&#xD589;</span>
+            <span style="font-size:10px;color:var(--gray)">또는 단계별 진행</span>
             <div style="flex:1;height:1px;background:var(--bd)"></div>
           </div>
           <div style="padding:10px 12px;border-radius:var(--rs);background:var(--g2);border:1px solid var(--g3);font-size:12px;color:#166534;cursor:pointer" onclick="goPage('keyword',document.querySelectorAll('.nav-tab')[2])">
-            <strong>① 키워드 추출</strong><br>지역·업종·품목 선택 후 롱테일 키워드 발굴
+            <strong>① Keyword Engine</strong><br>지역·업종·품목 선택 후 키워드 추출
           </div>
           <div style="padding:10px 12px;border-radius:var(--rs);background:var(--blue2);border:1px solid #BFDBFE;font-size:12px;color:#1E40AF;cursor:pointer" onclick="goPage('cluster',document.querySelectorAll('.nav-tab')[3])">
-            <strong>② Topic Cluster 생성</strong><br>50개 글 기획을 한번에 자동화
+            <strong>② Topic Cluster</strong><br>글 기획 자동 생성
           </div>
-          <div style="padding:10px 12px;border-radius:var(--rs);background:var(--amber2);border:1px solid #FDE68A;font-size:12px;color:#92400E;cursor:pointer" onclick="goPage('writer',document.querySelectorAll('.nav-tab')[4])">
-            <strong>③ AI Writer로 글 생성</strong><br>2500-4000자 SEO 최적화 포스팅
+          <div style="padding:10px 12px;border-radius:var(--rs);background:#F5F3FF;border:1px solid #DDD6FE;font-size:12px;color:#5B21B6;cursor:pointer" onclick="goPage('analytics',document.querySelectorAll('.nav-tab')[5])">
+            <strong>③ Analytics</strong><br>발행 현황 관리 · 복사 · 업로드 토글
           </div>
         </div>
       </div>
@@ -1846,6 +1852,9 @@ function updateDashboard(){
   document.getElementById('stat-traffic').textContent = (total*50).toLocaleString();
   document.getElementById('stat-leads').textContent = Math.round(total*50*0.03);
   document.getElementById('stat-regions').textContent = [...new Set(history.map(h=>h.region))].length;
+  var doneCnt = history.filter(function(h){ return h.uploadStatus==='done'; }).length;
+  var doneEl = document.getElementById('stat-done'); if(doneEl) doneEl.textContent = doneCnt;
+  var pendEl = document.getElementById('stat-pending'); if(pendEl) pendEl.textContent = history.length-doneCnt;
 
   const recent = document.getElementById('dash-recent');
   if(history.length){
