@@ -1940,6 +1940,7 @@ async function initApp(){
 initApp();
 
 /* ═══ 원클릭 자동화 ═══ */
+function closeAutoModal(){ autoRunning=false; var m=document.getElementById("autoModal"); if(m) m.style.display="none"; }
 function showAutoModal(){
   var m = document.getElementById('autoModal');
   if(!m){
@@ -2117,6 +2118,7 @@ function buildPostPrompt(kw, region, type){
 }
 
 /* ═══ 원클릭 자동화 ═══ */
+function closeAutoModal(){ autoRunning=false; var m=document.getElementById("autoModal"); if(m) m.style.display="none"; }
 function showAutoModal(){
   var m = document.getElementById('autoModal');
   if(!m){
@@ -2137,7 +2139,7 @@ function showAutoModal(){
       +'<div style="background:#F1F5F9;border-radius:6px;height:6px;margin-bottom:14px"><div id="autoProgress" style="height:100%;background:#22C55E;border-radius:6px;transition:width .3s;width:0%"></div></div>'
       +'<div id="autoDone" style="display:none;background:#F0FDF4;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#166534">✅ <strong>완료!</strong> <span id="autoSummary"></span></div>'
       +'<div id="autoError" style="display:none;background:#FEF2F2;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#DC2626">❌ <span id="autoErrorMsg"></span></div>'
-      +'<button onclick="autoRunning=false;document.getElementById('autoModal').style.display='none'" style="width:100%;padding:10px;border:1.5px solid #E2E8F0;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">닫기</button>'
+      +'<button onclick="closeAutoModal()" style="width:100%;padding:10px;border:1.5px solid #E2E8F0;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">닫기</button>'
       +'</div>';
     document.body.appendChild(m);
   } else {
