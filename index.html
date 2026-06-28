@@ -1254,17 +1254,21 @@ function selProjReg(el, name){
 
 function renderDist(){
   const q = regionQuery.toLowerCase();
-  const keys = (REGION_TABS[curRegion]||[]).filter(name=>{
+  const keys = (REGION_TABS[curRegion]||[]).filter(function(name){
     const info = (AREA_DATA[curRegion]||{})[name]||{};
     return !q || name.toLowerCase().includes(q) || String(info.tags||'').toLowerCase().includes(q) || String(info.food||'').toLowerCase().includes(q);
   });
-  document.getElementById('distGrid').innerHTML = keys.map(name=>{
+  const el = document.getElementById('distGrid');
+  if(!el) return;
+  el.innerHTML = keys.map(function(name){
     const info = (AREA_DATA[curRegion]||{})[name]||{};
-    const on = selDistricts.find(x=>x.district===name);
-    return `<div class="dist-btn${on?' on':''}" onclick="togDist('${name}')">
-      <div class="dn">${esc(name)}</div>
-      <div class="dt">${esc((info.tags||'').split(',')[0])}</div>
-    </div>`;
+    const on = selDistricts.find(function(x){ return x.district===name; });
+    const cls = on ? 'dist-btn on' : 'dist-btn';
+    const tag = esc((info.tags||'').split(',')[0]);
+    return '<div class="'+cls+'" data-name="'+esc(name)+'" onclick="togDist(this.dataset.name)">'
+      + '<div class="dn">'+esc(name)+'</div>'
+      + '<div class="dt">'+tag+'</div>'
+      + '</div>';
   }).join('');
 }
 function renderSelectedRegions(){
@@ -1308,11 +1312,20 @@ function rmDist(name){
 }
 function renderItems(){
   const q = itemQuery.toLowerCase();
-  const baseItems = (ITEMS[industry]||[]).map(name=>({name, custom:false}));
-  const addedItems = (customItems[industry]||[]).map(name=>({name, custom:true}));
-  document.getElementById('itemGrid').innerHTML = [...baseItems, ...addedItems].filter(it=>!q || it.name.toLowerCase().includes(q)).map(it=>
-    `<div class="item-btn${selItems.includes(it.name)?' on':''}${it.custom?' custom':''}" onclick="togItem(${jsArg(it.name)})">${esc(it.name)}${it.custom?`<span class="item-x" onclick="removeCustomItem(event,${jsArg(it.name)})">×</span>`:''}</div>`
-  ).join('');
+  const baseItems = (ITEMS[industry]||[]).map(function(name){ return {name:name, custom:false}; });
+  const addedItems = (customItems[industry]||[]).map(function(name){ return {name:name, custom:true}; });
+  const el = document.getElementById('itemGrid');
+  if(!el) return;
+  el.innerHTML = [...baseItems, ...addedItems].filter(function(it){
+    return !q || it.name.toLowerCase().includes(q);
+  }).map(function(it){
+    const on = selItems.includes(it.name);
+    const cls = (on ? 'item-btn on' : 'item-btn') + (it.custom ? ' custom' : '');
+    return '<div class="'+cls+'" data-item="'+esc(it.name)+'" onclick="togItem(this.dataset.item)">'
+      + esc(it.name)
+      + (it.custom ? '<span class="item-x" onclick="event.stopPropagation();removeCustomItem(''+esc(it.name)+'')">×</span>' : '')
+      + '</div>';
+  }).join('');
 }
 function addCustomItem(){
   const input = document.getElementById('customItemInput');
