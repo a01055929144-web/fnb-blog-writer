@@ -447,21 +447,21 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
         <i class="ti ti-search"></i> 키워드 추출 + 글기획 자동 생성
       </button>
 
-      <!-- 사용 가이드 (대시보드처럼 아래 배치) -->
+    </div>
+
+    <!-- 우: 사용가이드 + 키워드 결과 + 글기획 진행 상태 -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+
+      <!-- 사용 가이드 (우측 상단) -->
       <div class="card" style="background:var(--g2);border-color:var(--g3)">
         <div class="card-hd"><i class="ti ti-info-circle" style="color:var(--g3)"></i><h3 style="color:var(--g3)">사용 가이드</h3></div>
         <ol style="font-size:11px;color:#166534;line-height:1.8;padding-left:16px;margin:0">
-          <li><strong>지역</strong> 선택 → 납품 타깃 상권 최대 5개</li>
-          <li><strong>업종</strong> 선택 → 카드 클릭</li>
-          <li><strong>품목</strong> 선택 → 최대 5개</li>
-          <li>버튼 클릭 → 키워드 추출 후 <strong>글기획까지 자동 생성</strong></li>
-          <li>Topic Cluster 탭에서 기획 확인 후 <strong>전체 글 작성</strong></li>
+          <li>좌측에서 <strong>① 지역 → ② 업종 → ③ 품목</strong> 순서로 선택</li>
+          <li>아래 버튼 클릭 → <strong>키워드 추출 + 글기획 자동 생성</strong></li>
+          <li>완료 후 <strong>"Topic Cluster에서 글 작성하기"</strong> 클릭</li>
+          <li>글 작성 완료 → <strong>Analytics</strong>에서 복사 후 네이버 발행</li>
         </ol>
       </div>
-    </div>
-
-    <!-- 우: 키워드 결과 + 글기획 진행 상태 -->
-    <div style="display:flex;flex-direction:column;gap:12px">
 
       <!-- 키워드 결과 -->
       <div class="card">
@@ -716,13 +716,61 @@ const AREA_DATA = {
     '서구':     {tags:'검단 신도시,청라,신규 개발',food:'신규 창업 식재료 패키지,카페재료',price:'신규 창업자 타겟,초기 셋팅',target:'신규 창업 식당,카페,프랜차이즈',tip:'검단·청라 신도시 신규 창업 수요 많음. 창업 초기 식자재 셋팅 컨설팅 효과적'},
     '강화군':   {tags:'강화도 관광,특산물,농촌 관광',food:'강화 순무·쑥 특산 재료,해산물',price:'관광 수요,중단가',target:'관광 음식점,향토 식당',tip:'강화 특산물 활용 납품 차별화 가능. 주말 관광객 대비 납품 계획 필요'},
     '옹진군':   {tags:'섬 지역,어촌 관광,수산물 특화',food:'수산물,해산물,어촌 식재료',price:'수산물 직납 가능',target:'횟집,수산물 음식점',tip:'옹진군 섬 지역 수산물 직납 루트 구축 시 차별화 가능'},
+  },
+  부산: {
+    '해운대구': {tags:'관광·해변 상권,외국인 많음',food:'수산물,회,조개구이',target:'횟집·수산물 전문·관광 식당',tip:'해운대 관광 상권은 단가보다 품질·신선도가 핵심'},
+    '수영구':   {tags:'로컬 맛집,MZ 상권',food:'특색 있는 로컬 메뉴',target:'개성 있는 창업 식당',tip:'골목 상권 창업 증가. 소량 다품종 납품 선호'},
+    '남구':     {tags:'대학가·오피스',food:'저가 한식·분식',target:'학생 타겟 식당·분식집',tip:'가성비 식재료 납품 선호'},
+    '부산진구': {tags:'서면 번화가,프랜차이즈 多',food:'다양한 업종',target:'프랜차이즈·신규 창업',tip:'서면 창업 시 납품처 선택이 경쟁력'},
+    '기장군':   {tags:'수산물 특화',food:'회·해산물',target:'횟집·수산물 전문점',tip:'기장 미역·멍게 등 로컬 식재료 활용 가능'},
+    '동래구':   {tags:'주거 상권,가족 외식',food:'가족 한식·삼겹살',target:'동네 고깃집·한식당',tip:'단골 중심 상권. 신뢰 납품이 중요'},
+    '사하구':   {tags:'산업단지 인근',food:'점심 특화·단체급식',target:'직장인 대상 식당',tip:'점심 도시락·단체 납품 기회'},
+    '강서구':   {tags:'물류·공단',food:'단체급식·저가형',target:'구내식당·단체 급식',tip:'대량 납품 계약 가능'},
+    '연제구':   {tags:'행정 중심',food:'한식·일식',target:'오피스 주변 식당',tip:'점심 상권 특화'},
+    '금정구':   {tags:'부산대 대학가',food:'저가·분식·치킨',target:'학생 타겟',tip:'소량·저단가 납품'}
+  },
+  대구: {
+    '중구':     {tags:'동성로 번화가,관광',food:'치킨·막창·한우',target:'대구 특색 음식점',tip:'대구 막창·뭉티기 등 특산 식재료 납품 기회'},
+    '수성구':   {tags:'부촌·고급 상권',food:'한우·일식·양식',target:'프리미엄 식당',tip:'고급 식재료 납품 선호. 단가보다 품질'},
+    '달서구':   {tags:'주거 밀집·가족 상권',food:'삼겹살·치킨·한식',target:'동네 식당·고깃집',tip:'가족 외식 상권. 정기 납품 계약 용이'},
+    '북구':     {tags:'공단·서민 상권',food:'저가 한식·도시락',target:'직장인·공단 식당',tip:'단체 급식 납품 가능'},
+    '동구':     {tags:'동대구역 주변',food:'분식·한식',target:'역세권 식당',tip:'유동 인구 多. 회전율 높은 업종 多'},
+    '남구':     {tags:'대학가·병원',food:'저가·건강식',target:'학생·의료진 식당',tip:'건강 트렌드 반영한 식재료 수요'},
+    '서구':     {tags:'전통 시장 인근',food:'전통 한식·국밥',target:'전통 음식점',tip:'저단가·대량 납품 선호'},
+    '달성군':   {tags:'신도시·테크노폴리스',food:'다양한 업종',target:'신규 창업',tip:'신도시 개발로 창업 식당 증가 추세'}
+  },
+  대전: {
+    '유성구':   {tags:'KAIST·IT 상권,대학가',food:'다양한 업종',target:'대학가·IT 종사자 식당',tip:'젊은 창업자 多. 트렌디한 식재료 수요'},
+    '서구':     {tags:'둔산 행정·오피스',food:'한식·일식·양식',target:'오피스 주변 식당',tip:'점심 상권 강함. 정기 납품 계약 선호'},
+    '중구':     {tags:'원도심·전통 상권',food:'전통 한식·국밥',target:'전통 음식점·노포',tip:'오래된 납품처 많음. 신뢰 구축 중요'},
+    '대덕구':   {tags:'대덕연구단지,공단',food:'단체급식·저가',target:'연구원·직장인 식당',tip:'단체 급식 납품 기회'},
+    '동구':     {tags:'대전역 주변',food:'분식·저가 한식',target:'역세권 식당',tip:'유동 인구 위주. 포장·배달 특화'}
+  },
+  광주: {
+    '동구':     {tags:'충장로 번화가',food:'광주 특색 한식',target:'전통 한식·향토 음식',tip:'광주 한정식·남도 음식 전문 식재료 납품'},
+    '서구':     {tags:'상무지구 오피스',food:'한식·일식·양식',target:'오피스 주변 식당',tip:'점심 상권. 단체 납품 가능'},
+    '남구':     {tags:'주거 상권',food:'가족 외식·삼겹살',target:'동네 식당',tip:'단골 위주 상권. 신뢰 납품 중요'},
+    '북구':     {tags:'전남대 대학가',food:'저가·분식·치킨',target:'학생 타겟',tip:'소량 납품·가성비 식재료 수요'},
+    '광산구':   {tags:'신도시·산단',food:'다양한 업종',target:'신규 창업',tip:'신도시 개발로 창업 증가'}
+  },
+  울산: {
+    '남구':     {tags:'삼산 번화가',food:'회·고기·한식',target:'직장인·가족 외식',tip:'현대차 직원 多. 단가보다 품질 선호'},
+    '중구':     {tags:'울산 원도심',food:'전통 한식',target:'전통 음식점',tip:'오래된 상권. 기존 납품처 관계 중요'},
+    '북구':     {tags:'자동차 공단',food:'단체급식',target:'공단 직원 식당',tip:'대량 납품 기회. 도시락·단체 급식'},
+    '동구':     {tags:'현대重 인근',food:'직장인 특화',target:'점심 식당',tip:'대형 사업장 인근. 점심 납품 특화'},
+    '울주군':   {tags:'공단·물류',food:'저가·단체',target:'공단 급식',tip:'산업단지 납품 기회 많음'}
   }
 };
 
 const REGION_TABS = {
   서울: Object.keys(AREA_DATA.서울),
   경기: Object.keys(AREA_DATA.경기),
-  인천: Object.keys(AREA_DATA.인천)
+  인천: Object.keys(AREA_DATA.인천),
+  부산: Object.keys(AREA_DATA.부산),
+  대구: Object.keys(AREA_DATA.대구),
+  대전: Object.keys(AREA_DATA.대전),
+  광주: Object.keys(AREA_DATA.광주),
+  울산: Object.keys(AREA_DATA.울산)
 };
 
 const ITEMS = {
