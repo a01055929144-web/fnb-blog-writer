@@ -1042,11 +1042,17 @@ function handleIndustrySearch(value){ industryQuery=value.trim(); renderIndustry
 function handleItemSearch(value){ itemQuery=value.trim(); renderItems(); }
 
 function renderIndustryOptions(){
-  const q = industryQuery.toLowerCase();
-  const rows = INDUSTRIES.filter(item=>!q || item.name.toLowerCase().includes(q));
-  document.getElementById('industryGrid').innerHTML = rows.map(item=>`
-    <div class="ind${item.name===industry?' on':''}" onclick="selInd(this,${jsArg(item.name)})"><em>${item.icon}</em>${esc(item.name)}</div>
-  `).join('');
+  var q = industryQuery.toLowerCase();
+  var rows = INDUSTRIES.filter(function(item){
+    return !q || item.name.toLowerCase().includes(q);
+  });
+  var el = document.getElementById('industryGrid');
+  if(!el) return;
+  el.innerHTML = rows.map(function(item){
+    var on = item.name===industry ? ' on' : '';
+    return '<div class="ind'+on+'" data-ind="'+item.name+'" onclick="selIndByEl(this)">'
+      + '<em>'+item.icon+'</em>'+esc(item.name)+'</div>';
+  }).join('');
 }
 
 function selInd(el, name){
