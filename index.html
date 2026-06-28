@@ -1088,10 +1088,15 @@ function jsArg(v){ return esc(JSON.stringify(String(v||''))); }
    네비게이션
 ══════════════════════════════════════ */
 function goPage(id, el){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('on'));
-  document.getElementById('page-'+id).classList.add('on');
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('on'); });
+  var pg = document.getElementById('page-'+id);
+  if(pg) pg.classList.add('on');
   if(el) el.classList.add('on');
+  // 탭 전환 시 해당 탭 렌더링
+  if(id==='keyword'){ renderDist(); renderItems(); renderIndustryOptions(); }
+  if(id==='cluster'){ renderCluster(); }
+  if(id==='analytics'){ filterHistory(); updateAnalytics(); }
   persistLater('page:'+id);
 }
 
@@ -2626,6 +2631,61 @@ function updateAnalytics(){
   setEl('an-done-pct', '발행률 '+pct+'%');
   setEl('an-pending', pending);
   setEl('an-regions', regions);
+}
+
+
+// ══ 앱 초기화 ══
+document.addEventListener('DOMContentLoaded', function(){
+  // 업종 옵션 초기화
+  renderIndustryOptions();
+  // 지역/품목 그리드 초기화
+  renderDist();
+  renderItems();
+  // 대시보드 업데이트
+  updateDashboard();
+  // 저장된 상태 복원
+  try{
+    var saved = localStorage.getItem('fnb_state');
+    if(saved){
+      var s = JSON.parse(saved);
+      if(s.industry) industry = s.industry;
+      if(s.selDistricts) selDistricts = s.selDistricts;
+      if(s.selItems) selItems = s.selItems;
+      if(s.history) history = s.history;
+      if(s.phone) phone = s.phone;
+      renderDist();
+      renderItems();
+      renderIndustryOptions();
+      renderSelectedRegions();
+      updateDashboard();
+      filterHistory();
+    }
+  }catch(e){ console.warn('상태 복원 실패:', e); }
+  
+  // API 연결 상태 확인
+  checkApiStatus();
+  
+  console.log('F&B Lead Engine 초기화 완료');
+});
+
+function checkApiStatus(){
+  fetch(SHEET_ENDPOINT, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({prompt:'ping', max_tokens:1})
+  }).then(function(r){ return r.json(); })
+  .then(function(d){
+    var el = document.getElementById('apiStatus');
+    if(el){
+      if(d.success !== false){
+        el.innerHTML='<span style="color:#22C55E">● Claude API 연결됨</span>';
+      } else {
+        el.innerHTML='<span style="color:#EF4444">● API 오류: '+esc(d.message||'확인 필요')+'</span>';
+      }
+    }
+  }).catch(function(e){
+    console.warn('API 상태 확인 실패:', e);
+  });
 }
 
 </script>
