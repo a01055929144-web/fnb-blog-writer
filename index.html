@@ -1287,12 +1287,12 @@ async function genKeywords(){
 [품목]: ${selItems.join(', ')}
 
 JSON만 반환 (마크다운 없이):
-{"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low","why":"설명"}]}
+{"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low"}]}
 
 총 ${targetCount}개. 구매 의도 높은 롱테일 위주. difficulty: low/mid/high. intent: 구매/탐색/비교/창업`;
 
   try{
-    const text = await callClaude(prompt, 700);
+    const text = await callClaude(prompt, 2000);
     let clean = text.replace(/```json|```/g,'').trim();
     // JSON 블록만 추출
     const jStart = clean.indexOf('{');
@@ -1307,7 +1307,9 @@ JSON만 반환 (마크다운 없이):
     showToast(`${kwData.length}개 키워드 추출 완료!`);
     persistLater('keywordsGenerated');
   }catch(e){
-    showToast('키워드 추출 실패 — API 키 확인해주세요');
+    const em = e&&e.message ? e.message.substring(0,60) : String(e).substring(0,60);
+    showToast('추출 실패: '+em);
+    console.error('genKeywords 오류:', e);
   }
   btn.innerHTML='<i class="ti ti-search"></i> 롱테일 키워드 추출'; btn.disabled=false;
 }
@@ -1424,7 +1426,7 @@ type: 정보성/원가절감/납품노하우/창업컨설팅/트렌드/비교
 ${targetCount}개 생성. 구매·비교·납품 의도 우선, 중복 제목 금지.`;
 
   try{
-    const text = await callClaude(prompt, 900);
+    const text = await callClaude(prompt, 2000);
     let clean = text.replace(/```json|```/g,'').trim();
     const jStart = clean.indexOf('{');
     const jEnd = clean.lastIndexOf('}');
