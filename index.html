@@ -1096,7 +1096,7 @@ function applyAppState(state){
   localStorage.setItem('fnb_custom_items', JSON.stringify(customItems));
 }
 
-async async function loadAppSnapshot(){
+async function loadAppSnapshot(){
   try{
     const res = await fetch(SHEET_ENDPOINT + '?action=loadState');
     const data = await res.json();
