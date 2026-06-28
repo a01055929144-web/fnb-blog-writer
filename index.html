@@ -2163,11 +2163,7 @@ function copyPost(el){
   var i = parseInt(el.dataset.ai);
   var h = window._anaList && window._anaList[i];
   if(!h) return;
-  var text = (h.title||'') + '
-
-' + (h.body||'') + '
-
-' + (h.tags||[]).join(' ');
+  var text = (h.title||'') + '\n\n' + (h.body||'') + '\n\n' + ((h.tags||[]).join(' '));
   navigator.clipboard.writeText(text).then(function(){ showToast('클립보드에 복사됐어요!'); });
 }
 
