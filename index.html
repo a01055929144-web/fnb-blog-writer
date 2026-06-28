@@ -1,4 +1,18 @@
-<!DOCTYPE html>
+async function callClaude(prompt, maxTokens=2000){
+  // Apps Script 경유 Claude 호출 (CORS 없음)
+  const res = await fetch(SHEET_ENDPOINT, {
+    method: "POST",
+    headers: {"Content-Type": "text/plain;charset=utf-8"},
+    body: JSON.stringify({
+      prompt: prompt,
+      max_tokens: maxTokens
+    })
+  });
+  if(!res.ok) throw new Error("Apps Script 오류: " + res.status);
+  const data = await res.json();
+  if(!data.success) throw new Error(data.message || "Claude 호출 실패");
+  return data.text || "";
+}<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1139,24 +1153,20 @@ async function callClaude(prompt, maxTokens=2000){
 ══════════════════════════════════════ */
 async function saveToSheet(row){
   const payload = Object.assign({}, row, {sheetId: SHEET_ID});
-  // 최대 2회 시도
   for(var attempt = 0; attempt < 2; attempt++){
     try{
       const res = await fetch(SHEET_ENDPOINT, {
-        method: 'POST',
-        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        method: "POST",
+        headers: {"Content-Type": "text/plain;charset=utf-8"},
         body: JSON.stringify(payload)
       });
-      const text = await res.text();
-      let result;
-      try{ result = JSON.parse(text); }catch(e){ result = {success: res.ok}; }
-      if(result.success !== false){
-        console.log('시트 저장 성공 (행 ' + (result.row||'?') + ')');
+      const data = await res.json();
+      if(data.success !== false){
+        console.log("시트 저장 성공 row:", data.row);
         return true;
       }
-      console.warn('시트 저장 응답 오류:', result);
     }catch(e){
-      console.warn('시트 저장 시도 ' + (attempt+1) + ' 실패:', e);
+      console.warn("시트 저장 시도 "+(attempt+1)+" 실패:", e);
       if(attempt < 1) await new Promise(function(r){ setTimeout(r, 1000); });
     }
   }
@@ -2325,16 +2335,16 @@ async function toggleUploadStatus(i){
   // 구글 시트 상태 업데이트
   try{
     await fetch(SHEET_ENDPOINT, {
-      method: 'POST',
-      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
       body: JSON.stringify({
         sheetId: SHEET_ID,
-        action: 'updateStatus',
+        action: "updateStatus",
         keyword: h.kw,
         title: h.title,
         date: h.date,
-        uploadStatus: isDone ? '발행완료' : '미발행',
-        status: isDone ? '발행완료' : '자동생성'
+        uploadStatus: isDone ? "발행완료" : "미발행",
+        status: isDone ? "발행완료" : "자동생성"
       })
     });
     console.log('시트 상태 업데이트 완료');
