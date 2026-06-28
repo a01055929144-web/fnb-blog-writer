@@ -30,64 +30,171 @@ const REGION_HEADERS = [
 /* 업종별 공공데이터 품목코드
    출처: 한국농수산식품유통공사 일별 도소매 가격정보 API */
 const ITEM_MAP = {
+  /* 축산 — 가락시장 축산물 경락가 기준 품목코드 */
   '축산': [
-    {code: '231', name: '돼지고기 삼겹살', unit: '100g'},
-    {code: '232', name: '돼지고기 목살',   unit: '100g'},
-    {code: '211', name: '쇠고기 등심(1+)', unit: '100g'},
-    {code: '212', name: '쇠고기 갈비',     unit: '100g'},
-    {code: '241', name: '닭고기 육계',      unit: 'kg'}
+    {code: '211', name: '쇠고기 등심(1+등급)',  unit: '100g', cat: '축산'},
+    {code: '212', name: '쇠고기 갈비(1+등급)',  unit: '100g', cat: '축산'},
+    {code: '213', name: '쇠고기 설도',          unit: '100g', cat: '축산'},
+    {code: '214', name: '쇠고기 앞다리',        unit: '100g', cat: '축산'},
+    {code: '221', name: '돼지고기 삼겹살',      unit: '100g', cat: '축산'},
+    {code: '222', name: '돼지고기 목심',        unit: '100g', cat: '축산'},
+    {code: '223', name: '돼지고기 앞다리',      unit: '100g', cat: '축산'},
+    {code: '224', name: '돼지고기 뒷다리',      unit: '100g', cat: '축산'},
+    {code: '231', name: '닭고기 (생닭/육계)',   unit: 'kg',   cat: '축산'},
+    {code: '232', name: '오리고기',             unit: 'kg',   cat: '축산'}
   ],
+  /* 수산 — 노량진수산시장 도매가 기준 */
   '수산': [
-    {code: '511', name: '고등어',  unit: 'kg'},
-    {code: '512', name: '갈치',    unit: '마리'},
-    {code: '521', name: '오징어',  unit: '마리'},
-    {code: '531', name: '꽃게',    unit: 'kg'},
-    {code: '541', name: '광어(활)', unit: 'kg'}
+    {code: '311', name: '고등어',      unit: 'kg',  cat: '수산'},
+    {code: '312', name: '갈치',        unit: '마리', cat: '수산'},
+    {code: '313', name: '조기',        unit: '마리', cat: '수산'},
+    {code: '314', name: '삼치',        unit: 'kg',  cat: '수산'},
+    {code: '321', name: '오징어',      unit: '마리', cat: '수산'},
+    {code: '322', name: '낙지',        unit: '마리', cat: '수산'},
+    {code: '323', name: '문어',        unit: 'kg',  cat: '수산'},
+    {code: '331', name: '꽃게',        unit: 'kg',  cat: '수산'},
+    {code: '332', name: '대하(새우)',  unit: 'kg',  cat: '수산'},
+    {code: '341', name: '광어(활어)',  unit: 'kg',  cat: '수산'},
+    {code: '342', name: '우럭(활어)',  unit: 'kg',  cat: '수산'},
+    {code: '343', name: '참돔',        unit: 'kg',  cat: '수산'},
+    {code: '351', name: '굴',          unit: 'kg',  cat: '수산'},
+    {code: '352', name: '바지락',      unit: 'kg',  cat: '수산'},
+    {code: '353', name: '홍합',        unit: 'kg',  cat: '수산'}
   ],
+  /* 채소·과일 공통 코드 (여러 업종 공유) */
+  '채소': [
+    {code: '111', name: '배추',        unit: '포기', cat: '채소'},
+    {code: '112', name: '무',          unit: '개',   cat: '채소'},
+    {code: '113', name: '양배추',      unit: '포기', cat: '채소'},
+    {code: '114', name: '시금치',      unit: 'kg',   cat: '채소'},
+    {code: '115', name: '상추',        unit: '100g', cat: '채소'},
+    {code: '121', name: '대파',        unit: 'kg',   cat: '채소'},
+    {code: '122', name: '쪽파',        unit: 'kg',   cat: '채소'},
+    {code: '131', name: '양파',        unit: 'kg',   cat: '채소'},
+    {code: '132', name: '마늘(깐마늘)',unit: 'kg',   cat: '채소'},
+    {code: '133', name: '생강',        unit: 'kg',   cat: '채소'},
+    {code: '141', name: '고추(풋고추)',unit: 'kg',   cat: '채소'},
+    {code: '142', name: '청양고추',    unit: 'kg',   cat: '채소'},
+    {code: '143', name: '파프리카',    unit: 'kg',   cat: '채소'},
+    {code: '151', name: '오이',        unit: '개',   cat: '채소'},
+    {code: '152', name: '애호박',      unit: '개',   cat: '채소'},
+    {code: '153', name: '가지',        unit: '개',   cat: '채소'},
+    {code: '154', name: '토마토',      unit: 'kg',   cat: '채소'},
+    {code: '155', name: '방울토마토',  unit: 'kg',   cat: '채소'},
+    {code: '161', name: '감자',        unit: 'kg',   cat: '채소'},
+    {code: '162', name: '고구마',      unit: 'kg',   cat: '채소'},
+    {code: '171', name: '느타리버섯',  unit: 'kg',   cat: '채소'},
+    {code: '172', name: '새송이버섯',  unit: 'kg',   cat: '채소'},
+    {code: '173', name: '표고버섯',    unit: 'kg',   cat: '채소'},
+    {code: '174', name: '팽이버섯',    unit: '봉',   cat: '채소'}
+  ],
+  '과일': [
+    {code: '411', name: '사과',        unit: '개',   cat: '과일'},
+    {code: '412', name: '배',          unit: '개',   cat: '과일'},
+    {code: '413', name: '포도',        unit: 'kg',   cat: '과일'},
+    {code: '414', name: '복숭아',      unit: '개',   cat: '과일'},
+    {code: '421', name: '딸기',        unit: 'kg',   cat: '과일'},
+    {code: '422', name: '수박',        unit: '개',   cat: '과일'},
+    {code: '423', name: '참외',        unit: '개',   cat: '과일'},
+    {code: '424', name: '멜론',        unit: '개',   cat: '과일'},
+    {code: '431', name: '바나나',      unit: 'kg',   cat: '과일'},
+    {code: '432', name: '오렌지',      unit: '개',   cat: '과일'},
+    {code: '433', name: '레몬',        unit: '개',   cat: '과일'},
+    {code: '434', name: '아보카도',    unit: '개',   cat: '과일'},
+    {code: '441', name: '체리',        unit: 'kg',   cat: '과일'}
+  ],
+  '곡류': [
+    {code: '511', name: '쌀(20kg)',    unit: '포',   cat: '곡류'},
+    {code: '512', name: '찹쌀(20kg)', unit: '포',   cat: '곡류'},
+    {code: '521', name: '밀가루(강력분,20kg)', unit: '포', cat: '곡류'},
+    {code: '522', name: '밀가루(박력분,20kg)', unit: '포', cat: '곡류'}
+  ],
+  /* 업종별 매핑 — 위 공통 코드 참조 */
   '한식': [
-    {code: '111', name: '배추',    unit: '포기'},
-    {code: '112', name: '무',      unit: '개'},
-    {code: '221', name: '양파',    unit: 'kg'},
-    {code: '231', name: '돼지고기 삼겹살', unit: '100g'},
-    {code: '241', name: '닭고기 육계',     unit: 'kg'}
-  ],
-  '일식': [
-    {code: '541', name: '광어(활)', unit: 'kg'},
-    {code: '511', name: '고등어',   unit: 'kg'},
-    {code: '521', name: '오징어',   unit: '마리'},
-    {code: '121', name: '딸기',     unit: 'kg'}
-  ],
-  '중식': [
-    {code: '111', name: '배추',  unit: '포기'},
-    {code: '221', name: '양파',  unit: 'kg'},
-    {code: '112', name: '무',    unit: '개'},
-    {code: '231', name: '돼지고기 삼겹살', unit: '100g'}
+    {code: '111', name: '배추',           unit: '포기', cat: '채소'},
+    {code: '112', name: '무',             unit: '개',   cat: '채소'},
+    {code: '131', name: '양파',           unit: 'kg',   cat: '채소'},
+    {code: '121', name: '대파',           unit: 'kg',   cat: '채소'},
+    {code: '132', name: '마늘(깐마늘)',   unit: 'kg',   cat: '채소'},
+    {code: '141', name: '고추(풋고추)',   unit: 'kg',   cat: '채소'},
+    {code: '221', name: '돼지고기 삼겹살',unit: '100g', cat: '축산'},
+    {code: '231', name: '닭고기 (생닭)',  unit: 'kg',   cat: '축산'},
+    {code: '171', name: '느타리버섯',     unit: 'kg',   cat: '채소'},
+    {code: '161', name: '감자',           unit: 'kg',   cat: '채소'}
   ],
   '양식': [
-    {code: '121', name: '딸기',         unit: 'kg'},
-    {code: '214', name: '방울토마토',   unit: 'kg'},
-    {code: '211', name: '쇠고기 등심',  unit: '100g'}
+    {code: '154', name: '토마토',         unit: 'kg',   cat: '채소'},
+    {code: '155', name: '방울토마토',     unit: 'kg',   cat: '채소'},
+    {code: '143', name: '파프리카',       unit: 'kg',   cat: '채소'},
+    {code: '421', name: '딸기',           unit: 'kg',   cat: '과일'},
+    {code: '211', name: '쇠고기 등심',    unit: '100g', cat: '축산'},
+    {code: '131', name: '양파',           unit: 'kg',   cat: '채소'},
+    {code: '132', name: '마늘(깐마늘)',   unit: 'kg',   cat: '채소'},
+    {code: '434', name: '아보카도',       unit: '개',   cat: '과일'},
+    {code: '172', name: '새송이버섯',     unit: 'kg',   cat: '채소'}
+  ],
+  '일식': [
+    {code: '341', name: '광어(활어)',     unit: 'kg',   cat: '수산'},
+    {code: '342', name: '우럭(활어)',     unit: 'kg',   cat: '수산'},
+    {code: '311', name: '고등어',         unit: 'kg',   cat: '수산'},
+    {code: '321', name: '오징어',         unit: '마리', cat: '수산'},
+    {code: '331', name: '꽃게',           unit: 'kg',   cat: '수산'},
+    {code: '332', name: '대하(새우)',     unit: 'kg',   cat: '수산'},
+    {code: '121', name: '대파',           unit: 'kg',   cat: '채소'},
+    {code: '131', name: '양파',           unit: 'kg',   cat: '채소'},
+    {code: '173', name: '표고버섯',       unit: 'kg',   cat: '채소'}
+  ],
+  '중식': [
+    {code: '111', name: '배추',           unit: '포기', cat: '채소'},
+    {code: '112', name: '무',             unit: '개',   cat: '채소'},
+    {code: '131', name: '양파',           unit: 'kg',   cat: '채소'},
+    {code: '121', name: '대파',           unit: 'kg',   cat: '채소'},
+    {code: '132', name: '마늘(깐마늘)',   unit: 'kg',   cat: '채소'},
+    {code: '221', name: '돼지고기 삼겹살',unit: '100g', cat: '축산'},
+    {code: '231', name: '닭고기 (생닭)',  unit: 'kg',   cat: '축산'},
+    {code: '141', name: '고추(풋고추)',   unit: 'kg',   cat: '채소'},
+    {code: '152', name: '애호박',         unit: '개',   cat: '채소'}
   ],
   '샐러드': [
-    {code: '121', name: '딸기',       unit: 'kg'},
-    {code: '214', name: '방울토마토', unit: 'kg'},
-    {code: '112', name: '무',         unit: '개'},
-    {code: '221', name: '양파',       unit: 'kg'}
+    {code: '115', name: '상추',           unit: '100g', cat: '채소'},
+    {code: '114', name: '시금치',         unit: 'kg',   cat: '채소'},
+    {code: '113', name: '양배추',         unit: '포기', cat: '채소'},
+    {code: '155', name: '방울토마토',     unit: 'kg',   cat: '채소'},
+    {code: '143', name: '파프리카',       unit: 'kg',   cat: '채소'},
+    {code: '151', name: '오이',           unit: '개',   cat: '채소'},
+    {code: '434', name: '아보카도',       unit: '개',   cat: '과일'},
+    {code: '421', name: '딸기',           unit: 'kg',   cat: '과일'},
+    {code: '131', name: '양파',           unit: 'kg',   cat: '채소'},
+    {code: '433', name: '레몬',           unit: '개',   cat: '과일'}
   ],
   '주류': [
-    {code: '131', name: '사과', unit: '개'},
-    {code: '141', name: '포도', unit: 'kg'},
-    {code: '121', name: '딸기', unit: 'kg'}
+    {code: '411', name: '사과',           unit: '개',   cat: '과일'},
+    {code: '413', name: '포도',           unit: 'kg',   cat: '과일'},
+    {code: '421', name: '딸기',           unit: 'kg',   cat: '과일'},
+    {code: '431', name: '바나나',         unit: 'kg',   cat: '과일'},
+    {code: '433', name: '레몬',           unit: '개',   cat: '과일'},
+    {code: '422', name: '수박',           unit: '개',   cat: '과일'},
+    {code: '141', name: '고추(풋고추)',   unit: 'kg',   cat: '채소'},
+    {code: '221', name: '돼지고기 삼겹살',unit: '100g', cat: '축산'}
   ],
   '카페베이커리': [
-    {code: '121', name: '딸기',       unit: 'kg'},
-    {code: '131', name: '사과',       unit: '개'},
-    {code: '214', name: '방울토마토', unit: 'kg'}
+    {code: '421', name: '딸기',           unit: 'kg',   cat: '과일'},
+    {code: '422', name: '수박',           unit: '개',   cat: '과일'},
+    {code: '431', name: '바나나',         unit: 'kg',   cat: '과일'},
+    {code: '411', name: '사과',           unit: '개',   cat: '과일'},
+    {code: '413', name: '포도',           unit: 'kg',   cat: '과일'},
+    {code: '521', name: '밀가루(강력분)', unit: '포',   cat: '곡류'},
+    {code: '154', name: '토마토',         unit: 'kg',   cat: '채소'},
+    {code: '155', name: '방울토마토',     unit: 'kg',   cat: '채소'},
+    {code: '433', name: '레몬',           unit: '개',   cat: '과일'}
   ],
   '공산품': [
-    {code: '111', name: '배추',  unit: '포기'},
-    {code: '221', name: '양파',  unit: 'kg'},
-    {code: '231', name: '돼지고기 삼겹살', unit: '100g'}
+    {code: '511', name: '쌀(20kg)',       unit: '포',   cat: '곡류'},
+    {code: '521', name: '밀가루(강력분)', unit: '포',   cat: '곡류'},
+    {code: '131', name: '양파',           unit: 'kg',   cat: '채소'},
+    {code: '111', name: '배추',           unit: '포기', cat: '채소'},
+    {code: '221', name: '돼지고기 삼겹살',unit: '100g', cat: '축산'},
+    {code: '311', name: '고등어',         unit: 'kg',   cat: '수산'}
   ]
 };
 
