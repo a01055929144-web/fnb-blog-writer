@@ -167,27 +167,8 @@ const ITEM_MAP = {
     {code: '131', name: '양파',           unit: 'kg',   cat: '채소'},
     {code: '433', name: '레몬',           unit: '개',   cat: '과일'}
   ],
-  '주류': [
-    {code: '411', name: '사과',           unit: '개',   cat: '과일'},
-    {code: '413', name: '포도',           unit: 'kg',   cat: '과일'},
-    {code: '421', name: '딸기',           unit: 'kg',   cat: '과일'},
-    {code: '431', name: '바나나',         unit: 'kg',   cat: '과일'},
-    {code: '433', name: '레몬',           unit: '개',   cat: '과일'},
-    {code: '422', name: '수박',           unit: '개',   cat: '과일'},
-    {code: '141', name: '고추(풋고추)',   unit: 'kg',   cat: '채소'},
-    {code: '221', name: '돼지고기 삼겹살',unit: '100g', cat: '축산'}
-  ],
-  '카페베이커리': [
-    {code: '421', name: '딸기',           unit: 'kg',   cat: '과일'},
-    {code: '422', name: '수박',           unit: '개',   cat: '과일'},
-    {code: '431', name: '바나나',         unit: 'kg',   cat: '과일'},
-    {code: '411', name: '사과',           unit: '개',   cat: '과일'},
-    {code: '413', name: '포도',           unit: 'kg',   cat: '과일'},
-    {code: '521', name: '밀가루(강력분)', unit: '포',   cat: '곡류'},
-    {code: '154', name: '토마토',         unit: 'kg',   cat: '채소'},
-    {code: '155', name: '방울토마토',     unit: 'kg',   cat: '채소'},
-    {code: '433', name: '레몬',           unit: '개',   cat: '과일'}
-  ],
+  '주류': [],  // 제조사 납품가 중심 — 공공데이터 단가 해당 없음
+  '카페베이커리': [],  // 원두·유제품·밀가루 제조사 납품가 중심 — 공공데이터 단가 해당 없음
   '공산품': [
     {code: '511', name: '쌀(20kg)',       unit: '포',   cat: '곡류'},
     {code: '521', name: '밀가루(강력분)', unit: '포',   cat: '곡류'},
@@ -283,7 +264,11 @@ function callClaude_(data) {
 function fetchPrice_(params) {
   var industry = params.industry || '한식';
   var key = normalizeIndustry_(industry);
-  var items = ITEM_MAP[key] || ITEM_MAP['한식'];
+  var items = ITEM_MAP[key] || [];
+  if (!items.length) {
+    return {success: true, industry: key, date: todayStr, prices: [],
+      summary: key + '은(는) 공공데이터 단가 조회 대상 외 업종입니다. (제조사 납품가 별도 참고)'};
+  }
 
   var today = new Date();
   var endDay   = Utilities.formatDate(today, 'Asia/Seoul', 'yyyyMMdd');
