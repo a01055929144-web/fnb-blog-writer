@@ -387,46 +387,50 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 <!-- ═══ KEYWORD ENGINE ═══ -->
 <div class="page" id="page-keyword">
-  <div class="grid2" style="align-items:start">
+  <div class="grid2" style="align-items:start;gap:14px">
 
-    <!-- 설정 패널 -->
-    <div>
+    <!-- 좌: 설정 패널 -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+
+      <!-- 지역 선택 -->
       <div class="card">
-        <div class="card-hd"><i class="ti ti-settings"></i><h3>키워드 설정</h3></div>
-
-        <div class="sec-title"><i class="ti ti-map-pin" style="font-size:11px"></i> 지역 (최대 5개)</div>
-        <input class="mini-search" id="regionSearch" placeholder="지역명·상권 검색" oninput="handleRegionSearch(this.value)">
-        <div class="r-tabs">
+        <div class="card-hd"><i class="ti ti-map-pin"></i><h3>① 지역 선택 <span style="font-size:10px;color:var(--gray);font-weight:400">(최대 5개)</span></h3></div>
+        <input class="mini-search" id="regionSearch" placeholder="지역·상권 검색" oninput="handleRegionSearch(this.value)" style="margin-bottom:8px">
+        <div class="r-tabs" style="flex-wrap:wrap;gap:4px;margin-bottom:8px">
           <div class="r-tab on" onclick="selReg(this,'서울')">서울</div>
           <div class="r-tab" onclick="selReg(this,'경기')">경기</div>
           <div class="r-tab" onclick="selReg(this,'인천')">인천</div>
+          <div class="r-tab" onclick="selReg(this,'부산')">부산</div>
+          <div class="r-tab" onclick="selReg(this,'대구')">대구</div>
+          <div class="r-tab" onclick="selReg(this,'대전')">대전</div>
+          <div class="r-tab" onclick="selReg(this,'광주')">광주</div>
+          <div class="r-tab" onclick="selReg(this,'울산')">울산</div>
         </div>
-        <div class="dist-grid" id="distGrid" style="margin-bottom:6px"></div>
+        <div class="dist-grid" id="distGrid" style="margin-bottom:8px"></div>
         <div class="sel-tags" id="selRegions"></div>
+      </div>
 
-        <div class="sec-title" style="margin-top:14px"><i class="ti ti-category" style="font-size:11px"></i> 업종</div>
-        <input class="mini-search" id="industrySearch" placeholder="업종 검색" oninput="handleIndustrySearch(this.value)">
-        <div class="ind-grid" id="industryGrid" style="margin-bottom:14px"></div>
+      <!-- 업종 선택 -->
+      <div class="card">
+        <div class="card-hd"><i class="ti ti-category"></i><h3>② 업종 선택</h3></div>
+        <input class="mini-search" id="industrySearch" placeholder="업종 검색" oninput="handleIndustrySearch(this.value)" style="margin-bottom:8px">
+        <div class="ind-grid" id="industryGrid"></div>
+      </div>
 
-        <div class="sec-title" style="margin-top:14px"><i class="ti ti-box" style="font-size:11px"></i> 품목 (최대 5개)</div>
-        <input class="mini-search" id="itemSearch" placeholder="품목 검색" oninput="handleItemSearch(this.value)">
-        <div class="item-add">
-          <input class="mini-search" id="customItemInput" placeholder="직접 품목 추가">
-          <button class="btn btn-outline" onclick="addCustomItem()"><i class="ti ti-plus"></i> 추가</button>
+      <!-- 품목 선택 -->
+      <div class="card">
+        <div class="card-hd"><i class="ti ti-box"></i><h3>③ 품목 선택 <span style="font-size:10px;color:var(--gray);font-weight:400">(최대 5개)</span></h3></div>
+        <input class="mini-search" id="itemSearch" placeholder="품목 검색" oninput="handleItemSearch(this.value)" style="margin-bottom:8px">
+        <div class="item-add" style="display:flex;gap:6px;margin-bottom:8px">
+          <input class="mini-search" id="customItemInput" placeholder="직접 품목 추가" style="flex:1">
+          <button class="btn btn-outline" onclick="addCustomItem()" style="flex-shrink:0"><i class="ti ti-plus"></i> 추가</button>
         </div>
-        <div class="item-grid" id="itemGrid" style="margin-bottom:14px"></div>
+        <div class="item-grid" id="itemGrid"></div>
+      </div>
 
-        <div class="sec-title"><i class="ti ti-notes" style="font-size:11px"></i> 사용 가이드</div>
-        <div class="guide-box">
-          <ol>
-            <li><strong>지역</strong>에서 납품 타깃 상권을 최대 5개까지 선택하세요.</li>
-            <li><strong>업종</strong>을 고른 뒤 기본 품목 또는 직접 추가한 품목을 선택하세요.</li>
-            <li>키워드 추출 후 구매 의도가 높은 키워드만 골라 Topic Cluster로 넘기세요.</li>
-            <li>같은 조건은 저장된 결과를 재사용해 API 토큰을 아낍니다.</li>
-          </ol>
-        </div>
-
-        <div class="sec-title" style="margin-top:14px"><i class="ti ti-database" style="font-size:11px"></i> 데이터 레이어</div>
+      <!-- 데이터 레이어 -->
+      <div class="card">
+        <div class="card-hd"><i class="ti ti-database"></i><h3>데이터 레이어</h3></div>
         <div class="toggle-row">
           <div class="toggle-info"><h4>🌍 일반 데이터</h4><p>계절 시세·트렌드·원가절감 팁</p></div>
           <div class="toggle on" id="togG" onclick="togGeneral()"><div class="toggle-thumb"></div></div>
@@ -438,13 +442,28 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
         <div id="layerStatus" style="font-size:10px;padding:6px 10px;border-radius:var(--rs);background:var(--g2);color:#166534;font-weight:600;text-align:center;margin-top:6px">✅ 일반 + 지역 데이터 모두 반영</div>
       </div>
 
-      <button class="btn btn-dark btn-full" id="kwGenBtn" onclick="genKeywords()">
-        <i class="ti ti-search"></i> 롱테일 키워드 추출
+      <!-- 키워드 추출 버튼 -->
+      <button class="btn btn-dark btn-full" id="kwGenBtn" onclick="genKeywords()" style="padding:13px;font-size:13px">
+        <i class="ti ti-search"></i> 키워드 추출 + 글기획 자동 생성
       </button>
+
+      <!-- 사용 가이드 (대시보드처럼 아래 배치) -->
+      <div class="card" style="background:var(--g2);border-color:var(--g3)">
+        <div class="card-hd"><i class="ti ti-info-circle" style="color:var(--g3)"></i><h3 style="color:var(--g3)">사용 가이드</h3></div>
+        <ol style="font-size:11px;color:#166534;line-height:1.8;padding-left:16px;margin:0">
+          <li><strong>지역</strong> 선택 → 납품 타깃 상권 최대 5개</li>
+          <li><strong>업종</strong> 선택 → 카드 클릭</li>
+          <li><strong>품목</strong> 선택 → 최대 5개</li>
+          <li>버튼 클릭 → 키워드 추출 후 <strong>글기획까지 자동 생성</strong></li>
+          <li>Topic Cluster 탭에서 기획 확인 후 <strong>전체 글 작성</strong></li>
+        </ol>
+      </div>
     </div>
 
-    <!-- 키워드 결과 -->
-    <div>
+    <!-- 우: 키워드 결과 + 글기획 진행 상태 -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+
+      <!-- 키워드 결과 -->
       <div class="card">
         <div class="card-hd">
           <i class="ti ti-list"></i><h3>추출된 키워드</h3>
@@ -458,11 +477,17 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
         <div id="kwContainer">
           <div style="text-align:center;padding:40px;color:var(--gray);font-size:12px">
             <i class="ti ti-search" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3"></i>
-            업종·지역·품목 선택 후<br>키워드 추출 버튼을 눌러주세요
+            지역·업종·품목 선택 후<br>버튼을 눌러주세요
           </div>
         </div>
-        <button class="btn btn-green btn-full" id="toClusterBtn" style="margin-top:12px;display:none" onclick="goToCluster()">
-          <i class="ti ti-sitemap"></i> Topic Cluster 생성하기
+      </div>
+
+      <!-- 글기획 자동 생성 진행 상태 (키워드 추출 후 표시) -->
+      <div class="card" id="autoClusterStatus" style="display:none">
+        <div class="card-hd"><i class="ti ti-sitemap"></i><h3>글기획 자동 생성</h3><span class="badge badge-green" id="clusterAutobadge"></span></div>
+        <div id="autoClusterMsg" style="font-size:12px;color:var(--gray);padding:8px 0"></div>
+        <button class="btn btn-green btn-full" id="goClusterBtn" style="margin-top:8px;display:none" onclick="goPage('cluster',document.querySelector('.nav-tab:nth-child(3)'))">
+          <i class="ti ti-sitemap"></i> Topic Cluster에서 글 작성하기 →
         </button>
       </div>
     </div>
