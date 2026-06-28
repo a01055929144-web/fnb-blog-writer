@@ -1,18 +1,4 @@
-async function callClaude(prompt, maxTokens=2000){
-  // Apps Script 경유 Claude 호출 (CORS 없음)
-  const res = await fetch(SHEET_ENDPOINT, {
-    method: "POST",
-    headers: {"Content-Type": "text/plain;charset=utf-8"},
-    body: JSON.stringify({
-      prompt: prompt,
-      max_tokens: maxTokens
-    })
-  });
-  if(!res.ok) throw new Error("Apps Script 오류: " + res.status);
-  const data = await res.json();
-  if(!data.success) throw new Error(data.message || "Claude 호출 실패");
-  return data.text || "";
-}<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
