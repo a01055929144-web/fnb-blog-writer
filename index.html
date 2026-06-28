@@ -1125,20 +1125,27 @@ function selProjReg(el, name){
 }
 
 function renderDist(){
-  const q = regionQuery.toLowerCase();
-  const keys = (REGION_TABS[curRegion]||[]).filter(name=>{
-    const info = (AREA_DATA[curRegion]||{})[name]||{};
-    return !q || name.toLowerCase().includes(q) || String(info.tags||'').toLowerCase().includes(q) || String(info.food||'').toLowerCase().includes(q);
+  var q = regionQuery.toLowerCase();
+  var keys = (REGION_TABS[curRegion]||[]).filter(function(name){
+    var info = (AREA_DATA[curRegion]||{})[name]||{};
+    return !q || name.toLowerCase().includes(q) ||
+           String(info.tags||'').toLowerCase().includes(q) ||
+           String(info.food||'').toLowerCase().includes(q);
   });
-  document.getElementById('distGrid').innerHTML = keys.map(name=>{
-    const info = (AREA_DATA[curRegion]||{})[name]||{};
-    const on = selDistricts.find(x=>x.district===name);
-    return `<div class="dist-btn${on?' on':''}" onclick="togDist('${name}')">
-      <div class="dn">${esc(name)}</div>
-      <div class="dt">${esc((info.tags||'').split(',')[0])}</div>
-    </div>`;
+  var el = document.getElementById('distGrid');
+  if(!el) return;
+  el.innerHTML = keys.map(function(name){
+    var info = (AREA_DATA[curRegion]||{})[name]||{};
+    var on = selDistricts.find(function(x){ return x.district===name; });
+    var tag = (info.tags||'').split(',')[0].trim();
+    return '<div class="dist-btn'+(on?' on':'')+'" data-dist="'+name+'" onclick="togDistEl(this)">'
+      +'<div class="dn">'+name+'</div>'
+      +'<div class="dt">'+tag+'</div>'
+      +'</div>';
   }).join('');
 }
+function togDistEl(el){ togDist(el.getAttribute('data-dist')); }
+
 function renderSelectedRegions(){
   document.getElementById('selRegions').innerHTML = selDistricts.map(d=>
     `<div class="sel-tag">${esc(d.region)} ${esc(d.district)}<span onclick="rmDist('${d.district}')">×</span></div>`
@@ -1179,13 +1186,35 @@ function rmDist(name){
   persistLater('districtRemove');
 }
 function renderItems(){
-  const q = itemQuery.toLowerCase();
-  const baseItems = (ITEMS[industry]||[]).map(name=>({name, custom:false}));
-  const addedItems = (customItems[industry]||[]).map(name=>({name, custom:true}));
-  document.getElementById('itemGrid').innerHTML = [...baseItems, ...addedItems].filter(it=>!q || it.name.toLowerCase().includes(q)).map(it=>
-    `<div class="item-btn${selItems.includes(it.name)?' on':''}${it.custom?' custom':''}" onclick="togItem(${jsArg(it.name)})">${esc(it.name)}${it.custom?`<span class="item-x" onclick="removeCustomItem(event,${jsArg(it.name)})">×</span>`:''}</div>`
-  ).join('');
+  var q = itemQuery.toLowerCase();
+  var base = (ITEMS[industry]||[]).map(function(n){ return {name:n,custom:false}; });
+  var added = (customItems[industry]||[]).map(function(n){ return {name:n,custom:true}; });
+  var all = base.concat(added).filter(function(it){
+    return !q || it.name.toLowerCase().includes(q);
+  });
+  window._fnbItems = all;
+  var el = document.getElementById('itemGrid');
+  if(!el) return;
+  el.innerHTML = all.map(function(it, i){
+    var on = selItems.includes(it.name) ? ' on' : '';
+    var cls = 'item-btn'+on+(it.custom?' custom':'');
+    var del = it.custom
+      ? '<span class="item-x" data-i="'+i+'" onclick="event.stopPropagation();delItemEl(this)">×</span>'
+      : '';
+    return '<div class="'+cls+'" data-i="'+i+'" onclick="togItemEl(this)">'+it.name+del+'</div>';
+  }).join('');
 }
+function togItemEl(el){
+  var i = parseInt(el.getAttribute('data-i'));
+  var it = window._fnbItems&&window._fnbItems[i];
+  if(it) togItem(it.name);
+}
+function delItemEl(el){
+  var i = parseInt(el.getAttribute('data-i'));
+  var it = window._fnbItems&&window._fnbItems[i];
+  if(it) removeCustomItem(null, it.name);
+}
+
 function addCustomItem(){
   const input = document.getElementById('customItemInput');
   const item = input.value.trim();
@@ -1474,18 +1503,44 @@ function selAllCluster(){
   document.querySelectorAll('.cluster-card').forEach(el=>el.classList.add('on'));
   persistLater('clusterSelectAll');
 }
-function writeSelected(){
-  if(!selClusters.length){ showToast('글을 선택해주세요'); return; }
-  const first = clusterData[selClusters[0]];
-  document.getElementById('writerKw').value = first.keyword||first.title;
-  document.getElementById('writerRegion').value = first.region||'';
-  goPage('writer', document.querySelectorAll('.nav-tab')[4]);
-  showToast(`AI Writer에서 "${first.title}" 작성 준비 완료!`);
+async function writeSelected(){
+  if(!selClusters.length){ showToast('글 기획을 선택해주세요'); return; }
+  if(typeof autoRunning !== 'undefined' && autoRunning){ showToast('이미 실행 중이에요'); return; }
+  autoRunning = true;
+
+  var items = selClusters.map(function(i){ return clusterData[i]; }).filter(Boolean);
+  items.sort(function(a,b){
+    var p={high:0,mid:1,low:2};
+    return (p[a.priority]||1)-(p[b.priority]||1);
+  });
+
+  showAutoModal();
+  updateAutoModal('step1','✅','키워드/클러스터 선택 완료');
+  updateAutoModal('step2','✅','글 기획 '+items.length+'개 선택');
+  updateAutoModal('step3','⏳','글 작성 시작...');
+
+  var ok=0, total=items.length;
+  for(var i=0;i<items.length;i++){
+    if(!autoRunning) break;
+    var det=document.getElementById('autoStep3Detail');
+    if(det) det.innerHTML='📝 ('+(i+1)+'/'+total+') '+(items[i].title||items[i].keyword||'')+'...';
+    try{
+      var r=await writeOnePost(items[i],i,total);
+      if(r&&r.success) ok++;
+    }catch(e){ console.warn('글 작성 실패:',e); }
+    var pr=document.getElementById('autoProgress');
+    if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
+    updateAutoModal('step3','⏳','작성 중('+(i+1)+'/'+total+') 완료 '+ok+'개');
+  }
+
+  updateAutoModal('step3','✅','완료('+ok+'/'+total+'개)');
+  updateAutoModal('step4','✅','구글 시트 저장 완료');
+  var dn=document.getElementById('autoDone'); if(dn) dn.style.display='block';
+  var sm=document.getElementById('autoSummary'); if(sm) sm.textContent=ok+'개 포스팅이 저장됐어요!';
+  updateDashboard(); renderHistList();
+  autoRunning=false;
 }
 
-/* ══════════════════════════════════════
-   AI Writer
-══════════════════════════════════════ */
 function buildWriterPrompt(kw, region, type, length, options){
   const parts = (region||'').split(' ');
   const regKey = parts[0];
