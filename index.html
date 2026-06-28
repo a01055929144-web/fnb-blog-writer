@@ -264,7 +264,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 <div class="hd">
   <div class="hd-logo">
     <div class="hd-logo-dot"></div>
-    F&B Lead Engine
+    F&amp;B Lead Engine
     <span class="hd-sub">식자재 유통 AI SEO 플랫폼</span>
   </div>
   <div class="hd-r">
@@ -272,22 +272,20 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <div style="width:6px;height:6px;background:var(--g);border-radius:50%;animation:pulse 2s infinite"></div>
       <span style="color:var(--g3);font-size:11px;font-weight:600">Claude API 연결됨</span>
     </div>
-    <span class="hd-status" id="apiStatus">⚡ 시트 자동저장 ON</span>
     <a class="sheet-btn" href="https://docs.google.com/spreadsheets/d/1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU/edit" target="_blank">
-      <i class="ti ti-table" style="font-size:12px"></i> 시트
+      <i class="ti ti-table"></i> 시트
     </a>
   </div>
 </div>
 
-<!-- 네비 -->
-<div class="nav">
-  <div class="nav-tab on" onclick="goPage('dashboard',this)"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
-  <div class="nav-tab" onclick="goPage('project',this)"><i class="ti ti-folders"></i>Project</div>
-  <div class="nav-tab" onclick="goPage('keyword',this)"><i class="ti ti-search"></i>Keyword Engine</div>
-  <div class="nav-tab" onclick="goPage('cluster',this)"><i class="ti ti-sitemap"></i>Topic Cluster</div>
-    <div class="nav-tab" onclick="goPage('cta',this)"><i class="ti ti-speakerphone"></i>CTA Generator</div>
-  <div class="nav-tab" onclick="goPage('analytics',this)"><i class="ti ti-chart-bar"></i>Analytics</div>
-</div>
+<!-- 통합 네비게이션 -->
+<nav class="nav">
+  <div class="nav-tab on"  onclick="goPage('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+  <div class="nav-tab"     onclick="goPage('keyword',this)"><i class="ti ti-search"></i> 키워드&amp;설정</div>
+  <div class="nav-tab"     onclick="goPage('cluster',this)"><i class="ti ti-sitemap"></i> 글 기획</div>
+  <div class="nav-tab"     onclick="goPage('cta',this)"><i class="ti ti-message-circle"></i> CTA</div>
+  <div class="nav-tab"     onclick="goPage('analytics',this)"><i class="ti ti-chart-bar"></i> Analytics</div>
+</nav>
 
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page on" id="page-dashboard">
@@ -616,45 +614,31 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 <!-- ═══ ANALYTICS ═══ -->
 <div class="page" id="page-analytics">
-  <div class="stat-grid" style="margin-bottom:16px">
-    <div class="stat">
-      <div class="stat-label">총 생성 글</div>
-      <div class="stat-val" id="an-total">0</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">예상 월 유입</div>
-      <div class="stat-val" id="an-traffic">0</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">예상 월 상담</div>
-      <div class="stat-val" id="an-leads">0</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">커버 키워드</div>
-      <div class="stat-val" id="an-kw">0</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <h2 style="font-size:15px;font-weight:800">📊 발행 현황 관리</h2>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-o" onclick="filterHistory('all')" id="fAll" style="font-size:11px;padding:5px 10px">전체</button>
+      <button class="btn btn-o" onclick="filterHistory('pending')" id="fPend" style="font-size:11px;padding:5px 10px">미발행</button>
+      <button class="btn btn-o" onclick="filterHistory('done')" id="fDone" style="font-size:11px;padding:5px 10px">발행완료</button>
     </div>
   </div>
 
-  <div class="analytics-row">
-    <div>
-      <div class="sec-title">작성 히스토리</div>
-      <div id="histList">
-        <div style="text-align:center;padding:30px;color:var(--gray);font-size:12px;background:var(--w);border-radius:var(--r);border:1px solid var(--bd)">
-          아직 작성된 글이 없어요
-        </div>
-      </div>
-    </div>
-    <div class="analytics-main">
-      <div id="histDetail" style="text-align:center;padding:40px;color:var(--gray);font-size:12px">
-        <i class="ti ti-article" style="font-size:32px;display:block;margin-bottom:10px;opacity:.3"></i>
-        히스토리에서 글을 선택하면<br>여기서 확인할 수 있어요
-      </div>
-    </div>
+  <!-- 요약 카드 -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+    <div class="stat"><div class="stat-label">총 작성 글</div><div class="stat-val" id="an-total">0</div></div>
+    <div class="stat"><div class="stat-label">✅ 발행완료</div><div class="stat-val" style="color:var(--g)" id="an-done">0</div><div class="stat-sub" id="an-done-pct"></div></div>
+    <div class="stat"><div class="stat-label">⏳ 미발행</div><div class="stat-val" style="color:var(--amber)" id="an-pending">0</div></div>
+    <div class="stat"><div class="stat-label">커버 지역</div><div class="stat-val" id="an-regions">0</div></div>
   </div>
-</div>
 
-<div class="toast" id="toast"><i class="ti ti-check"></i><span id="toastMsg"></span></div>
-
+  <!-- 글 목록 -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px">
+      <input class="mini-search" id="anSearch" placeholder="제목·지역·업종 검색" oninput="filterHistory(currentFilter,this.value)" style="flex:1;max-width:300px">
+      <span style="font-size:11px;color:var(--gray)" id="anCount">0개</span>
+    </div>
+    <div id="histList" style="max-height:65vh;overflow-y:auto"></div>
+  </div>
 <script>
 /* ══════════════════════════════════════
    고정값
@@ -1988,6 +1972,7 @@ async function writeOnePost(item, idx, total){
   return {success:true,title:title,kw:kw};
 }
 let autoRunning = false;
+var currentFilter = 'all';
 async function startAutoMode(){
   if(!selDistricts.length){
     goPage('keyword',document.querySelectorAll('.nav-tab')[2]);
@@ -2102,6 +2087,120 @@ async function writeSelected(){
   updateDashboard(); renderHistList();
   autoRunning=false;
 }
+function filterHistory(filter, search){
+  if(filter !== undefined) currentFilter = filter;
+  var f = currentFilter || 'all';
+  var q = (search !== undefined ? search : (document.getElementById('anSearch')||{}).value||'').toLowerCase();
+
+  // 필터 버튼 활성화
+  ['all','pending','done'].forEach(function(k){
+    var btn = document.getElementById('f'+k.charAt(0).toUpperCase()+k.slice(1));
+    if(btn) btn.style.fontWeight = (k===f) ? '800' : '400';
+  });
+
+  var list = history.filter(function(h){
+    var matchFilter = f==='all' || (f==='pending' && h.uploadStatus!=='done') || (f==='done' && h.uploadStatus==='done');
+    var matchQ = !q || (h.title||'').toLowerCase().includes(q) || (h.region||'').toLowerCase().includes(q) || (h.industry||'').toLowerCase().includes(q);
+    return matchFilter && matchQ;
+  });
+
+  var cnt = document.getElementById('anCount');
+  if(cnt) cnt.textContent = list.length+'개';
+
+  var el = document.getElementById('histList');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--gray);font-size:13px">해당하는 글이 없어요</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(function(h, i){
+    var isDone = h.uploadStatus === 'done';
+    return '<div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;gap:12px">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:13px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(h.title||h.kw||'제목없음')+'</div>'
+      +'<div style="font-size:11px;color:var(--gray);margin-bottom:6px">'
+        +esc(h.date||'')+'  ·  '+esc(h.region||'')+'  ·  '+esc(h.industry||'')+'  ·  '+(h.chars||0)+'자'
+      +'</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<button onclick="copyPost(''+i+'')" style="padding:4px 10px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer"><i class="ti ti-copy"></i> 복사</button>'
+      +'<button onclick="showDetail(''+i+'')" style="padding:4px 10px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer"><i class="ti ti-eye"></i> 보기</button>'
+      +'</div>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'
+      +'<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;background:'+(isDone?'#DCFCE7':'#FEF3C7')+';color:'+(isDone?'#166534':'#92400E')+'">'+(isDone?'✅ 발행완료':'⏳ 미발행')+'</span>'
+      +'<button onclick="toggleUpload(''+i+'')" style="padding:4px 10px;border:1px solid '+(isDone?'#FCA5A5':'#86EFAC')+';border-radius:5px;background:'+(isDone?'#FEF2F2':'#F0FDF4')+';font-size:10px;cursor:pointer;font-weight:600;color:'+(isDone?'#DC2626':'#166534')+'">'+(isDone?'↩ 미발행으로':'→ 발행완료')+'</button>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function toggleUpload(idx){
+  var i = parseInt(idx);
+  var filtered = document.getElementById('histList');
+  // 실제 history에서 해당 아이템 찾기
+  var visibleItems = history.filter(function(h){
+    var f = currentFilter || 'all';
+    var q = ((document.getElementById('anSearch')||{}).value||'').toLowerCase();
+    var mf = f==='all' || (f==='pending' && h.uploadStatus!=='done') || (f==='done' && h.uploadStatus==='done');
+    var mq = !q || (h.title||'').toLowerCase().includes(q) || (h.region||'').toLowerCase().includes(q);
+    return mf && mq;
+  });
+  var h = visibleItems[i];
+  if(!h) return;
+  h.uploadStatus = (h.uploadStatus==='done') ? 'pending' : 'done';
+  // 시트 업데이트
+  try{
+    fetch(SHEET_ENDPOINT, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'updateStatus', sheetId:SHEET_ID, title:h.title, uploadStatus:h.uploadStatus})
+    });
+  }catch(e){}
+  saveApp();
+  filterHistory();
+  updateDashboard();
+}
+
+function copyPost(idx){
+  var visibleItems = history.filter(function(h){
+    var f = currentFilter || 'all';
+    var q = ((document.getElementById('anSearch')||{}).value||'').toLowerCase();
+    var mf = f==='all' || (f==='pending' && h.uploadStatus!=='done') || (f==='done' && h.uploadStatus==='done');
+    var mq = !q || (h.title||'').toLowerCase().includes(q) || (h.region||'').toLowerCase().includes(q);
+    return mf && mq;
+  });
+  var h = visibleItems[parseInt(idx)];
+  if(!h) return;
+  var text = (h.title||'') + '
+
+' + (h.body||'') + '
+
+' + (h.tags||[]).join(' ');
+  navigator.clipboard.writeText(text).then(function(){ showToast('클립보드에 복사됐어요!'); });
+}
+
+function showDetail(idx){
+  var visibleItems = history.filter(function(h){
+    var f = currentFilter || 'all';
+    return true;
+  });
+  var h = history[parseInt(idx)];
+  if(!h) return;
+  showToast((h.title||'').substring(0,30)+'...');
+}
+
+function updateAnalytics(){
+  var total = history.length;
+  var done = history.filter(function(h){ return h.uploadStatus==='done'; }).length;
+  var pending = total - done;
+  var pct = total ? Math.round(done/total*100) : 0;
+  var regions = [...new Set(history.map(function(h){ return h.region; }))].length;
+  var s = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+  s('an-total', total); s('an-done', done);
+  s('an-done-pct', '발행률 '+pct+'%');
+  s('an-pending', pending); s('an-regions', regions);
+}
+
 </script>
 </body>
 </html>
