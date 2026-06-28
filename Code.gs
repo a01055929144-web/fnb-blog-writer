@@ -16,7 +16,7 @@ const SHEET = {
 
 const POST_HEADERS = [
   '번호', '날짜', '지역(시도)', '시/구', '업종', '콘텐츠타입',
-  '제목', '본문(500자)', '해시태그', '글자수', '저장상태', '블로그업로드'
+  '핵심키워드', '제목', '본문(500자)', '해시태그', '글자수', '저장상태', '블로그업로드'
 ];
 
 const PRICE_HEADERS = [
@@ -365,6 +365,7 @@ function savePost_(data) {
     gugun,
     data.industry || '',
     data.type     || '',
+    data.keyword  || data.kw || '',
     data.title    || '',
     String(data.body || '').substring(0, 500),
     data.hashtags || '',
@@ -377,7 +378,7 @@ function savePost_(data) {
   if (newRow % 2 === 0) {
     sheet.getRange(newRow, 1, 1, POST_HEADERS.length).setBackground('#F8FAFC');
   }
-  sheet.getRange(newRow, 12)
+  sheet.getRange(newRow, 13)
     .setBackground('#FEF3C7')
     .setFontColor('#92400E')
     .setFontWeight('bold');
@@ -542,7 +543,7 @@ function weeklyAutoWrite() {
       savePost_({
         date: new Date().toLocaleDateString('ko-KR'),
         region: region, industry: industry, type: type,
-        title: title, body: body, hashtags: tags,
+        keyword: kw, title: title, body: body, hashtags: tags,
         chars: body.length, status: '자동예약'
       });
 
