@@ -333,6 +333,16 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <div class="card-hd"><i class="ti ti-bulb"></i><h3>다음 추천 작업</h3></div>
       <div id="dash-next">
         <div style="display:flex;flex-direction:column;gap:8px">
+          <div onclick="startAutoMode()" style="padding:16px;border-radius:var(--rs);background:linear-gradient(135deg,#166534,#15803D);cursor:pointer;text-align:center;box-shadow:0 4px 14px rgba(22,163,74,.3);margin-bottom:4px">
+            <div style="font-size:22px;margin-bottom:4px">🚀</div>
+            <div style="color:#fff;font-size:14px;font-weight:800;margin-bottom:3px">원클릭 전체 자동화</div>
+            <div style="color:rgba(255,255,255,.75);font-size:11px">지역+업종+품목 선택 후 클릭 → 키워드·글기획·작성·저장 자동</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin:2px 0">
+            <div style="flex:1;height:1px;background:var(--bd)"></div>
+            <span style="font-size:10px;color:var(--gray)">또는 단계별</span>
+            <div style="flex:1;height:1px;background:var(--bd)"></div>
+          </div>
           <div style="padding:10px 12px;border-radius:var(--rs);background:var(--g2);border:1px solid var(--g3);font-size:12px;color:#166534;cursor:pointer" onclick="goPage('keyword',document.querySelectorAll('.nav-tab')[2])">
             <strong>① 키워드 추출</strong><br>지역·업종·품목 선택 후 롱테일 키워드 발굴
           </div>
@@ -458,6 +468,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
         <div id="layerStatus" style="font-size:10px;padding:6px 10px;border-radius:var(--rs);background:var(--g2);color:#166534;font-weight:600;text-align:center;margin-top:6px">✅ 일반 + 지역 데이터 모두 반영</div>
       </div>
 
+      <button onclick="startAutoMode()" style="width:100%;padding:11px;background:linear-gradient(135deg,#166534,#15803D);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:6px">🚀 원클릭 전체 자동화</button>
       <button class="btn btn-dark btn-full" id="kwGenBtn" onclick="genKeywords()">
         <i class="ti ti-search"></i> 롱테일 키워드 추출
       </button>
@@ -2031,43 +2042,74 @@ function buildPostPrompt(kw,region,type){
 }
 
 async function startAutoMode(){
-  if(!selDistricts.length){ goPage('keyword',document.querySelectorAll('.nav-tab')[2]); showToast('지역을 선택해주세요'); return; }
-  if(!selItems.length){ goPage('keyword',document.querySelectorAll('.nav-tab')[2]); showToast('품목을 선택해주세요'); return; }
-  if(autoRunning){ showToast('실행 중이에요'); return; }
-  autoRunning=true; autoLog=[]; showAutoModal();
+  if(!selDistricts.length){
+    goPage('keyword', document.querySelectorAll('.nav-tab')[2]);
+    showToast('먼저 지역을 선택해주세요'); return;
+  }
+  if(!selItems.length){
+    goPage('keyword', document.querySelectorAll('.nav-tab')[2]);
+    showToast('먼저 품목을 선택해주세요'); return;
+  }
+  if(autoRunning){ showToast('이미 자동화 실행 중이에요'); return; }
+
+  autoRunning = true;
+  showAutoModal();
+
   try{
+    // Step 1: 키워드 추출
     updateAutoModal('step1','⏳','키워드 추출 중...');
     await genKeywords();
-    if(!kwData.length) throw new Error('키워드 추출 실패');
-    selKws=[];
-    kwData.slice().sort(function(a,b){var p={low:0,mid:1,high:2};return (p[a.difficulty]||1)-(p[b.difficulty]||1);}).slice(0,10).forEach(function(k){ selKws.push({kw:k.keyword,region:k.region}); });
+    if(!kwData.length) throw new Error('키워드 추출 실패 — 업종/품목을 확인해주세요');
+    selKws = [];
+    kwData.slice().sort(function(a,b){
+      var p = {low:0,mid:1,high:2};
+      return (p[a.difficulty]||1) - (p[b.difficulty]||1);
+    }).slice(0,10).forEach(function(k){ selKws.push({kw:k.keyword, region:k.region}); });
     updateAutoModal('step1','✅','키워드 '+kwData.length+'개 추출 → '+selKws.length+'개 선택');
+
+    // Step 2: Topic Cluster 생성
     updateAutoModal('step2','⏳','글 기획 생성 중...');
     await genCluster();
     if(!clusterData.length) throw new Error('글 기획 생성 실패');
-    var sorted=clusterData.slice().sort(function(a,b){var p={high:0,mid:1,low:2};return (p[a.priority]||1)-(p[b.priority]||1);});
-    updateAutoModal('step2','✅','글 기획 '+sorted.length+'개 완료');
-    var total=sorted.length, ok=0;
+    var sortedItems = clusterData.slice().sort(function(a,b){
+      var p = {high:0,mid:1,low:2};
+      return (p[a.priority]||1) - (p[b.priority]||1);
+    });
+    updateAutoModal('step2','✅','글 기획 '+sortedItems.length+'개 완료');
+
+    // Step 3: 전체 글 작성
+    var total = sortedItems.length;
+    var ok = 0;
     updateAutoModal('step3','⏳','글 작성 시작 (0/'+total+')...');
-    for(var i=0;i<sorted.length;i++){
+    for(var i=0; i<sortedItems.length; i++){
       if(!autoRunning) break;
-      var detEl=document.getElementById('autoStep3Detail');
-      if(detEl) detEl.innerHTML='📝 ('+(i+1)+'/'+total+') '+(sorted[i].title||sorted[i].keyword||'')+'...';
-      try{ var r=await writeOnePost(sorted[i],i,total,null); if(r&&r.success) ok++; }catch(e){ console.warn(e); }
-      var pr=document.getElementById('autoProgress'); if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
-      updateAutoModal('step3','⏳','글 작성 ('+(i+1)+'/'+total+') 완료 '+ok+'개');
+      var detEl = document.getElementById('autoStep3Detail');
+      if(detEl) detEl.innerHTML = '📝 ('+(i+1)+'/'+total+') '+(sortedItems[i].title||sortedItems[i].keyword||'')+'...';
+      try{
+        var r = await writeOnePost(sortedItems[i], i, total, null);
+        if(r && r.success) ok++;
+      }catch(e){ console.warn('글 '+i+' 실패:', e); }
+      var pr = document.getElementById('autoProgress');
+      if(pr) pr.style.width = Math.round((i+1)/total*100)+'%';
+      updateAutoModal('step3','⏳','작성 중 ('+(i+1)+'/'+total+') — 완료 '+ok+'개');
     }
-    updateAutoModal('step3','✅','완료 ('+ok+'/'+total+'개)');
-    updateAutoModal('step4','✅','구글 시트 저장 완료');
-    var dn=document.getElementById('autoDone'); if(dn) dn.style.display='block';
-    var sm=document.getElementById('autoSummary'); if(sm) sm.textContent='총 '+ok+'개 포스팅이 구글 시트에 저장됐어요!';
-    updateDashboard(); renderHistList();
+    updateAutoModal('step3','✅','글 작성 완료 ('+ok+'/'+total+'개)');
+    updateAutoModal('step4','✅','구글 시트 [작성글] 탭 저장 완료');
+
+    var doneEl = document.getElementById('autoDone');
+    var summEl = document.getElementById('autoSummary');
+    if(doneEl) doneEl.style.display = 'block';
+    if(summEl) summEl.textContent = '총 '+ok+'개 포스팅이 구글 시트에 저장됐어요!';
+    updateDashboard();
+    renderHistList();
+
   }catch(e){
-    var er=document.getElementById('autoError'); if(er) er.style.display='block';
-    var em=document.getElementById('autoErrorMsg'); if(em) em.textContent=e.message||String(e);
+    console.error('자동화 오류:', e);
+    var errEl = document.getElementById('autoError');
+    var errMsgEl = document.getElementById('autoErrorMsg');
+    if(errEl) errEl.style.display = 'block';
+    if(errMsgEl) errMsgEl.textContent = e.message || String(e);
   }
-  autoRunning=false;
+  autoRunning = false;
 }
-</script>
-</body>
-</html>
+
