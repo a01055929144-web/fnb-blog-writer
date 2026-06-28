@@ -1142,17 +1142,31 @@ function togDistByEl(el){
 }
 
 function renderSelectedRegions(){
-  document.getElementById('selRegions').innerHTML = selDistricts.map(d=>
-    `<div class="sel-tag">${esc(d.region)} ${esc(d.district)}<span onclick="rmDist('${d.district}')">×</span></div>`
-  ).join('');
+  var el = document.getElementById('selRegions');
+  if(!el) return;
+  el.innerHTML = selDistricts.map(function(d){
+    return '<div class="sel-tag" data-dist="'+d.district+'">'
+      + esc(d.region)+' '+esc(d.district)
+      + '<span data-dist="'+d.district+'" onclick="rmDistByEl(this)">x</span>'
+      + '</div>';
+  }).join('');
 }
+function rmDistByEl(el){ rmDist(el.dataset.dist); }
+
 function renderProjDist(reg){
-  const keys = REGION_TABS[reg||'서울']||[];
-  document.getElementById('projDistGrid').innerHTML = keys.map(name=>`
-    <div class="dist-btn" onclick="togProjDist(this,'${reg||'서울'}','${name}')">
-      <div class="dn">${esc(name)}</div>
-    </div>`).join('');
+  var region = reg || '서울';
+  var keys = REGION_TABS[region] || [];
+  var el = document.getElementById('projDistGrid');
+  if(!el) return;
+  el.innerHTML = keys.map(function(name){
+    var on = projSelDists.find(function(x){ return x.district===name; }) ? ' on' : '';
+    return '<div class="dist-btn'+on+'" data-reg="'+region+'" data-nm="'+name+'" onclick="togProjDistByEl(this)">'
+      + '<div class="dn">'+esc(name)+'</div>'
+      + '</div>';
+  }).join('');
 }
+function togProjDistByEl(el){ togProjDist(el, el.dataset.reg, el.dataset.nm); }
+
 function togDist(name){
   const idx = selDistricts.findIndex(x=>x.district===name);
   if(idx>-1) selDistricts.splice(idx,1);
@@ -1346,7 +1360,7 @@ function renderKeywords(){
     html+=`<div class="kw-group">
       <div class="kw-group-title">${labels[diff]}<span class="kw-count">${groups[diff].length}개</span></div>
       <div class="kw-list">${groups[diff].map(kw=>`
-        <div class="kw-item${selKws.find(x=>x.kw===kw.keyword)?' on':''}" id="kwi-${kw.index}" onclick="togKw(${kw.index})">
+        <div class="kw-item${selKws.find(x=>x.kw===kw.keyword)?' on':''}" id="kwi-${kw.index}" data-ki="${kw.index}" onclick="togKwByEl(this)">
           <div class="kw-chk">${selKws.find(x=>x.kw===kw.keyword)?'✓':''}</div>
           <div class="kw-txt">${esc(kw.keyword)}</div>
           <span class="kw-region">${esc(kw.region)}</span>
@@ -1477,7 +1491,7 @@ function renderCluster(){
   selClusters = [];
   const intentColors = {'창업':'intent-창업','원가절감':'intent-원가절감','거래처변경':'intent-거래처변경','납품':'intent-납품','정보':'intent-정보','비교':'intent-정보','트렌드':'intent-정보'};
   document.getElementById('clusterGrid').innerHTML = clusterData.map((c,i)=>`
-    <div class="cluster-card" id="cc${i}" onclick="togCluster(${i})">
+    <div class="cluster-card" id="cc${i}" data-ci="${i}" onclick="togClusterByEl(this)">
       <div class="cluster-num">#${i+1} · ${esc(c.region||'')} · ${esc(c.type||'')}</div>
       <div class="cluster-title">${esc(c.title)}</div>
       <span class="cluster-intent ${intentColors[c.intent]||'intent-정보'}">${esc(c.intent)}</span>
@@ -1485,6 +1499,7 @@ function renderCluster(){
     </div>`).join('');
 }
 
+function togClusterByEl(el){ togCluster(parseInt(el.dataset.ci||0)); }
 function togCluster(i){
   const el = document.getElementById('cc'+i);
   if(selClusters.includes(i)){ selClusters=selClusters.filter(x=>x!==i); el.classList.remove('on'); }
@@ -1959,7 +1974,7 @@ function showAutoModal(){
     +'<div id="autoDone" style="display:none;background:#F0FDF4;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#166534">✅ <strong>완료!</strong> <span id="autoSummary"></span></div>'
     +'<div id="autoError" style="display:none;background:#FEF2F2;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#DC2626">❌ <span id="autoErrorMsg"></span></div>'
     +'<div style="display:flex;gap:8px">'
-    +'<button onclick="autoRunning=false;document.getElementById('autoModal').style.display='none'" style="flex:1;padding:10px;border:1.5px solid #E2E8F0;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">⏹ 닫기</button>'
+    +'<button onclick="closeAutoModal()" style="flex:1;padding:10px;border:1.5px solid #E2E8F0;border-radius:8px;background:#fff;cursor:pointer;font-size:12px">⏹ 닫기</button>'
     +'<a href="https://docs.google.com/spreadsheets/d/1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU/edit" target="_blank" style="flex:1;padding:10px;background:#22C55E;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center">📊 시트 열기</a>'
     +'</div></div>';
   document.body.appendChild(div);
@@ -1971,6 +1986,7 @@ function updateAutoModal(step,icon,text){
   if(ic) ic.textContent=icon;
   if(tx) tx.textContent=text;
 }
+function closeAutoModal(){ autoRunning=false; var m=document.getElementById("autoModal"); if(m) m.style.display="none"; }
 function stopAutoMode(){ autoRunning=false; }
 
 async function writeOnePost(item, idx, total, el){
