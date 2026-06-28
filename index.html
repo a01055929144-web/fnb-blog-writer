@@ -1284,11 +1284,12 @@ function renderProjDist(reg){
     </div>`).join('');
 }
 function togDist(name){
-  const idx = selDistricts.findIndex(x=>x.district===name);
+  if(!name){ console.warn('togDist: name이 없음'); return; }
+  const idx = selDistricts.findIndex(function(x){ return x.district===name; });
   if(idx>-1) selDistricts.splice(idx,1);
   else{
-    if(selDistricts.length>=5){showToast('최대 5개까지 선택 가능해요');return;}
-    selDistricts.push({region:curRegion,district:name});
+    if(selDistricts.length>=5){ showToast('최대 5개까지 선택 가능해요'); return; }
+    selDistricts.push({region:curRegion, district:name});
   }
   renderDist();
   renderSelectedRegions();
@@ -1316,41 +1317,37 @@ function renderItems(){
   const addedItems = (customItems[industry]||[]).map(function(name){ return {name:name, custom:true}; });
   const el = document.getElementById('itemGrid');
   if(!el) return;
-  el.innerHTML = [...baseItems, ...addedItems].filter(function(it){
+  const list = [...baseItems, ...addedItems].filter(function(it){
     return !q || it.name.toLowerCase().includes(q);
-  }).map(function(it){
+  });
+  el.innerHTML = list.map(function(it, i){
     const on = selItems.includes(it.name);
     const cls = (on ? 'item-btn on' : 'item-btn') + (it.custom ? ' custom' : '');
-    return '<div class="'+cls+'" data-item="'+esc(it.name)+'" onclick="togItem(this.dataset.item)">'
+    // data-attribute 방식으로 esc() 없이 안전하게 처리
+    return '<div class="'+cls+'" data-item-idx="'+i+'" onclick="togItemByIdx(this)">'
       + esc(it.name)
-      + (it.custom ? '<span class="item-x" onclick="event.stopPropagation();removeCustomItem(''+esc(it.name)+'')">×</span>' : '')
+      + (it.custom ? '<span class="item-x" data-item-idx="'+i+'" onclick="event.stopPropagation();removeItemByIdx(this)">×</span>' : '')
       + '</div>';
   }).join('');
+  // 인덱스 → 이름 매핑 저장
+  window._itemList = list.map(function(it){ return it.name; });
 }
-function addCustomItem(){
-  const input = document.getElementById('customItemInput');
-  const item = input.value.trim();
-  if(!item){ showToast('추가할 품목을 입력해주세요'); return; }
-  customItems[industry] = customItems[industry] || [];
-  if((ITEMS[industry]||[]).includes(item) || customItems[industry].includes(item)){
-    showToast('이미 있는 품목이에요'); return;
-  }
-  customItems[industry].push(item);
-  localStorage.setItem('fnb_custom_items', JSON.stringify(customItems));
-  input.value = '';
-  renderItems();
-  persistLater('customItemAdd');
+
+function togItemByIdx(el){
+  var idx = parseInt(el.dataset.itemIdx);
+  var name = window._itemList && window._itemList[idx];
+  if(name) togItem(name);
 }
-function removeCustomItem(event, item){
-  event.stopPropagation();
-  customItems[industry] = (customItems[industry]||[]).filter(x=>x!==item);
-  selItems = selItems.filter(x=>x!==item);
-  localStorage.setItem('fnb_custom_items', JSON.stringify(customItems));
-  renderItems();
-  persistLater('customItemRemove');
+
+function removeItemByIdx(el){
+  var idx = parseInt(el.dataset.itemIdx);
+  var name = window._itemList && window._itemList[idx];
+  if(name) removeCustomItem(name);
 }
+
 function togItem(it){
-  if(selItems.includes(it)) selItems = selItems.filter(x=>x!==it);
+  if(!it){ console.warn('togItem: it이 없음'); return; }
+  if(selItems.includes(it)) selItems = selItems.filter(function(x){ return x!==it; });
   else if(selItems.length<5){ selItems.push(it); }
   else{ showToast('품목은 최대 5개까지 선택 가능해요'); return; }
   renderItems();
