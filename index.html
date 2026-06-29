@@ -1334,6 +1334,9 @@ function saveClusterCache(key){
 async function genKeywords(){
   if(!selDistricts.length){ showToast('지역을 선택해주세요'); return; }
   if(!selItems.length){ showToast('품목을 선택해주세요'); return; }
+  // 이미 실행 중이면 중복 방지
+  var kwBtn = document.getElementById('kwGenBtn');
+  if(kwBtn && kwBtn.disabled){ showToast('이미 추출 중이에요...'); return; }
   const cacheKey = stableKey({industry, selDistricts, selItems, useGeneral, useLocal});
   if(keywordCache[cacheKey] && Array.isArray(keywordCache[cacheKey].kwData)){
     kwData = keywordCache[cacheKey].kwData;
@@ -1403,7 +1406,7 @@ function autoSelectBestKws(){
   });
   renderKeywords();
   updateKwBtn();
-  showToast('✅ 우선순위 기준 '+selKws.length+'개 자동 선택 완료');
+  try{ showToast('✅ 우선순위 기준 '+selKws.length+'개 자동 선택 완료'); }catch(e){}
 }
 
 
@@ -1868,11 +1871,20 @@ function copyHistPost(i){
 /* ══════════════════════════════════════
    토스트
 ══════════════════════════════════════ */
-function showToast(msg){
-  const t = document.getElementById('toast');
-  document.getElementById('toastMsg').textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2500);
+function showToast(msg, duration){
+  try{
+    var el = document.getElementById('toast');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'toast';
+      el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1E293B;color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;z-index:9998;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.opacity = '1';
+    clearTimeout(el._timer);
+    el._timer = setTimeout(function(){ el.style.opacity='0'; }, duration||2500);
+  }catch(e){ console.log('[Toast]', msg); }
 }
 
 /* ══════════════════════════════════════
