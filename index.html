@@ -2550,6 +2550,81 @@ function loadSavedPosts(){
     }
   }catch(e){}
   return false;
-}</script>
+}
+/* ═══ Dashboard 인라인 렌더 ═══ */
+function renderDashInline(){
+  var dg = document.getElementById('dashDistGrid');
+  if(dg && typeof REGION_TABS!=='undefined' && curRegion){
+    dg.innerHTML = '';
+    (REGION_TABS[curRegion]||[]).slice(0,15).forEach(function(name){
+      var el = document.createElement('div');
+      el.textContent = name;
+      var isOn = selDistricts.find(function(d){ return d.district===name; });
+      el.style.cssText = 'padding:3px 8px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;transition:.15s;'
+        +(isOn?'background:#15803D;color:#fff;':'background:#F1F5F9;color:#374151;');
+      el.onclick = (function(n,e){ return function(){ dashTogDist(e,n); }; })(name,el);
+      dg.appendChild(el);
+    });
+  }
+  var sr = document.getElementById('dashSelRegions');
+  if(sr){
+    sr.innerHTML = '';
+    selDistricts.forEach(function(d){
+      var el = document.createElement('span');
+      el.textContent = d.region+' '+d.district+' ×';
+      el.style.cssText = 'background:var(--g2);color:var(--g3);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer';
+      el.onclick = (function(dist){ return function(){
+        selDistricts = selDistricts.filter(function(x){ return x.district!==dist; });
+        renderDashInline();
+      }; })(d.district);
+      sr.appendChild(el);
+    });
+  }
+  var ig = document.getElementById('dashIndGrid');
+  if(ig && typeof INDUSTRIES!=='undefined'){
+    ig.innerHTML = '';
+    INDUSTRIES.forEach(function(ind){
+      var el = document.createElement('div');
+      el.innerHTML = '<div style="font-size:16px">'+ind.icon+'</div><div style="font-size:9px;font-weight:600;margin-top:2px">'+ind.name+'</div>';
+      var isOn = ind.name===industry;
+      el.style.cssText = 'padding:6px 3px;border-radius:6px;cursor:pointer;text-align:center;transition:.15s;'
+        +(isOn?'border:2px solid var(--g3);background:var(--g2);':'border:1.5px solid var(--bd);background:#fff;');
+      el.onclick = (function(n){ return function(){ dashSelInd(n); }; })(ind.name);
+      ig.appendChild(el);
+    });
+  }
+  var pmg = document.getElementById('dashItemGrid');
+  if(pmg && typeof ITEMS!=='undefined'){
+    pmg.innerHTML = '';
+    (ITEMS[industry]||[]).slice(0,10).forEach(function(name){
+      var el = document.createElement('div');
+      el.textContent = name;
+      var isOn = selItems.includes(name);
+      el.style.cssText = 'padding:4px 10px;border-radius:5px;border:1.5px solid '+(isOn?'var(--g3)':'var(--bd)')+';font-size:10px;font-weight:600;cursor:pointer;transition:.15s;'
+        +(isOn?'background:var(--g3);color:#fff;':'background:#fff;');
+      el.onclick = (function(n){ return function(){ dashTogItem(n); }; })(name);
+      pmg.appendChild(el);
+    });
+  }
+}
+
+function dashSelInd(name){
+  industry = name; selItems = []; renderDashInline();
+}
+function dashTogDist(el, name){
+  var exists = selDistricts.find(function(d){ return d.district===name; });
+  if(exists){ selDistricts = selDistricts.filter(function(d){ return d.district!==name; }); }
+  else{
+    if(selDistricts.length>=3){ showToast('최대 3개 지역'); return; }
+    selDistricts.push({region:curRegion, district:name});
+  }
+  renderDashInline();
+}
+function dashTogItem(name){
+  if(selItems.includes(name)){ selItems=selItems.filter(function(x){ return x!==name; }); }
+  else{ if(selItems.length>=3){ showToast('최대 3개 품목'); return; } selItems.push(name); }
+  renderDashInline();
+}
+</script>
 </body>
 </html>
