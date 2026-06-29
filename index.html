@@ -1413,26 +1413,36 @@ JSON만 반환 (마크다운 없이):
 }
 
 function renderKeywords(){
-  const groups={low:[],mid:[],high:[]};
-  kwData.forEach(k=>{ if(groups[k.difficulty]) groups[k.difficulty].push(k); });
-  const labels={low:'🎯 경쟁 낮음 (최우선)',mid:'📊 경쟁 보통',high:'🔍 틈새 키워드'};
-  let html='';
-  ['low','mid','high'].forEach(diff=>{
+  var groups = {low:[], mid:[], high:[]};
+  kwData.forEach(function(k){ if(groups[k.difficulty]) groups[k.difficulty].push(k); });
+  var labels = {low:'🎯 경쟁 낮음 (최우선)', mid:'📊 경쟁 보통', high:'🔍 틈새 키워드'};
+  var html = '';
+  ['low','mid','high'].forEach(function(diff){
     if(!groups[diff].length) return;
-    html+=`<div class="kw-group">
-      <div class="kw-group-title">${labels[diff]}<span class="kw-count">${groups[diff].length}개</span></div>
-      <div class="kw-list">${groups[diff].map(kw=>`
-        <div class="kw-item${selKws.find(x=>x.kw===kw.keyword)?' on':''}" id="kwi-${kw.index}" onclick="togKw(${kw.index})">
-          <div class="kw-chk">${selKws.find(x=>x.kw===kw.keyword)?'✓':''}</div>
-          <div class="kw-txt">${esc(kw.keyword)}</div>
-          <span class="kw-region">${esc(kw.region)}</span>
-          <span class="diff d-${diff==='low'?'lo':diff==='mid'?'mi':'hi'}">${diff==='low'?'낮음':diff==='mid'?'보통':'높음'}</span>
-        </div>`).join('')}
-      </div>
-    </div>`;
+    var items = groups[diff].map(function(kw){
+      var on = selKws.find(function(x){ return x.kw===kw.keyword; }) ? ' on' : '';
+      var chk = on ? '✓' : '';
+      var diffLabel = diff==='low'?'낮음':diff==='mid'?'보통':'높음';
+      var diffClass = diff==='low'?'lo':diff==='mid'?'mi':'hi';
+      return '<div class="kw-item'+on+'" data-ki="'+kw.index+'" onclick="togKwByEl(this)">'
+        + '<div class="kw-chk">'+chk+'</div>'
+        + '<div class="kw-txt">'+esc(kw.keyword)+'</div>'
+        + '<span class="kw-region">'+esc(kw.region)+'</span>'
+        + '<span class="diff d-'+diffClass+'">'+diffLabel+'</span>'
+        + '</div>';
+    }).join('');
+    html += '<div class="kw-group">'
+      + '<div class="kw-group-title">'+labels[diff]+'<span class="kw-count">'+groups[diff].length+'개</span></div>'
+      + '<div class="kw-list">'+items+'</div>'
+      + '</div>';
   });
-  document.getElementById('kwContainer').innerHTML = html || '<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">키워드가 없어요</div>';
+  var container = document.getElementById('kwContainer');
+  if(container) container.innerHTML = html || '<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">키워드가 없어요</div>';
   updateKwBtn();
+}
+function togKwByEl(el){
+  var idx = parseInt(el.getAttribute('data-ki')||'0');
+  togKw(idx);
 }
 
 function togKw(index){
@@ -1466,18 +1476,48 @@ function selAllKw(){
 }
 function clearKw(){ selKws=[]; renderKeywords(); persistLater('keywordClear'); }
 function updateKwBtn(){
-  const cnt = selKws.length;
-  document.getElementById('kwSelCnt').textContent = cnt+'개 선택됨';
-  const btn = document.getElementById('toClusterBtn');
-  btn.style.display = cnt>0 ? 'flex' : 'none';
-  btn.textContent = '';
-  btn.innerHTML = `<i class="ti ti-sitemap"></i> 선택한 ${cnt}개 키워드로 Topic Cluster 생성`;
+  var cnt = selKws.length;
+  var cntEl = document.getElementById('kwSelCnt');
+  if(cntEl) cntEl.textContent = cnt+'개 선택됨';
+  // 완료버튼: 키워드 있으면 항상 표시
+  var btn = document.getElementById('toClusterBtn');
+  if(!btn) return;
+  if(kwData.length > 0){
+    btn.style.display = 'flex';
+    btn.innerHTML = cnt > 0
+      ? '<i class="ti ti-sitemap"></i> 선택한 '+cnt+'개로 글기획 생성 →'
+      : '<i class="ti ti-sitemap"></i> 전체 선택 후 글기획 생성 →';
+  } else {
+    btn.style.display = 'none';
+  }
 }
-function goToCluster(){
-  document.getElementById('clusterKeywordInfo').innerHTML =
-    `<strong>${selKws.length}개 키워드 선택됨</strong><br>` +
-    selKws.map(k=>`<span style="display:inline-block;background:var(--g2);color:var(--g);border-radius:6px;padding:2px 8px;font-size:10px;margin:2px;font-weight:600">${esc(k.kw)}</span>`).join('');
-  goPage('cluster', document.querySelectorAll('.nav-tab')[3]);
+async function goToCluster(){
+  // 선택된 키워드 없으면 전체 선택
+  if(!selKws.length && kwData.length){
+    selKws = [];
+    kwData.slice(0,10).forEach(function(k){
+      selKws.push({kw:k.keyword, keyword:k.keyword, region:k.region||''});
+    });
+    renderKeywords();
+  }
+  if(!selKws.length){ showToast('키워드를 먼저 추출해주세요'); return; }
+
+  // clusterKeywordInfo 업데이트
+  var info = document.getElementById('clusterKeywordInfo');
+  if(info){
+    info.innerHTML = '<strong>'+selKws.length+'개 키워드 선택됨</strong><br>'
+      + selKws.map(function(k){
+          return '<span style="display:inline-block;background:var(--g2);color:var(--g3);border-radius:6px;padding:2px 8px;font-size:10px;margin:2px;font-weight:600">'+esc(k.kw||k.keyword||'')+'</span>';
+        }).join('');
+  }
+
+  // 글기획 아직 없으면 자동 생성 후 이동
+  if(!clusterData.length){
+    goPage('cluster', document.querySelectorAll('.nav-tab')[2]);
+    await genCluster();
+  } else {
+    goPage('cluster', document.querySelectorAll('.nav-tab')[2]);
+  }
 }
 
 /* ══════════════════════════════════════
