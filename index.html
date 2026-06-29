@@ -2052,82 +2052,141 @@ let autoRunning = false;
 var _priceCache = {};
 var currentFilter = 'all';
 async function startAutoMode(){
-  // 원터치 자동화 = 지역+업종+품목만 선택하면 나머지 전부 자동
-  if(!selDistricts.length){
-    goPage('keyword', document.querySelectorAll('.nav-tab')[1]);
-    showToast('① 지역을 먼저 선택해주세요'); return;
-  }
-  if(!selItems.length){
-    goPage('keyword', document.querySelectorAll('.nav-tab')[1]);
-    showToast('③ 품목을 먼저 선택해주세요'); return;
+  // 선택 검사 — 탭 이동 없이 모달 안내
+  if(!selDistricts.length || !selItems.length){
+    // 미선택 항목 안내 모달
+    showSettingGuideModal();
+    return;
   }
   if(autoRunning){ showToast('이미 실행 중이에요'); return; }
+
   autoRunning = true;
   showAutoModal();
 
-  var priceData = null;
   try{
-    // Step 0: 실시간 단가 조회 (Apps Script 경유)
+    // ── Step 0: 실시간 단가 조회 ──
     setStep(0,'⏳','실시간 단가 조회 중...');
-    priceData = await fetchRealtimePrice(industry);
-    setStep(0, priceData?'✅':'⚠️',
-      priceData ? '단가 조회 완료 — '+priceData.prices.length+'개 품목' : '기본 데이터 사용');
+    var priceData = null;
+    try{
+      priceData = await fetchRealtimePrice(industry);
+      setStep(0,'✅', priceData ? '단가 조회 완료 ('+priceData.prices.length+'개 품목)' : '기본 데이터 사용');
+    }catch(e){ setStep(0,'⚠️','단가 조회 실패 — 기본 데이터 사용'); }
 
-    // Step 1: SEO 키워드 자동 추출
+    // ── Step 1: SEO 키워드 추출 ──
     setStep(1,'⏳','SEO 키워드 추출 중...');
-    await genKeywords();
-    if(!kwData.length) throw new Error('키워드 추출 실패');
-    setStep(1,'✅','키워드 '+kwData.length+'개 추출 — 우선순위 '+selKws.length+'개 자동 선택');
+    var regionSummary = selDistricts.map(function(d){ return d.region+' '+d.district; }).join(', ');
+    var gI = (typeof GENERAL_DATA!=='undefined' && useGeneral) ? (GENERAL_DATA[industry]||{}) : {};
+    var si = gI.season ? (gI.season[String(new Date().getMonth()+1)]||'') : '';
+    var kwPrompt = 'F&B 식자재 블로그 네이버 SEO 키워드 10개 JSON.
+'
+      +'업종:'+industry+' / 지역:'+regionSummary+' / 품목:'+selItems.join(',')+'
+'
+      +(si?'시장상황:'+si+'
+':'')
+      +'타겟:신규창업 사장님. 구매/창업의도 롱테일. low 60%/mid 30%/high 10%.
+'
+      +'{"keywords":[{"keyword":"강남 고깃집 창업 납품업체","region":"서울 강남구","intent":"창업","difficulty":"low"}]}
+'
+      +'JSON만. 10개. intent:창업/납품/비용/오픈. difficulty:low/mid/high.';
 
-    // Step 2: 글기획 자동 생성
+    var kwText = await callClaude(kwPrompt, 1500, true);
+    var kwClean = kwText.replace(/```json|```/g,'').trim();
+    var jS=kwClean.indexOf('{'), jE=kwClean.lastIndexOf('}');
+    if(jS>-1&&jE>-1) kwClean=kwClean.slice(jS,jE+1);
+    var kwParsed = JSON.parse(kwClean);
+    kwData = (kwParsed.keywords||[]).map(function(k,i){ return Object.assign({},k,{index:i}); });
+    if(!kwData.length) throw new Error('키워드 추출 실패');
+
+    // 우선순위 자동 선택
+    var usedKws = new Set((typeof history!=='undefined'?history:[]).map(function(h){ return (h.kw||'').toLowerCase(); }));
+    selKws = [];
+    ['low','mid','high'].forEach(function(diff){
+      kwData.filter(function(k){ return k.difficulty===diff && !usedKws.has((k.keyword||'').toLowerCase()); })
+        .slice(0, 10-selKws.length)
+        .forEach(function(k){ if(selKws.length<10) selKws.push({kw:k.keyword,keyword:k.keyword,region:k.region||''}); });
+    });
+    setStep(1,'✅','키워드 '+kwData.length+'개 추출 → '+selKws.length+'개 자동 선택');
+
+    // ── Step 2: 글기획 생성 ──
     setStep(2,'⏳','글기획 자동 생성 중...');
-    await genCluster();
+    var kwList = selKws.map(function(k){ return k.kw||k.keyword||''; }).join(', ');
+    var regions = [...new Set(selKws.map(function(k){ return k.region||''; }).filter(Boolean))].join(', ') || regionSummary;
+    var clPrompt = 'F&B 식자재 블로그 글기획 12개 JSON.
+'
+      +'업종:'+industry+' / 지역:'+regions+' / 키워드:'+kwList+'
+'
+      +'신규창업 사장님 타겟. JSON만:
+'
+      +'{"cluster":[{"title":"제목","keyword":"키워드","intent":"창업","priority":"high","region":"서울 강남구","type":"창업컨설팅"}]}
+'
+      +'12개. priority:high/mid/low. type:창업컨설팅/정보성/납품노하우.';
+
+    var clText = await callClaude(clPrompt, 1000, true);
+    var clClean = clText.replace(/```json|```/g,'').trim();
+    var cS=clClean.indexOf('{'), cE=clClean.lastIndexOf('}');
+    if(cS>-1&&cE>-1) clClean=clClean.slice(cS,cE+1);
+    var clParsed = JSON.parse(clClean);
+    clusterData = clParsed.cluster||[];
     if(!clusterData.length) throw new Error('글기획 생성 실패');
 
     // 중복 제목 제외 + 우선순위 정렬
-    var usedTitles = new Set(history.map(function(h){ return (h.title||'').toLowerCase(); }));
-    var sorted = clusterData.slice().sort(function(a,b){
-      var p={high:0,mid:1,low:2};
-      return (p[a.priority]||1)-(p[b.priority]||1);
-    }).filter(function(c){
-      return !usedTitles.has((c.title||'').toLowerCase());
-    });
+    var usedTitles = new Set((typeof history!=='undefined'?history:[]).map(function(h){ return (h.title||'').toLowerCase(); }));
+    var sorted = clusterData.slice()
+      .sort(function(a,b){ var p={high:0,mid:1,low:2}; return (p[a.priority]||1)-(p[b.priority]||1); })
+      .filter(function(c){ return !usedTitles.has((c.title||'').toLowerCase()); });
     if(!sorted.length) throw new Error('작성할 글 없음 (모두 중복)');
-    setStep(2,'✅','글기획 '+sorted.length+'개 (중복 제외, 우선순위 정렬)');
+    setStep(2,'✅','글기획 '+sorted.length+'개 생성 완료');
 
-    // Step 3: 팩트 기반 SEO 글 전체 자동 작성
-    var total = sorted.length, ok = 0;
-    setStep(3,'⏳','SEO 글 작성 시작 (0/'+total+')...');
+    // ── Step 3: 팩트 기반 글 전체 작성 ──
+    var total=sorted.length, ok=0;
+    setStep(3,'⏳','SEO 글 작성 중... (0/'+total+')');
     for(var i=0; i<sorted.length; i++){
       if(!autoRunning) break;
-      var det = document.getElementById('as3d');
-      if(det) det.innerHTML = '📝 ('+(i+1)+'/'+total+') '+(sorted[i].title||sorted[i].keyword||'')+'...';
+      var det=document.getElementById('as3d');
+      if(det) det.innerHTML='📝 ('+(i+1)+'/'+total+') <strong>'+esc(sorted[i].title||'')+'</strong>';
       try{
         var res = await writeOnePost(sorted[i], i, total, priceData);
-        if(res && res.success) ok++;
-      }catch(e){ console.warn('글 '+i+' 실패:', e); }
-      var pr = document.getElementById('asPr');
-      if(pr) pr.style.width = Math.round((i+1)/total*100)+'%';
+        if(res&&res.success) ok++;
+      }catch(e){ console.warn('글'+i+' 실패:',e); }
+      var pr=document.getElementById('asPr');
+      if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
       setStep(3,'⏳','작성 중 ('+(i+1)+'/'+total+') — 완료 '+ok+'개');
     }
     setStep(3,'✅','글 작성 완료 ('+ok+'/'+total+'개)');
+
+    // ── Step 4: 저장 완료 ──
     setStep(4,'✅','구글 시트 [작성글] 저장 완료');
 
-    var dn = document.getElementById('asDone');
-    var sm = document.getElementById('asSumm');
-    if(dn) dn.style.display = 'block';
-    if(sm) sm.textContent = '총 '+ok+'개 포스팅 완료! Analytics에서 복사 후 블로그 발행하세요.';
-    updateDashboard();
-    try{ renderHistList(); }catch(e){}
+    var dn=document.getElementById('asDone'); if(dn) dn.style.display='block';
+    var sm=document.getElementById('asSumm');
+    if(sm) sm.innerHTML = '<strong>'+ok+'개 포스팅 완료!</strong><br>'
+      +'Analytics 탭에서 복사 → 네이버 블로그 발행하세요.';
+
+    try{ updateDashboard(); }catch(e){}
+    try{ if(typeof renderHistList==='function') renderHistList(); }catch(e){}
 
   }catch(e){
-    var er = document.getElementById('asErr');
-    var em = document.getElementById('asErrM');
-    if(er) er.style.display = 'block';
-    if(em) em.textContent = e.message || String(e);
-    console.error('자동화 오류:', e);
+    var er=document.getElementById('asErr'); if(er) er.style.display='block';
+    var em=document.getElementById('asErrM'); if(em) em.textContent=e.message||String(e);
+    console.error('자동화 오류:',e);
   }
-  autoRunning = false;
+  autoRunning=false;
+}
+
+// 설정 미완료 시 안내 모달
+function showSettingGuideModal(){
+  var missing = [];
+  if(!selDistricts.length) missing.push('📍 지역');
+  if(!selItems.length) missing.push('📦 품목');
+  var msg = missing.join(', ') + ' 선택이 필요해요.
+
+키워드&설정 탭에서 선택해주세요!';
+  // 간단한 안내 토스트
+  showToast(missing.join(', ')+' 먼저 선택해주세요', 3000);
+  // 키워드&설정 탭으로 자동 이동 (딱 이 경우에만)
+  setTimeout(function(){
+    goPage('keyword', document.querySelectorAll('.nav-tab')[1]);
+  }, 500);
 }
 
 
