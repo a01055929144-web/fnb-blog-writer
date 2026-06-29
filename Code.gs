@@ -204,6 +204,8 @@ function doPost(e) {
     if (data.prompt !== undefined)        return out.setContent(JSON.stringify(callClaude_(data)));
     if (data.action === 'fetchPrice')     return out.setContent(JSON.stringify(fetchPrice_(data)));
     if (data.action === 'updateStatus')   return out.setContent(JSON.stringify(updateStatus_(data)));
+    if (data.action === 'updatePost')     return out.setContent(JSON.stringify(updatePost_(data)));
+    if (data.action === 'deletePost')     return out.setContent(JSON.stringify(deletePost_(data)));
     return out.setContent(JSON.stringify(savePost_(data)));
   } catch (err) {
     return out.setContent(JSON.stringify({success: false, message: err.toString()}));
@@ -387,6 +389,67 @@ function savePost_(data) {
 /* ══════════════════════════════════════
    발행 상태 업데이트
 ══════════════════════════════════════ */
+
+/* ══════════════════════════════════════
+   글 수정 (제목/본문/해시태그 편집 → 시트 반영)
+══════════════════════════════════════ */
+function updatePost_(data) {
+  var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var sheet = ensureSheet_(ss, SHEET.posts, POST_HEADERS);
+  var lastRow = sheet.getLastRow();
+  // rowId로 찾기 (없으면 제목으로 fallback)
+  var targetRow = -1;
+  if (data.rowId) {
+    for (var r = 2; r <= lastRow; r++) {
+      if (sheet.getRange(r, 1).getValue() == data.rowId) { targetRow = r; break; }
+    }
+  }
+  if (targetRow === -1 && data.oldTitle) {
+    for (var r2 = 2; r2 <= lastRow; r2++) {
+      if (sheet.getRange(r2, 8).getValue() === data.oldTitle) { targetRow = r2; break; }
+    }
+  }
+  if (targetRow === -1) return {success: false, message: '해당 글을 찾을 수 없습니다'};
+
+  // 수정된 필드만 업데이트
+  if (data.title    !== undefined) sheet.getRange(targetRow, 8).setValue(data.title);
+  if (data.body     !== undefined) sheet.getRange(targetRow, 9).setValue(data.body);
+  if (data.hashtags !== undefined) sheet.getRange(targetRow, 10).setValue(data.hashtags);
+  if (data.status   !== undefined) {
+    var cell = sheet.getRange(targetRow, 12);
+    cell.setValue(data.status);
+    if (data.status === '발행완료') {
+      cell.setBackground('#DCFCE7').setFontColor('#166534').setFontWeight('bold');
+    } else {
+      cell.setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('normal');
+    }
+  }
+  return {success: true, row: targetRow};
+}
+
+/* ══════════════════════════════════════
+   글 삭제 (시트 행 삭제)
+══════════════════════════════════════ */
+function deletePost_(data) {
+  var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var sheet = ensureSheet_(ss, SHEET.posts, POST_HEADERS);
+  var lastRow = sheet.getLastRow();
+  var targetRow = -1;
+  if (data.rowId) {
+    for (var r = 2; r <= lastRow; r++) {
+      if (sheet.getRange(r, 1).getValue() == data.rowId) { targetRow = r; break; }
+    }
+  }
+  if (targetRow === -1 && data.title) {
+    for (var r2 = 2; r2 <= lastRow; r2++) {
+      if (sheet.getRange(r2, 8).getValue() === data.title) { targetRow = r2; break; }
+    }
+  }
+  if (targetRow === -1) return {success: false, message: '해당 글을 찾을 수 없습니다'};
+  sheet.deleteRow(targetRow);
+  return {success: true, deleted: true, row: targetRow};
+}
+
 function updateStatus_(data) {
   var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
   var sheet = ensureSheet_(ss, SHEET.posts, POST_HEADERS);
