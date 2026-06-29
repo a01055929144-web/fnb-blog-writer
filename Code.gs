@@ -355,32 +355,36 @@ function savePost_(data) {
   var region = data.region || '';
   var sido  = data.sido  || region.split(' ')[0] || '';
   var gugun = data.gugun || region.split(' ').slice(1).join(' ') || '';
+  var rowNum = sheet.getLastRow(); // 번호 = 현재 마지막 행 번호
 
-  var rowNum = sheet.getLastRow(); // 헤더 포함 행 수 = 다음 번호
-  sheet.appendRow([
-    rowNum,                                              // 번호
-    data.date || new Date().toLocaleDateString('ko-KR'), // 날짜
-    sido,                                               // 지역(시도)
-    gugun,                                              // 시/구
-    data.industry || '',                                // 업종
-    data.type     || '',                                // 콘텐츠타입
-    data.keyword  || data.kw || '',                    // 핵심키워드
-    data.title    || '',                                // 제목
-    String(data.body || '').substring(0, 500),         // 본문(500자)
-    data.hashtags || '',                                // 해시태그
-    Number(data.chars) || 0,                           // 글자수
-    data.status   || '자동생성',                        // 저장상태
-    '미발행'                                            // 블로그업로드
-  ]);
+  // POST_HEADERS 12컬럼과 1:1 매핑
+  var row = [
+    rowNum,                                               // 1: 번호
+    data.date || new Date().toLocaleDateString('ko-KR'),  // 2: 날짜
+    sido,                                                 // 3: 지역(시도)
+    gugun,                                                // 4: 시/구
+    data.industry || '',                                  // 5: 업종
+    data.type     || '',                                  // 6: 콘텐츠타입
+    data.keyword  || data.kw || '',                       // 7: 핵심키워드
+    data.title    || '',                                  // 8: 제목
+    String(data.body || ''),                              // 9: 본문(전체) — 잘리지 않음
+    data.hashtags || '',                                  // 10: 해시태그
+    Number(data.chars) || 0,                             // 11: 글자수
+    '미발행'                                              // 12: 발행상태
+  ];
 
+  sheet.appendRow(row);
   var newRow = sheet.getLastRow();
+
+  // 짝수 행 배경색
   if (newRow % 2 === 0) {
     sheet.getRange(newRow, 1, 1, POST_HEADERS.length).setBackground('#F8FAFC');
   }
-  sheet.getRange(newRow, 13)
-    .setBackground('#FEF3C7')
-    .setFontColor('#92400E')
-    .setFontWeight('bold');
+  // 발행상태(12번) 스타일
+  sheet.getRange(newRow, 12)
+    .setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
+  // 본문(9번) 줄바꿈
+  sheet.getRange(newRow, 9).setWrap(true);
 
   updateRegion_(ss, sido + (gugun ? ' ' + gugun : ''), data.industry);
   return {success: true, row: newRow};
@@ -455,8 +459,8 @@ function updateStatus_(data) {
   var sheet = ensureSheet_(ss, SHEET.posts, POST_HEADERS);
   var lastRow = sheet.getLastRow();
   for (var r = 2; r <= lastRow; r++) {
-    if (sheet.getRange(r, 7).getValue() === data.title) {
-      var cell = sheet.getRange(r, 12);
+    if (sheet.getRange(r, 8).getValue() === data.title) { // 제목 8번 컬럼
+      var cell = sheet.getRange(r, 12); // 발행상태 12번 컬럼
       var status = data.uploadStatus || '미발행';
       cell.setValue(status);
       if (status === '발행완료') {
@@ -648,22 +652,31 @@ function cleanupSheets() {
     }
   });
 
-  // 2. 작성글 탭 재정비
-  var postSheet = ensureSheet_(ss, '작성글', [
-    '번호', '날짜', '지역(시도)', '시/구', '업종', '콘텐츠타입',
-    '핵심키워드', '제목', '본문(전체)', '해시태그', '글자수', '발행상태'
-  ]);
+  // 2. 작성글 탭 헤더 강제 재설정 (구버전 헤더 교체)
+  var postSheet = ss.getSheetByName('작성글');
+  if (!postSheet) {
+    postSheet = ss.insertSheet('작성글');
+  }
+  // 헤더 행 강제 교체
+  var correctHeaders = ['번호','날짜','지역(시도)','시/구','업종','콘텐츠타입',
+    '핵심키워드','제목','본문(전체)','해시태그','글자수','발행상태'];
+  postSheet.getRange(1, 1, 1, correctHeaders.length).setValues([correctHeaders]);
+  var hdr = postSheet.getRange(1, 1, 1, correctHeaders.length);
+  hdr.setBackground('#0F172A').setFontColor('#ffffff').setFontWeight('bold').setHorizontalAlignment('center');
+  postSheet.setFrozenRows(1);
 
-  // 3. 작성글 빈 행 삭제 (글자수=0이고 제목 비어있는 행)
+  // 3. 빈 행 삭제 (제목이 없고 글자수=0인 행)
   var lastRow = postSheet.getLastRow();
   var toDelete = [];
   for (var r = lastRow; r >= 2; r--) {
-    var title  = postSheet.getRange(r, 8).getValue();
-    var chars  = postSheet.getRange(r, 11).getValue();
-    if (!title && (!chars || chars === 0)) {
+    var titleVal = postSheet.getRange(r, 8).getValue();   // 8번: 제목
+    var charsVal = postSheet.getRange(r, 11).getValue();  // 11번: 글자수
+    if (!titleVal && (!charsVal || charsVal === 0)) {
       toDelete.push(r);
     }
   }
+  // 배치 삭제 (역순)
+  toDelete.sort(function(a,b){return b-a;});
   toDelete.forEach(function(r) { postSheet.deleteRow(r); });
   Logger.log('빈 행 ' + toDelete.length + '개 삭제');
 
@@ -717,12 +730,18 @@ function ensureSheet_(ss, name, headers) {
     h.setBackground('#0F172A').setFontColor('#ffffff').setFontWeight('bold').setHorizontalAlignment('center');
     sheet.setFrozenRows(1);
     if (name === SHEET.posts) {
-      sheet.setColumnWidth(1, 50);   // 번호
-      sheet.setColumnWidth(7, 200);  // 핵심키워드
-      sheet.setColumnWidth(8, 320);  // 제목
-      sheet.setColumnWidth(9, 500);  // 본문(전체)
-      sheet.setColumnWidth(10, 250); // 해시태그
-      sheet.setColumnWidth(12, 90);  // 발행상태
+      sheet.setColumnWidth(1,  50);   // 번호
+      sheet.setColumnWidth(2,  90);   // 날짜
+      sheet.setColumnWidth(3,  70);   // 지역(시도)
+      sheet.setColumnWidth(4,  70);   // 시/구
+      sheet.setColumnWidth(5,  90);   // 업종
+      sheet.setColumnWidth(6,  90);   // 콘텐츠타입
+      sheet.setColumnWidth(7, 200);   // 핵심키워드
+      sheet.setColumnWidth(8, 320);   // 제목
+      sheet.setColumnWidth(9, 500);   // 본문(전체)
+      sheet.setColumnWidth(10, 220);  // 해시태그
+      sheet.setColumnWidth(11, 60);   // 글자수
+      sheet.setColumnWidth(12, 80);   // 발행상태
     }
   }
   return sheet;
