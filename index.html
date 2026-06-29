@@ -2086,16 +2086,11 @@ async function startAutoMode(){
     var regionSummary = selDistricts.map(function(d){ return d.region+' '+d.district; }).join(', ');
     var gI = (typeof GENERAL_DATA!=='undefined' && useGeneral) ? (GENERAL_DATA[industry]||{}) : {};
     var si = gI.season ? (gI.season[String(new Date().getMonth()+1)]||'') : '';
-    var kwPrompt = 'F&B 식자재 블로그 네이버 SEO 키워드 10개 JSON.
-'
-      +'업종:'+industry+' / 지역:'+regionSummary+' / 품목:'+selItems.join(',')+'
-'
-      +(si?'시장상황:'+si+'
-':'')
-      +'타겟:신규창업 사장님. 구매/창업의도 롱테일. low 60%/mid 30%/high 10%.
-'
-      +'{"keywords":[{"keyword":"강남 고깃집 창업 납품업체","region":"서울 강남구","intent":"창업","difficulty":"low"}]}
-'
+    var kwPrompt = 'F&B 식자재 블로그 네이버 SEO 키워드 10개 JSON.\n'
+      +'업종:'+industry+' / 지역:'+regionSummary+' / 품목:'+selItems.join(',')+'\n'
+      +(si?'시장상황:'+si+'\n':'')
+      +'타겟:신규창업 사장님. 구매/창업의도 롱테일. low 60%/mid 30%/high 10%.\n'
+      +'{"keywords":[{"keyword":"강남 고깃집 창업 납품업체","region":"서울 강남구","intent":"창업","difficulty":"low"}]}\n'
       +'JSON만. 10개. intent:창업/납품/비용/오픈. difficulty:low/mid/high.';
 
     var kwText = await callClaude(kwPrompt, 1500, true);
@@ -2120,14 +2115,10 @@ async function startAutoMode(){
     setStep(2,'⏳','글기획 자동 생성 중...');
     var kwList = selKws.map(function(k){ return k.kw||k.keyword||''; }).join(', ');
     var regions = [...new Set(selKws.map(function(k){ return k.region||''; }).filter(Boolean))].join(', ') || regionSummary;
-    var clPrompt = 'F&B 식자재 블로그 글기획 12개 JSON.
-'
-      +'업종:'+industry+' / 지역:'+regions+' / 키워드:'+kwList+'
-'
-      +'신규창업 사장님 타겟. JSON만:
-'
-      +'{"cluster":[{"title":"제목","keyword":"키워드","intent":"창업","priority":"high","region":"서울 강남구","type":"창업컨설팅"}]}
-'
+    var clPrompt = 'F&B 식자재 블로그 글기획 12개 JSON.\n'
+      +'업종:'+industry+' / 지역:'+regions+' / 키워드:'+kwList+'\n'
+      +'신규창업 사장님 타겟. JSON만:\n'
+      +'{"cluster":[{"title":"제목","keyword":"키워드","intent":"창업","priority":"high","region":"서울 강남구","type":"창업컨설팅"}]}\n'
       +'12개. priority:high/mid/low. type:창업컨설팅/정보성/납품노하우.';
 
     var clText = await callClaude(clPrompt, 1000, true);
