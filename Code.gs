@@ -563,6 +563,79 @@ function setupWeeklyTriggers() {
   Logger.log('트리거 설정 완료: 매주 화/금 오전 9시');
 }
 
+
+/* ══════════════════════════════════════
+   시트 정비 — 구버전 탭 삭제 + 빈 행 정리
+   Apps Script 편집기에서 1회 수동 실행
+══════════════════════════════════════ */
+function cleanupSheets() {
+  var ss = SpreadsheetApp.openById(getSheetId_());
+  var keepSheets = ['작성글', '지역현황'];
+  var sheets = ss.getSheets();
+
+  // 1. 불필요한 탭 삭제
+  sheets.forEach(function(sheet) {
+    var name = sheet.getName();
+    if (keepSheets.indexOf(name) === -1) {
+      // 시트 하나는 남겨야 하므로 마지막 시트는 skip
+      if (ss.getSheets().length > 1) {
+        ss.deleteSheet(sheet);
+        Logger.log('삭제: ' + name);
+      }
+    }
+  });
+
+  // 2. 작성글 탭 재정비
+  var postSheet = ensureSheet_(ss, '작성글', [
+    '번호', '날짜', '지역(시도)', '시/구', '업종', '콘텐츠타입',
+    '핵심키워드', '제목', '본문(전체)', '해시태그', '글자수', '발행상태'
+  ]);
+
+  // 3. 작성글 빈 행 삭제 (글자수=0이고 제목 비어있는 행)
+  var lastRow = postSheet.getLastRow();
+  var toDelete = [];
+  for (var r = lastRow; r >= 2; r--) {
+    var title  = postSheet.getRange(r, 8).getValue();
+    var chars  = postSheet.getRange(r, 11).getValue();
+    if (!title && (!chars || chars === 0)) {
+      toDelete.push(r);
+    }
+  }
+  toDelete.forEach(function(r) { postSheet.deleteRow(r); });
+  Logger.log('빈 행 ' + toDelete.length + '개 삭제');
+
+  // 4. 실제 데이터 행 컬럼 확인 및 발행상태 열 정비
+  var finalRow = postSheet.getLastRow();
+  if (finalRow > 1) {
+    for (var r2 = 2; r2 <= finalRow; r2++) {
+      var statusCell = postSheet.getRange(r2, 12);
+      var status = statusCell.getValue();
+      if (!status || status === '자동생성' || status === '미발행') {
+        statusCell.setValue('미발행')
+          .setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
+      } else if (status === '발행완료') {
+        statusCell.setBackground('#DCFCE7').setFontColor('#166534').setFontWeight('bold');
+      }
+    }
+  }
+
+  // 5. 지역현황 탭 정비
+  ensureSheet_(ss, '지역현황', [
+    '지역', '시도', '시/구', '총글수', '발행완료', '미발행', '주요업종', '최종업데이트'
+  ]);
+
+  // 6. 헤더 스타일 재적용
+  [postSheet].forEach(function(sh) {
+    var hdr = sh.getRange(1, 1, 1, sh.getLastColumn());
+    hdr.setBackground('#0F172A').setFontColor('#ffffff')
+       .setFontWeight('bold').setHorizontalAlignment('center');
+    sh.setFrozenRows(1);
+  });
+
+  Logger.log('✅ 시트 정비 완료: ' + postSheet.getLastRow() + '개 데이터 행');
+  SpreadsheetApp.flush();
+}
+
 /* ══════════════════════════════════════
    유틸리티
 ══════════════════════════════════════ */
