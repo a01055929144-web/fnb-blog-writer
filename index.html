@@ -2943,138 +2943,73 @@ function togChannel(el){
 }
 
 async function genRestContent(){
-  var name     = (document.getElementById('restName')||{}).value || '';
-  var location = (document.getElementById('restLocation')||{}).value || '';
-  var menu     = (document.getElementById('restMenu')||{}).value || '';
-  var price    = (document.getElementById('restPrice')||{}).value || '';
-  var feature  = (document.getElementById('restFeature')||{}).value || '';
-  var hours    = (document.getElementById('restHours')||{}).value || '';
+  var name     = (document.getElementById('restName')||{}).value||'';
+  var location = (document.getElementById('restLocation')||{}).value||'';
+  var menu     = (document.getElementById('restMenu')||{}).value||'';
+  var price    = (document.getElementById('restPrice')||{}).value||'';
+  var feature  = (document.getElementById('restFeature')||{}).value||'';
+  var hours    = (document.getElementById('restHours')||{}).value||'';
 
   if(!name){ showToast('식당 이름을 입력해주세요'); return; }
   if(!location){ showToast('위치를 입력해주세요'); return; }
 
   var btn = document.getElementById('restGenBtn');
   if(btn){ btn.innerHTML='<i class="ti ti-loader-2"></i> 생성 중...'; btn.disabled=true; }
-
-  var badge = document.getElementById('restContentBadge');
-  var area  = document.getElementById('restContentArea');
-  if(area) area.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray)"><i class="ti ti-loader-2" style="font-size:24px;animation:spin 1s linear infinite;display:block;margin-bottom:8px"></i>채널별 콘텐츠 생성 중...</div>';
+  var area = document.getElementById('restContentArea');
+  if(area) area.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray)">생성 중...</div>';
 
   var chLabels = {blog:'📝 네이버 블로그', insta:'📸 인스타그램', tiktok:'🎵 틱톡/릴스', kakao:'💬 카카오 채널'};
+  var info = ['식당명:'+name, '위치:'+location];
+  if(menu)    info.push('메뉴:'+menu);
+  if(price)   info.push('가격:'+price);
+  if(feature) info.push('특징:'+feature);
+  if(hours)   info.push('시간:'+hours);
+  var baseInfo = info.join(' | ');
+
+  var prompts = {
+    blog: '네이버 블로그 맛집 리뷰 (1500자 이상, SEO 최적화). 정보: '+baseInfo
+      +'. 구성: **제목**(이모지+식당명+위치), 도입부, **메뉴리뷰**, **분위기**, **총평**, **해시태그**20개. 생생하게.',
+    insta: '인스타그램 맛집 캡션. 정보: '+baseInfo
+      +'. 300자 감성 캡션+해시태그30개. MZ 감성체.',
+    tiktok: '틱톡/릴스 60초 스크립트. 정보: '+baseInfo
+      +'. [0-3초]훅 [4-15초]외관 [16-40초]음식클로즈업 [41-55초]정보 [56-60초]CTA. 자막 포함.',
+    kakao: '카카오채널 고객 메시지 200자. 정보: '+baseInfo+'. 친근하고 따뜻한 톤. 재방문 유도.'
+  };
+
   var results = [];
-
-  var baseInfo = '식당명: '+name+'\n위치: '+location
-    +(menu?'\n대표메뉴: '+menu:'')
-    +(price?'\n가격대: '+price:'')
-    +(feature?'\n특징: '+feature:'')
-    +(hours?'\n영업시간: '+hours:'');
-
   for(var i=0; i<selChannels.length; i++){
     var ch = selChannels[i];
-    var prompt = '';
-
-    if(ch === 'blog'){
-      prompt = '네이버 블로그 맛집 리뷰 작성.
-
-'+baseInfo+'
-
-'
-        +'SEO 최적화 블로그 글 (1500자 이상):
-'
-        +'- 제목: 이모지+식당명+위치+특징 포함
-'
-        +'- 도입부: 방문 계기, 첫인상
-'
-        +'- 소제목1: 대표 메뉴 상세 리뷰 (맛·양·가성비)
-'
-        +'- 소제목2: 분위기·인테리어·주차
-'
-        +'- 소제목3: 총평·추천 대상
-'
-        +'- 해시태그: 20개
-'
-        +'실제 방문한 것처럼 생생하고 자연스럽게.';
-    } else if(ch === 'insta'){
-      prompt = '인스타그램 맛집 피드 캡션 작성.
-
-'+baseInfo+'
-
-'
-        +'감성적이고 자연스러운 인스타 캡션 (300자 내외):
-'
-        +'- 첫 줄: 시선 끄는 감성 문장
-'
-        +'- 음식·분위기 묘사
-'
-        +'- 위치 정보
-'
-        +'- 해시태그 30개 (줄바꿈 후)
-'
-        +'MZ세대가 공감하는 감성 문체.';
-    } else if(ch === 'tiktok'){
-      prompt = '틱톡/릴스 숏폼 영상 스크립트.
-
-'+baseInfo+'
-
-'
-        +'60초 이내 숏폼 스크립트:
-'
-        +'[0-3초] 훅: "서울에서 이런 데 있어?" 식 강렬한 오프닝
-'
-        +'[4-15초] 식당 외관·분위기 컷 설명
-'
-        +'[16-40초] 메뉴 클로즈업 + 리얼 반응
-'
-        +'[41-55초] 위치·가격 정보
-'
-        +'[56-60초] CTA: 저장·팔로우 유도
-'
-        +'자막 텍스트도 포함.';
-    } else if(ch === 'kakao'){
-      prompt = '카카오 채널 단골 고객 메시지.
-
-'+baseInfo+'
-
-'
-        +'카카오 채널 고객 메시지 (200자 내외):
-'
-        +'- 친근하고 따뜻한 톤
-'
-        +'- 신메뉴/이벤트 안내 형식
-'
-        +'- 재방문 유도 문구
-'
-        +'- 이모지 적절히 사용.';
-    }
-
+    var p = prompts[ch];
+    if(!p) continue;
     try{
-      var text = await callClaude(prompt, 1500, ch !== 'blog');
+      var useHaiku = (ch !== 'blog');
+      var text = await callClaude(p, ch==='blog'?2000:800, useHaiku);
       results.push({ch:ch, label:chLabels[ch]||ch, content:text});
     }catch(e){
-      results.push({ch:ch, label:chLabels[ch]||ch, content:'생성 실패: '+e.message});
+      results.push({ch:ch, label:chLabels[ch]||ch, content:'생성 실패: '+(e.message||'')});
     }
   }
 
-  // 결과 렌더링
+  var badge = document.getElementById('restContentBadge');
   if(badge){ badge.style.display='inline'; badge.textContent=results.length+'개 채널'; }
+  window._restResults = results;
+
   if(area){
-    area.innerHTML = results.map(function(r, i){
-      return '<div style="margin-bottom:16px;padding:14px;background:#F8FAFC;border-radius:8px;border:1px solid var(--bd)">'
+    area.innerHTML = results.map(function(r,i){
+      return '<div style="margin-bottom:14px;padding:14px;background:#F8FAFC;border-radius:8px;border:1px solid var(--bd)">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
         +'<div style="font-size:12px;font-weight:800">'+esc(r.label)+'</div>'
-        +'<button data-ri="'+i+'" onclick="copyRestContent(this)" '
-        +'style="padding:4px 10px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer">'
-        +'<i class="ti ti-copy"></i> 복사</button>'
+        +'<button data-ri="'+i+'" onclick="copyRestContent(this)" style="padding:4px 10px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer"><i class="ti ti-copy"></i> 복사</button>'
         +'</div>'
-        +'<div style="font-size:11px;line-height:1.7;white-space:pre-wrap;max-height:200px;overflow-y:auto">'+esc(r.content)+'</div>'
+        +'<div style="font-size:11px;line-height:1.7;white-space:pre-wrap;max-height:220px;overflow-y:auto">'+esc(r.content)+'</div>'
         +'</div>';
     }).join('');
-    window._restResults = results;
   }
 
   showToast('✅ '+results.length+'개 채널 콘텐츠 생성 완료!');
   if(btn){ btn.innerHTML='<i class="ti ti-wand"></i> 맛집 홍보 콘텐츠 자동 생성'; btn.disabled=false; }
 }
+
 
 function copyRestContent(el){
   var i = parseInt(el.getAttribute('data-ri'));
