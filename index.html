@@ -2343,8 +2343,8 @@ async function writeOnePost(item, idx, total){
   }catch(e){ console.warn('시트 저장 실패:',e); }
   return {success:true,title:title,kw:kw};
 }
-let autoRunning = false;
-var _priceCache = {};
+
+
 var currentFilter = 'all';
 async function startAutoMode(){
   // 원터치 자동화 = 지역+업종+품목만 선택하면 나머지 전부 자동
