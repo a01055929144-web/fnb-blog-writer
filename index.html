@@ -1336,193 +1336,79 @@ async function genKeywords(){
     kwData = keywordCache[cacheKey].kwData;
     selKws = [];
     renderKeywords();
-    document.getElementById('kwTotalBadge').textContent = kwData.length+'개';
-    showToast('저장된 조건 결과를 불러왔어요');
-    persistLater('keywordsCacheHit');
+    var kb = document.getElementById('kwTotalBadge');
+    if(kb) kb.textContent = kwData.length+'개';
+    showToast('저장된 키워드 결과를 불러왔어요');
+    autoSelectBestKws();
     return;
   }
   const btn = document.getElementById('kwGenBtn');
-  btn.innerHTML='<i class="ti ti-loader-2"></i> 키워드 추출 중...'; btn.disabled=true;
+  if(btn){ btn.innerHTML='<i class="ti ti-loader-2"></i> 추출 중...'; btn.disabled=true; }
 
-  const regionSummary = selDistricts.map(d=>{
-    const info = useLocal ? ((AREA_DATA[d.region]||{})[d.district]||{}) : {};
-    return useLocal ? `${d.region} ${d.district}: ${info.tags||''}` : `${d.region} ${d.district}`;
-  }).join('\n');
+  const regionSummary = selDistricts.map(function(d){ return d.region+' '+d.district; }).join(', ');
+  const gI = useGeneral ? (GENERAL_DATA[industry]||{}) : {};
+  const si = gI.season ? (gI.season[String(new Date().getMonth()+1)]||'') : '';
 
-  const targetCount = Math.min(24, Math.max(8, selDistricts.length * selItems.length * 2));
-  const prompt = `F&B 식자재 중개 블로그용 네이버 SEO 롱테일 키워드를 추출해주세요.
-
-[업종]: ${industry}
-[지역]: ${regionSummary}
-[품목]: ${selItems.join(', ')}
-
-JSON만 반환 (마크다운 없이):
-{"keywords":[{"keyword":"강남 삼겹살 납품업체","region":"서울 강남구","intent":"구매","difficulty":"low"}]}
-
-총 ${targetCount}개. 구매 의도 높은 롱테일 위주. difficulty: low/mid/high. intent: 구매/탐색/비교/창업`;
+  const prompt = '당신은 네이버 블로그 SEO 전문가입니다. F&B 식자재 유통 블로그의 키워드를 추출해주세요.\n\n'
+    +'[타겟] 신규 창업 예정인 식당 사장님 (신규오픈, 창업준비, 식자재 납품처 찾는 중)\n'
+    +'[업종] '+industry+'\n'
+    +'[지역] '+regionSummary+'\n'
+    +'[품목] '+selItems.join(', ')+'\n'
+    +(si?'[이달 시장상황] '+si+'\n':'')
+    +'\n[SEO 키워드 선정 기준]\n'
+    +'- 네이버 검색량 있는 실제 검색어 형태\n'
+    +'- "지역+업종+납품/창업/셋팅/비용" 조합 롱테일\n'
+    +'- 구매/창업 의도 키워드 우선 (정보성 제외)\n'
+    +'- 경쟁 낮음(low): 월 검색량 100-1000, 블로그 경쟁 낮음\n'
+    +'- 경쟁 보통(mid): 월 검색량 1000-5000\n'
+    +'- low 키워드 60%, mid 30%, high 10% 비율\n'
+    +'\n[키워드 예시]\n'
+    +'"강남 고깃집 창업 식자재 납품업체", "홍대 삼겹살집 오픈 준비 비용",\n'
+    +'"부산 해운대 횟집 창업 초기 셋팅", "수산물 납품업체 추천 소규모식당"\n'
+    +'\nJSON만 반환 (코드블록 없이):\n'
+    +'{"keywords":[{"keyword":"강남 고깃집 창업 식자재 납품","region":"서울 강남구","intent":"창업","difficulty":"low"}]}\n'
+    +'\n총 20개. intent: 창업/납품/비용/오픈준비. difficulty: low/mid/high.';
 
   try{
-    const text = await callClaude(prompt, 2000);
+    const text = await callClaude(prompt, 1500);
     let clean = text.replace(/```json|```/g,'').trim();
-    // JSON 블록만 추출
-    const jStart = clean.indexOf('{');
-    const jEnd = clean.lastIndexOf('}');
-    if(jStart > -1 && jEnd > -1) clean = clean.slice(jStart, jEnd+1);
+    const jS = clean.indexOf('{'), jE = clean.lastIndexOf('}');
+    if(jS>-1 && jE>-1) clean = clean.slice(jS, jE+1);
     const parsed = JSON.parse(clean);
-    kwData = (parsed.keywords||[]).map((k,i)=>({...k,index:i}));
-    selKws = [];
+    kwData = (parsed.keywords||[]).map(function(k,i){ return Object.assign({},k,{index:i}); });
+    if(!kwData.length) throw new Error('키워드 0개');
     saveKeywordCache(cacheKey);
     renderKeywords();
-    document.getElementById('kwTotalBadge').textContent = kwData.length+'개';
-    showToast(kwData.length+'개 키워드 추출 완료! 글기획 자동 생성 중...');
-
-    // 자동으로 selKws 세팅 (low 경쟁 우선 상위 8개, 중복 제외)
-    var usedKws = new Set(history.map(function(h){ return (h.kw||'').toLowerCase(); }));
-    selKws = [];
-    kwData.slice().sort(function(a,b){
-      var p={low:0,mid:1,high:2};
-      return (p[a.difficulty]||1)-(p[b.difficulty]||1);
-    }).filter(function(k){
-      return !usedKws.has((k.keyword||'').toLowerCase());
-    }).slice(0,8).forEach(function(k){
-      selKws.push({kw:k.keyword, keyword:k.keyword, region:k.region||''});
-    });
-
-    // 자동으로 글기획 생성
-    var statusEl = document.getElementById('autoClusterStatus');
-    var msgEl    = document.getElementById('autoClusterMsg');
-    if(statusEl) statusEl.style.display='block';
-    if(msgEl)    msgEl.textContent='⏳ 글기획 생성 중...';
-    await genCluster();
-    var badgeEl = document.getElementById('clusterAutobadge');
-    var btnEl   = document.getElementById('goClusterBtn');
-    if(clusterData.length){
-      if(msgEl)   msgEl.textContent='✅ 글기획 '+clusterData.length+'개 생성 완료!';
-      if(badgeEl) badgeEl.textContent=clusterData.length+'개';
-      if(btnEl)   btnEl.style.display='block';
-    } else {
-      if(msgEl) msgEl.textContent='⚠️ 글기획 생성 실패 — Topic Cluster에서 재시도해주세요.';
-    }
+    var kb = document.getElementById('kwTotalBadge');
+    if(kb) kb.textContent = kwData.length+'개';
+    showToast('✅ '+kwData.length+'개 SEO 키워드 추출 완료');
+    autoSelectBestKws();
     persistLater('keywordsGenerated');
   }catch(e){
-    const em = e&&e.message ? e.message.substring(0,60) : String(e).substring(0,60);
-    showToast('추출 실패: '+em);
+    showToast('추출 실패: '+(e&&e.message?e.message.substring(0,50):String(e)));
     console.error('genKeywords 오류:', e);
   }
-  btn.innerHTML='<i class="ti ti-search"></i> 롱테일 키워드 추출'; btn.disabled=false;
+  if(btn){ btn.innerHTML='<i class="ti ti-search"></i> 키워드 추출 + 글기획 자동 생성'; btn.disabled=false; }
 }
 
-function renderKeywords(){
-  var groups = {low:[], mid:[], high:[]};
-  kwData.forEach(function(k){ if(groups[k.difficulty]) groups[k.difficulty].push(k); });
-  var labels = {low:'🎯 경쟁 낮음 (최우선)', mid:'📊 경쟁 보통', high:'🔍 틈새 키워드'};
-  var html = '';
+// 우선순위 자동 선택 (low 우선, 중복 제외)
+function autoSelectBestKws(){
+  var used = new Set(history.map(function(h){ return (h.kw||'').toLowerCase(); }));
+  selKws = [];
+  // low → mid → high 순서로 최대 10개
   ['low','mid','high'].forEach(function(diff){
-    if(!groups[diff].length) return;
-    var items = groups[diff].map(function(kw){
-      var on = selKws.find(function(x){ return x.kw===kw.keyword; }) ? ' on' : '';
-      var chk = on ? '✓' : '';
-      var diffLabel = diff==='low'?'낮음':diff==='mid'?'보통':'높음';
-      var diffClass = diff==='low'?'lo':diff==='mid'?'mi':'hi';
-      return '<div class="kw-item'+on+'" data-ki="'+kw.index+'" onclick="togKwByEl(this)">'
-        + '<div class="kw-chk">'+chk+'</div>'
-        + '<div class="kw-txt">'+esc(kw.keyword)+'</div>'
-        + '<span class="kw-region">'+esc(kw.region)+'</span>'
-        + '<span class="diff d-'+diffClass+'">'+diffLabel+'</span>'
-        + '</div>';
-    }).join('');
-    html += '<div class="kw-group">'
-      + '<div class="kw-group-title">'+labels[diff]+'<span class="kw-count">'+groups[diff].length+'개</span></div>'
-      + '<div class="kw-list">'+items+'</div>'
-      + '</div>';
+    kwData.filter(function(k){
+      return k.difficulty===diff && !used.has((k.keyword||'').toLowerCase());
+    }).slice(0, 10-selKws.length).forEach(function(k){
+      if(selKws.length < 10) selKws.push({kw:k.keyword, keyword:k.keyword, region:k.region||''});
+    });
   });
-  var container = document.getElementById('kwContainer');
-  if(container) container.innerHTML = html || '<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">키워드가 없어요</div>';
+  renderKeywords();
   updateKwBtn();
-}
-function togKwByEl(el){
-  var idx = parseInt(el.getAttribute('data-ki')||'0');
-  togKw(idx);
+  showToast('✅ 우선순위 기준 '+selKws.length+'개 자동 선택 완료');
 }
 
-function togKw(index){
-  const item = kwData[index];
-  if(!item) return;
-  const exists = selKws.find(x=>x.kw===item.keyword);
-  if(exists){ selKws = selKws.filter(x=>x.kw!==item.keyword); }
-  else{
-    if(selKws.length>=10){ showToast('최대 10개까지 선택 가능해요'); return; }
-    selKws.push({kw:item.keyword, region:item.region});
-  }
-  renderKeywords();
-  persistLater('keywordSelect');
-}
-function selAllKw(){
-  // 이미 전체 선택된 상태면 전체 해제
-  if(selKws.length >= Math.min(kwData.length, 10)){
-    selKws = [];
-    showToast('키워드 선택 해제');
-  } else {
-    selKws = [];
-    kwData.slice(0,10).forEach(function(k){
-      selKws.push({kw:k.keyword, keyword:k.keyword, region:k.region||''});
-    });
-    showToast(selKws.length+'개 키워드 전체 선택');
-  }
-  renderKeywords();
-  var cnt = document.getElementById('kwSelCnt');
-  if(cnt) cnt.textContent = selKws.length+'개 선택됨';
-  persistLater('keywordSelectAll');
-}
-function clearKw(){ selKws=[]; renderKeywords(); persistLater('keywordClear'); }
-function updateKwBtn(){
-  var cnt = selKws.length;
-  var cntEl = document.getElementById('kwSelCnt');
-  if(cntEl) cntEl.textContent = cnt+'개 선택됨';
-  // 완료버튼: 키워드 있으면 항상 표시
-  var btn = document.getElementById('toClusterBtn');
-  if(!btn) return;
-  if(kwData.length > 0){
-    btn.style.display = 'flex';
-    btn.innerHTML = cnt > 0
-      ? '<i class="ti ti-sitemap"></i> 선택한 '+cnt+'개로 글기획 생성 →'
-      : '<i class="ti ti-sitemap"></i> 전체 선택 후 글기획 생성 →';
-  } else {
-    btn.style.display = 'none';
-  }
-}
-async function goToCluster(){
-  // 선택된 키워드 없으면 전체 선택
-  if(!selKws.length && kwData.length){
-    selKws = [];
-    kwData.slice(0,10).forEach(function(k){
-      selKws.push({kw:k.keyword, keyword:k.keyword, region:k.region||''});
-    });
-    renderKeywords();
-  }
-  if(!selKws.length){ showToast('키워드를 먼저 추출해주세요'); return; }
 
-  // clusterKeywordInfo 업데이트
-  var info = document.getElementById('clusterKeywordInfo');
-  if(info){
-    info.innerHTML = '<strong>'+selKws.length+'개 키워드 선택됨</strong><br>'
-      + selKws.map(function(k){
-          return '<span style="display:inline-block;background:var(--g2);color:var(--g3);border-radius:6px;padding:2px 8px;font-size:10px;margin:2px;font-weight:600">'+esc(k.kw||k.keyword||'')+'</span>';
-        }).join('');
-  }
-
-  // 글기획 아직 없으면 자동 생성 후 이동
-  if(!clusterData.length){
-    goPage('cluster', document.querySelectorAll('.nav-tab')[2]);
-    await genCluster();
-  } else {
-    goPage('cluster', document.querySelectorAll('.nav-tab')[2]);
-  }
-}
-
-/* ══════════════════════════════════════
-   Topic Cluster
-══════════════════════════════════════ */
 async function genCluster(){
   if(!selKws.length){ showToast('먼저 키워드를 선택해주세요'); return; }
 
@@ -2134,13 +2020,14 @@ let autoRunning = false;
 var _priceCache = {};
 var currentFilter = 'all';
 async function startAutoMode(){
+  // 원터치 자동화 = 지역+업종+품목만 선택하면 나머지 전부 자동
   if(!selDistricts.length){
-    goPage('keyword',document.querySelectorAll('.nav-tab')[2]);
-    showToast('지역을 선택해주세요'); return;
+    goPage('keyword', document.querySelectorAll('.nav-tab')[1]);
+    showToast('① 지역을 먼저 선택해주세요'); return;
   }
   if(!selItems.length){
-    goPage('keyword',document.querySelectorAll('.nav-tab')[2]);
-    showToast('품목을 선택해주세요'); return;
+    goPage('keyword', document.querySelectorAll('.nav-tab')[1]);
+    showToast('③ 품목을 먼저 선택해주세요'); return;
   }
   if(autoRunning){ showToast('이미 실행 중이에요'); return; }
   autoRunning = true;
@@ -2148,36 +2035,22 @@ async function startAutoMode(){
 
   var priceData = null;
   try{
-    // Step 0: 실시간 단가 조회
+    // Step 0: 실시간 단가 조회 (Apps Script 경유)
     setStep(0,'⏳','실시간 단가 조회 중...');
     priceData = await fetchRealtimePrice(industry);
     setStep(0, priceData?'✅':'⚠️',
-      priceData ? '단가 조회 완료 ('+priceData.prices.length+'개 품목)' : '기본 데이터 사용');
+      priceData ? '단가 조회 완료 — '+priceData.prices.length+'개 품목' : '기본 데이터 사용');
 
-    // Step 1: 키워드 추출 (Claude 1회)
+    // Step 1: SEO 키워드 자동 추출
     setStep(1,'⏳','SEO 키워드 추출 중...');
     await genKeywords();
     if(!kwData.length) throw new Error('키워드 추출 실패');
+    setStep(1,'✅','키워드 '+kwData.length+'개 추출 — 우선순위 '+selKws.length+'개 자동 선택');
 
-    // 중복 제거 + 우선순위 정렬 + selKws 세팅
-    var usedKws = new Set(history.map(function(h){ return (h.kw||'').toLowerCase(); }));
-    selKws = [];
-    kwData.slice().sort(function(a,b){
-      var p={low:0,mid:1,high:2};
-      return (p[a.difficulty]||1)-(p[b.difficulty]||1);
-    }).filter(function(k){
-      return !usedKws.has((k.keyword||'').toLowerCase());
-    }).slice(0,8).forEach(function(k){
-      // genCluster가 읽는 형식으로 저장
-      selKws.push({kw: k.keyword, keyword: k.keyword, region: k.region||''});
-    });
-    if(!selKws.length) throw new Error('사용 가능한 키워드 없음 (모두 중복)');
-    setStep(1,'✅','키워드 '+kwData.length+'개 → '+selKws.length+'개 선택 (중복 제외)');
-
-    // Step 2: 글 기획 (Claude 1회) - genCluster 직접 호출
-    setStep(2,'⏳','글 기획 생성 중...');
+    // Step 2: 글기획 자동 생성
+    setStep(2,'⏳','글기획 자동 생성 중...');
     await genCluster();
-    if(!clusterData.length) throw new Error('글 기획 생성 실패');
+    if(!clusterData.length) throw new Error('글기획 생성 실패');
 
     // 중복 제목 제외 + 우선순위 정렬
     var usedTitles = new Set(history.map(function(h){ return (h.title||'').toLowerCase(); }));
@@ -2187,33 +2060,39 @@ async function startAutoMode(){
     }).filter(function(c){
       return !usedTitles.has((c.title||'').toLowerCase());
     });
-    if(!sorted.length) throw new Error('작성 가능한 글 기획 없음 (모두 중복)');
-    setStep(2,'✅','글 기획 '+sorted.length+'개 (중복 제외, 우선순위 정렬)');
+    if(!sorted.length) throw new Error('작성할 글 없음 (모두 중복)');
+    setStep(2,'✅','글기획 '+sorted.length+'개 (중복 제외, 우선순위 정렬)');
 
-    // Step 3: 팩트 기반 SEO 글 작성 (Claude × N)
-    var total=sorted.length, ok=0;
+    // Step 3: 팩트 기반 SEO 글 전체 자동 작성
+    var total = sorted.length, ok = 0;
     setStep(3,'⏳','SEO 글 작성 시작 (0/'+total+')...');
     for(var i=0; i<sorted.length; i++){
       if(!autoRunning) break;
+      var det = document.getElementById('as3d');
+      if(det) det.innerHTML = '📝 ('+(i+1)+'/'+total+') '+(sorted[i].title||sorted[i].keyword||'')+'...';
       try{
-        var r = await writeOnePost(sorted[i], i, total, priceData);
-        if(r&&r.success) ok++;
+        var res = await writeOnePost(sorted[i], i, total, priceData);
+        if(res && res.success) ok++;
       }catch(e){ console.warn('글 '+i+' 실패:', e); }
       var pr = document.getElementById('asPr');
       if(pr) pr.style.width = Math.round((i+1)/total*100)+'%';
       setStep(3,'⏳','작성 중 ('+(i+1)+'/'+total+') — 완료 '+ok+'개');
     }
     setStep(3,'✅','글 작성 완료 ('+ok+'/'+total+'개)');
-    setStep(4,'✅','구글 시트 저장 완료');
+    setStep(4,'✅','구글 시트 [작성글] 저장 완료');
 
-    var dn=document.getElementById('asDone'); if(dn) dn.style.display='block';
-    var sm=document.getElementById('asSumm');
-    if(sm) sm.textContent='총 '+ok+'개 포스팅 완료! Analytics에서 복사 후 블로그 발행하세요.';
-    updateDashboard(); renderHistList();
+    var dn = document.getElementById('asDone');
+    var sm = document.getElementById('asSumm');
+    if(dn) dn.style.display = 'block';
+    if(sm) sm.textContent = '총 '+ok+'개 포스팅 완료! Analytics에서 복사 후 블로그 발행하세요.';
+    updateDashboard();
+    try{ renderHistList(); }catch(e){}
 
   }catch(e){
-    var er=document.getElementById('asErr'); if(er) er.style.display='block';
-    var em=document.getElementById('asErrM'); if(em) em.textContent=e.message||String(e);
+    var er = document.getElementById('asErr');
+    var em = document.getElementById('asErrM');
+    if(er) er.style.display = 'block';
+    if(em) em.textContent = e.message || String(e);
     console.error('자동화 오류:', e);
   }
   autoRunning = false;
