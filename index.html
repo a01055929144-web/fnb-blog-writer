@@ -584,31 +584,57 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 <!-- ═══ ANALYTICS ═══ -->
 <div class="page" id="page-analytics">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <h2 style="font-size:15px;font-weight:800">📊 발행 현황 관리</h2>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-o" onclick="filterHistory('all')" id="fAll" style="font-size:11px;padding:5px 10px">전체</button>
-      <button class="btn btn-o" onclick="filterHistory('pending')" id="fPend" style="font-size:11px;padding:5px 10px">미발행</button>
-      <button class="btn btn-o" onclick="filterHistory('done')" id="fDone" style="font-size:11px;padding:5px 10px">발행완료</button>
+  <!-- 상단 필터 + 검색 -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <div style="display:flex;gap:4px">
+      <button onclick="filterHistory('all')" id="fAll" class="btn btn-outline" style="font-size:11px;padding:5px 12px;font-weight:700">전체</button>
+      <button onclick="filterHistory('pending')" id="fPending" class="btn btn-outline" style="font-size:11px;padding:5px 12px">⏳ 미발행</button>
+      <button onclick="filterHistory('done')" id="fDone" class="btn btn-outline" style="font-size:11px;padding:5px 12px">✅ 발행완료</button>
     </div>
+    <input id="anSearch" class="mini-search" placeholder="제목·지역·업종 검색" oninput="filterHistory(currentFilter,this.value)" style="flex:1;max-width:260px">
+    <span id="anCount" style="font-size:11px;color:var(--gray);margin-left:auto">0개</span>
   </div>
 
-  <!-- 요약 카드 -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+  <!-- 요약 KPI -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
     <div class="stat"><div class="stat-label">총 작성 글</div><div class="stat-val" id="an-total">0</div></div>
-    <div class="stat"><div class="stat-label">✅ 발행완료</div><div class="stat-val" style="color:var(--g)" id="an-done">0</div><div class="stat-sub" id="an-done-pct"></div></div>
-    <div class="stat"><div class="stat-label">⏳ 미발행</div><div class="stat-val" style="color:var(--amber)" id="an-pending">0</div></div>
+    <div class="stat" style="border-left:3px solid var(--g)"><div class="stat-label">✅ 발행완료</div><div class="stat-val" style="color:var(--g)" id="an-done">0</div><div class="stat-sub" id="an-done-pct"></div></div>
+    <div class="stat" style="border-left:3px solid var(--amber)"><div class="stat-label">⏳ 미발행</div><div class="stat-val" style="color:var(--amber)" id="an-pending">0</div></div>
     <div class="stat"><div class="stat-label">커버 지역</div><div class="stat-val" id="an-regions">0</div></div>
   </div>
 
   <!-- 글 목록 -->
-  <div class="card" style="padding:0;overflow:hidden">
-    <div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px">
-      <input class="mini-search" id="anSearch" placeholder="제목·지역·업종 검색" oninput="filterHistory(currentFilter,this.value)" style="flex:1;max-width:300px">
-      <span style="font-size:11px;color:var(--gray)" id="anCount">0개</span>
+  <div id="histList" style="display:flex;flex-direction:column;gap:10px"></div>
+
+  <!-- 초안 편집 모달 -->
+  <div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:720px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px">
+        <div style="font-size:14px;font-weight:800;flex:1">✏️ 초안 편집</div>
+        <button onclick="saveEdit()" style="padding:7px 16px;background:var(--g3);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">저장</button>
+        <button onclick="closeEdit()" style="padding:7px 12px;border:1px solid var(--bd);border-radius:6px;background:#fff;font-size:12px;cursor:pointer">닫기</button>
+      </div>
+      <div style="padding:16px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--gray);margin-bottom:4px">제목</div>
+          <input id="editTitle" style="width:100%;padding:8px 12px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px;font-weight:600">
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:var(--gray);margin-bottom:4px">본문 <span id="editCharCount" style="font-weight:400;color:var(--gray)"></span></div>
+          <textarea id="editBody" oninput="updateCharCount()" style="width:100%;min-height:360px;padding:10px 12px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px;line-height:1.7;resize:vertical;font-family:inherit"></textarea>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--gray);margin-bottom:4px">해시태그</div>
+          <input id="editTags" style="width:100%;padding:8px 12px;border:1.5px solid var(--bd);border-radius:6px;font-size:11px">
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="copyEdit()" style="flex:1;padding:9px;border:1.5px solid var(--bd);border-radius:6px;background:#fff;font-size:12px;cursor:pointer;font-weight:600"><i class="ti ti-copy"></i> 전체 복사</button>
+          <button onclick="copyTitleBody()" style="flex:1;padding:9px;border:1.5px solid var(--g3);border-radius:6px;background:var(--g2);font-size:12px;cursor:pointer;font-weight:600;color:var(--g3)"><i class="ti ti-clipboard-text"></i> 제목+본문 복사</button>
+        </div>
+      </div>
     </div>
-    <div id="histList" style="max-height:65vh;overflow-y:auto"></div>
   </div>
+</div>
 <script>
 /* ══════════════════════════════════════
    고정값
@@ -2031,7 +2057,7 @@ async function writeOnePost(item, idx, total){
         industry: industry,
         type: type,
         title: title,
-        body: body.substring(0,500),
+        body: body,  // 전체 본문 저장 (잘리지 않음)
         hashtags: typeof tags==='string'?tags:tags.join(' '),
         chars: body.length,
         status: '자동생성'
@@ -2208,57 +2234,65 @@ async function writeSelected(){
 function filterHistory(filter, search){
   if(filter !== undefined) currentFilter = filter;
   var f = currentFilter || 'all';
-  var q = (search !== undefined ? search : (document.getElementById('anSearch')||{}).value||'').toLowerCase();
+  var q = ((search !== undefined ? search : '') || (document.getElementById('anSearch')||{}).value||'').toLowerCase();
 
   // 필터 버튼 활성화
-  ['all','pending','done'].forEach(function(k){
-    var btn = document.getElementById('f'+k.charAt(0).toUpperCase()+k.slice(1));
-    if(btn) btn.style.fontWeight = (k===f) ? '800' : '400';
+  ['All','Pending','Done'].forEach(function(k){
+    var btn = document.getElementById('f'+k);
+    if(!btn) return;
+    btn.style.background = (k.toLowerCase()===f || (f==='all'&&k==='All')) ? 'var(--dark)' : '';
+    btn.style.color = (k.toLowerCase()===f || (f==='all'&&k==='All')) ? '#fff' : '';
   });
 
-  var list = history.filter(function(h){
-    var matchFilter = f==='all' || (f==='pending' && h.uploadStatus!=='done') || (f==='done' && h.uploadStatus==='done');
-    var matchQ = !q || (h.title||'').toLowerCase().includes(q) || (h.region||'').toLowerCase().includes(q) || (h.industry||'').toLowerCase().includes(q);
-    return matchFilter && matchQ;
+  var list = (history||[]).filter(function(h){
+    var isDone = h.uploadStatus === 'done';
+    var mf = f==='all' || (f==='pending' && !isDone) || (f==='done' && isDone);
+    var mq = !q || (h.title||'').toLowerCase().includes(q)
+              || (h.region||'').toLowerCase().includes(q)
+              || (h.industry||'').toLowerCase().includes(q);
+    return mf && mq;
   });
 
   var cnt = document.getElementById('anCount');
   if(cnt) cnt.textContent = list.length+'개';
+  window._anaList = list;
 
   var el = document.getElementById('histList');
   if(!el) return;
+
   if(!list.length){
-    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--gray);font-size:13px">해당하는 글이 없어요</div>';
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray);font-size:13px"><div style="font-size:32px;margin-bottom:8px">✍️</div>해당하는 글이 없어요</div>';
     return;
   }
 
-  // data-idx 방식으로 따옴표 충돌 방지
-  window._anaList = list;
   el.innerHTML = list.map(function(h, i){
     var isDone = h.uploadStatus === 'done';
-    var bgBadge = isDone ? '#DCFCE7' : '#FEF3C7';
-    var coBadge = isDone ? '#166534' : '#92400E';
-    var bgBtn   = isDone ? '#FEF2F2' : '#F0FDF4';
-    var coBtn   = isDone ? '#DC2626' : '#166534';
-    var bdBtn   = isDone ? '#FCA5A5' : '#86EFAC';
-    var labelBadge = isDone ? '✅ 발행완료' : '⏳ 미발행';
-    var labelBtn   = isDone ? '↩ 미발행으로' : '→ 발행완료';
-    return '<div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;gap:12px">'
+    return '<div style="background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px 16px">'
+      // 상단: 제목 + 토글
+      +'<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">'
       +'<div style="flex:1;min-width:0">'
-      +'<div style="font-size:13px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(h.title||h.kw||'제목없음')+'</div>'
-      +'<div style="font-size:11px;color:var(--gray);margin-bottom:6px">'+esc(h.date||'')+' · '+esc(h.region||'')+' · '+esc(h.industry||'')+' · '+(h.chars||0)+'자</div>'
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      +'<button data-ai="'+i+'" onclick="copyPost(this)" style="padding:4px 10px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer"><i class="ti ti-copy"></i> 복사</button>'
-      +'<button data-ai="'+i+'" onclick="showDetail(this)" style="padding:4px 10px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer"><i class="ti ti-eye"></i> 보기</button>'
+      +'<div style="font-size:13px;font-weight:800;margin-bottom:3px;line-height:1.4">'+esc(h.title||h.kw||'제목없음')+'</div>'
+      +'<div style="font-size:10px;color:var(--gray)">'+esc(h.date||'')+' · '+esc(h.region||'')+' · '+esc(h.industry||'')+' · '+(h.chars||0)+'자</div>'
+      +'</div>'
+      // 발행 토글
+      +'<div onclick="toggleUpload('+i+')" style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;padding:4px 10px;border-radius:20px;border:1.5px solid '+(isDone?'var(--g3)':'var(--bd)')+';background:'+(isDone?'var(--g2)':'#F8FAFC')+'">'
+      +'<div style="width:14px;height:14px;border-radius:50%;background:'+(isDone?'var(--g3)':'var(--bd)')+';transition:.2s"></div>'
+      +'<span style="font-size:11px;font-weight:700;color:'+(isDone?'var(--g3)':'var(--gray)')+'">'+(isDone?'발행완료':'미발행')+'</span>'
       +'</div>'
       +'</div>'
-      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'
-      +'<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;background:'+bgBadge+';color:'+coBadge+'">'+labelBadge+'</span>'
-      +'<button data-ai="'+i+'" onclick="toggleUpload(this)" style="padding:4px 10px;border:1px solid '+bdBtn+';border-radius:5px;background:'+bgBtn+';font-size:10px;cursor:pointer;font-weight:600;color:'+coBtn+'">'+labelBtn+'</button>'
+      // 본문 미리보기
+      +'<div style="font-size:11px;color:#475569;line-height:1.6;background:#F8FAFC;border-radius:6px;padding:8px 10px;margin-bottom:8px;white-space:pre-wrap;max-height:80px;overflow:hidden;position:relative">'
+      +esc((h.body||'').substring(0,200))+(((h.body||'').length>200)?'...':'')
+      +'</div>'
+      // 하단 버튼
+      +'<div style="display:flex;gap:6px">'
+      +'<button data-ai="'+i+'" onclick="openEdit(this)" style="padding:5px 12px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer;font-weight:600"><i class="ti ti-pencil"></i> 편집</button>'
+      +'<button data-ai="'+i+'" onclick="copyPost(this)" style="padding:5px 12px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer"><i class="ti ti-copy"></i> 복사</button>'
       +'</div>'
       +'</div>';
   }).join('');
 }
+
 
 function toggleUpload(el){
   var i = parseInt(el.dataset.ai);
@@ -3027,6 +3061,102 @@ function copyRestContent(el){
   navigator.clipboard.writeText(r.content).then(function(){
     showToast('복사 완료! 해당 채널에 붙여넣기 하세요.');
   });
+}
+
+var _editIdx = -1;
+
+function openEdit(el){
+  var i = parseInt(el.getAttribute('data-ai'));
+  var h = window._anaList && window._anaList[i];
+  if(!h) return;
+  _editIdx = i;
+  var realIdx = (history||[]).indexOf(h);
+  _editRealIdx = realIdx;
+  document.getElementById('editTitle').value = h.title || '';
+  document.getElementById('editBody').value  = h.body  || '';
+  document.getElementById('editTags').value  = (h.tags||[]).join ? (h.tags||[]).join(' ') : (h.tags||'');
+  updateCharCount();
+  var m = document.getElementById('editModal');
+  if(m){ m.style.display='flex'; }
+}
+
+function closeEdit(){
+  var m = document.getElementById('editModal');
+  if(m) m.style.display='none';
+  _editIdx = -1;
+}
+
+function saveEdit(){
+  var h = window._anaList && window._anaList[_editIdx];
+  if(!h) return;
+  h.title = document.getElementById('editTitle').value;
+  h.body  = document.getElementById('editBody').value;
+  var tags = document.getElementById('editTags').value;
+  h.tags  = tags.split ? tags.split(/\s+/).filter(Boolean) : [];
+  h.chars = h.body.length;
+  saveApp();
+  closeEdit();
+  filterHistory();
+  showToast('저장됐어요!');
+}
+
+function updateCharCount(){
+  var ta = document.getElementById('editBody');
+  var cnt = document.getElementById('editCharCount');
+  if(ta && cnt) cnt.textContent = ta.value.length+'자';
+}
+
+function copyEdit(){
+  var title = document.getElementById('editTitle').value;
+  var body  = document.getElementById('editBody').value;
+  var tags  = document.getElementById('editTags').value;
+  navigator.clipboard.writeText(title+'\n\n'+body+'\n\n'+tags)
+    .then(function(){ showToast('전체 복사 완료!'); });
+}
+
+function copyTitleBody(){
+  var title = document.getElementById('editTitle').value;
+  var body  = document.getElementById('editBody').value;
+  navigator.clipboard.writeText(title+'\n\n'+body)
+    .then(function(){ showToast('제목+본문 복사 완료!'); });
+}
+
+function updateAnalytics(){
+  var total   = (history||[]).length;
+  var done    = (history||[]).filter(function(h){ return h.uploadStatus==='done'; }).length;
+  var pending = total - done;
+  var pct     = total ? Math.round(done/total*100) : 0;
+  var regions = new Set((history||[]).map(function(h){ return h.region; })).size;
+  var s = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+  s('an-total',total); s('an-done',done);
+  s('an-done-pct','발행률 '+pct+'%');
+  s('an-pending',pending); s('an-regions',regions);
+}
+
+function toggleUpload(idx){
+  var h = window._anaList && window._anaList[idx];
+  if(!h) return;
+  h.uploadStatus = (h.uploadStatus==='done') ? 'pending' : 'done';
+  // 시트 상태 업데이트
+  try{
+    fetch(SHEET_ENDPOINT,{
+      method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'updateStatus',sheetId:SHEET_ID,title:h.title,uploadStatus:h.uploadStatus})
+    });
+  }catch(e){}
+  saveApp();
+  filterHistory();
+  updateAnalytics();
+  updateDashboard();
+}
+
+function copyPost(el){
+  var i = parseInt(el.getAttribute('data-ai'));
+  var h = window._anaList && window._anaList[i];
+  if(!h) return;
+  var tags = (h.tags||[]).join ? (h.tags||[]).join(' ') : (h.tags||'');
+  navigator.clipboard.writeText((h.title||'')+'\n\n'+(h.body||'')+'\n\n'+tags)
+    .then(function(){ showToast('복사됐어요!'); });
 }
 
 </script>
