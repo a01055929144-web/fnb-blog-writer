@@ -284,9 +284,9 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 <!-- 통합 네비게이션 -->
 <nav class="nav">
-  <div class="nav-tab on" onclick="goPage('dashboard',this)"><i class="ti ti-layout-dashboard"></i> 대시보드</div>
-  <div class="nav-tab"    onclick="goPage('keyword',this)"><i class="ti ti-building-store"></i> 맛집 홍보</div>
+  <div class="nav-tab on" onclick="goPage('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
   <div class="nav-tab"    onclick="goPage('analytics',this)"><i class="ti ti-notebook"></i> 내 글 관리</div>
+  <div class="nav-tab"    onclick="goPage('keyword',this)"><i class="ti ti-building-store"></i> 맛집 홍보</div>
 </nav>
 
 <!-- ═══ DASHBOARD ═══ -->
@@ -518,6 +518,20 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 <!-- ═══ ANALYTICS ═══ -->
 <div class="page" id="page-analytics">
+
+  <!-- 저장 현황 배너 -->
+  <div style="background:linear-gradient(135deg,#0F172A,#1E293B);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:2px">📝 내 글 관리</div>
+      <div style="font-size:10px;color:#94A3B8">웹에서 편집·저장 → 복사 후 네이버 발행 | 구글 시트에도 자동 백업</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="exportAllPosts()" style="padding:6px 12px;background:#1E40AF;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer"><i class="ti ti-download"></i> 전체 내보내기</button>
+      <button onclick="syncToSheet()" style="padding:6px 12px;background:#166534;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer"><i class="ti ti-table"></i> 시트 동기화</button>
+    </div>
+  </div>
+
+
   <!-- 상단 필터 + 검색 -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <div style="display:flex;gap:4px">
@@ -1883,6 +1897,11 @@ function hydrateControls(){
 
 async function initApp(){
   try{ await loadAppSnapshot(); }catch(e){ console.warn('snapshot 실패:', e); }
+  // 로컬 저장 글 복원 (snapshot보다 우선)
+  try{
+    var localOk = loadSavedPosts();
+    if(localOk) console.log('✅ 로컬 저장 글 복원:', history.length+'개');
+  }catch(e){}
   try{ hydrateControls(); }catch(e){ console.warn('hydrate 실패:', e); }
   try{ renderIndustryOptions(); }catch(e){ console.warn('renderInd 실패:', e); }
   try{ renderDist(); }catch(e){ console.warn('renderDist 실패:', e); }
@@ -3098,12 +3117,79 @@ function copyPost(el){
 
 
 
+/* ═══ 글 내보내기 / 시트 동기화 ═══ */
+function exportAllPosts(){
+  if(!history.length){ showToast('저장된 글이 없어요'); return; }
+  var lines = history.map(function(h, i){
+    return '===== ['+(i+1)+'] '+h.title+' =====\n'
+      +'날짜: '+(h.date||'')+' | 지역: '+(h.region||'')+' | 업종: '+(h.industry||'')+'\n\n'
+      +(h.body||'')+'\n\n'
+      +((h.tags||[]).join?h.tags.join(' '):(h.tags||''))+'\n';
+  }).join('\n\n');
+  var blob = new Blob([lines], {type:'text/plain;charset=utf-8'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'fnb_posts_'+new Date().toLocaleDateString('ko-KR').replace(/\s/g,'')+'.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ '+history.length+'개 글 내보내기 완료!');
+}
+
+async function syncToSheet(){
+  if(!history.length){ showToast('저장된 글이 없어요'); return; }
+  showToast('⏳ 시트 동기화 중...');
+  var ok = 0;
+  for(var i=0; i<history.length; i++){
+    var h = history[i];
+    if(!h.title) continue;
+    try{
+      await fetch(SHEET_ENDPOINT, {
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({
+          sheetId: SHEET_ID,
+          date: h.date || new Date().toLocaleDateString('ko-KR'),
+          sido: (h.region||'').split(' ')[0]||'',
+          gugun: (h.region||'').split(' ').slice(1).join(' ')||'',
+          industry: h.industry||'', type: h.type||'',
+          keyword: h.kw||h.keyword||'',
+          title: h.title||'',
+          body: h.body||'',
+          hashtags: (h.tags||[]).join?h.tags.join(' '):(h.tags||''),
+          chars: h.chars||0,
+          status: h.uploadStatus==='done'?'발행완료':'미발행'
+        })
+      });
+      ok++;
+    }catch(e){}
+    await new Promise(function(r){ setTimeout(r, 300); });
+  }
+  showToast('✅ '+ok+'개 시트 동기화 완료!');
+}
+
 </script>
 </body>
 </html>function saveApp(){
   try{
-    localStorage.setItem('fnb_history', JSON.stringify((history||[]).slice(0,200)));
-  }catch(e){ console.warn('history 저장 실패:', e); }
+    // 웹 로컬 저장 (최대 500개)
+    localStorage.setItem('fnb_history', JSON.stringify((history||[]).slice(0,500)));
+    localStorage.setItem('fnb_savedAt', new Date().toISOString());
+  }catch(e){ console.warn('로컬 저장 실패:', e); }
+}
+
+function loadSavedPosts(){
+  // 로컬스토리지에서 글 복원
+  try{
+    var saved = localStorage.getItem('fnb_history');
+    if(saved){
+      var parsed = JSON.parse(saved);
+      if(Array.isArray(parsed) && parsed.length > 0){
+        history = parsed;
+        return true;
+      }
+    }
+  }catch(e){}
+  return false;
 }!DOCTYPE html>
 <html lang="ko">
 <head>
