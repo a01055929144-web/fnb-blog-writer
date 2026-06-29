@@ -1205,10 +1205,14 @@ function renderDist(){
 function togDistEl(el){ togDist(el.getAttribute('data-dist')); }
 
 function renderSelectedRegions(){
-  var _srHTML = (function(){ = selDistricts.map(d=>
-    `<div class="sel-tag">${esc(d.region)} ${esc(d.district)}<span onclick="rmDist('${d.district}')">×</span></div>`
-  ).join('');
+  var el = document.getElementById('selRegions');
+  if(!el) return;
+  el.innerHTML = selDistricts.map(function(d){
+    return '<div class="sel-tag">'+esc(d.region)+' '+esc(d.district)
+      +'<span onclick="rmDist(''+d.region+'',''+d.district+'')" style="cursor:pointer;margin-left:4px;opacity:.7">×</span></div>';
+  }).join('');
 }
+
 function renderProjDist(reg){
   const keys = REGION_TABS[reg||'서울']||[];
   document.getElementById('projDistGrid').innerHTML = keys.map(name=>`
