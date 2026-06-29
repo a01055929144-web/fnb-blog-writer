@@ -201,6 +201,7 @@ function normalizeIndustry_(ind) {
 function doPost(e) {
   var out = ContentService.createTextOutput();
   out.setMimeType(ContentService.MimeType.JSON);
+  // CORS: 브라우저 직접 호출 허용 (배포 시 "모든 사용자" 설정 필수)
   try {
     var raw = (e.postData && e.postData.contents) || '{}';
     var data = JSON.parse(raw);
@@ -357,21 +358,21 @@ function savePost_(data) {
   var sido  = data.sido  || region.split(' ')[0] || '';
   var gugun = data.gugun || region.split(' ').slice(1).join(' ') || '';
 
-  var rowNum = sheet.getLastRow();
+  var rowNum = sheet.getLastRow(); // 헤더 포함 행 수 = 다음 번호
   sheet.appendRow([
-    rowNum,
-    data.date || new Date().toLocaleDateString('ko-KR'),
-    sido,
-    gugun,
-    data.industry || '',
-    data.type     || '',
-    data.keyword  || data.kw || '',
-    data.title    || '',
-    String(data.body || '').substring(0, 500),
-    data.hashtags || '',
-    data.chars    || 0,
-    data.status   || '자동생성',
-    '미발행'
+    rowNum,                                              // 번호
+    data.date || new Date().toLocaleDateString('ko-KR'), // 날짜
+    sido,                                               // 지역(시도)
+    gugun,                                              // 시/구
+    data.industry || '',                                // 업종
+    data.type     || '',                                // 콘텐츠타입
+    data.keyword  || data.kw || '',                    // 핵심키워드
+    data.title    || '',                                // 제목
+    String(data.body || '').substring(0, 500),         // 본문(500자)
+    data.hashtags || '',                                // 해시태그
+    Number(data.chars) || 0,                           // 글자수
+    data.status   || '자동생성',                        // 저장상태
+    '미발행'                                            // 블로그업로드
   ]);
 
   var newRow = sheet.getLastRow();
