@@ -10,17 +10,13 @@ const PRICE_API_BASE = 'https://apis.data.go.kr/B552845/perDay';
 
 const SHEET = {
   posts:   '작성글',
-  price:   '단가데이터',
   regions: '지역현황'
 };
 
+// 작성글: 본문 전체 저장 (잘리지 않음), 발행상태 토글
 const POST_HEADERS = [
   '번호', '날짜', '지역(시도)', '시/구', '업종', '콘텐츠타입',
-  '핵심키워드', '제목', '본문(500자)', '해시태그', '글자수', '저장상태', '블로그업로드'
-];
-
-const PRICE_HEADERS = [
-  '날짜', '업종', '품목명', '도매가(원)', '소매가(원)', '단위', '전일비', '전년비', '출처'
+  '핵심키워드', '제목', '본문(전체)', '해시태그', '글자수', '발행상태'
 ];
 
 const REGION_HEADERS = [
@@ -573,7 +569,6 @@ function setupWeeklyTriggers() {
 function ensureAllSheets_() {
   var ss = SpreadsheetApp.openById(getSheetId_());
   ensureSheet_(ss, SHEET.posts,   POST_HEADERS);
-  ensureSheet_(ss, SHEET.price,   PRICE_HEADERS);
   ensureSheet_(ss, SHEET.regions, REGION_HEADERS);
 }
 
@@ -586,10 +581,12 @@ function ensureSheet_(ss, name, headers) {
     h.setBackground('#0F172A').setFontColor('#ffffff').setFontWeight('bold').setHorizontalAlignment('center');
     sheet.setFrozenRows(1);
     if (name === SHEET.posts) {
-      sheet.setColumnWidth(7, 280);
-      sheet.setColumnWidth(8, 380);
-      sheet.setColumnWidth(9, 240);
-      sheet.setColumnWidth(12, 100);
+      sheet.setColumnWidth(1, 50);   // 번호
+      sheet.setColumnWidth(7, 200);  // 핵심키워드
+      sheet.setColumnWidth(8, 320);  // 제목
+      sheet.setColumnWidth(9, 500);  // 본문(전체)
+      sheet.setColumnWidth(10, 250); // 해시태그
+      sheet.setColumnWidth(12, 90);  // 발행상태
     }
   }
   return sheet;
