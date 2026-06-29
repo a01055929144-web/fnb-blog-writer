@@ -1439,12 +1439,12 @@ async function genCluster(){
   // 12개로 제한 (토큰 절약, 안정적 파싱)
   const prompt = 'F&B 식자재 중개 블로그 글 기획 12개를 JSON으로 생성해주세요.\n\n'
     +'업종: '+industry+'\n지역: '+regions+'\n키워드: '+kwList+'\n\n'
-    +'신규 창업 사장님 타겟 우선. JSON만 반환 (마크다운 없이):\n'
+    +'신규 창업 사장님 타겟 우선. JSON만 반환 (마크다운 없이, 8개):\n'
     +'{"cluster":[{"title":"제목","keyword":"핵심키워드","intent":"창업","priority":"high","region":"서울 강남구","type":"창업컨설팅"}]}\n\n'
-    +'12개. intent: 창업/납품/정보/원가절감. priority: high/mid/low. type: 창업컨설팅/정보성/납품노하우/원가절감.';
+    +'8개. intent: 창업/납품/정보/원가절감. priority: high/mid/low. type: 창업컨설팅/정보성/납품노하우.';
 
   try{
-    const text = await callClaude(prompt, 1000, true); // Haiku
+    const text = await callClaude(prompt, 1800, true); // Haiku — 토큰 늘려 JSON 잘림 방지
     let clean = text.replace(/```json|```/g,'').trim();
     const jS = clean.indexOf('{'), jE = clean.lastIndexOf('}');
     if(jS>-1 && jE>jS) clean = clean.slice(jS, jE+1);
@@ -2061,8 +2061,17 @@ async function startAutoMode(){
     var priceData = null;
     try{
       priceData = await fetchRealtimePrice(industry);
-      setStep(0,'✅', priceData ? '단가 조회 완료 ('+priceData.prices.length+'개 품목)' : '기본 데이터 사용');
-    }catch(e){ setStep(0,'⚠️','단가 조회 실패 — 기본 데이터 사용'); }
+      var pLen = (priceData && priceData.prices) ? priceData.prices.length : 0;
+      if(pLen > 0){
+        setStep(0,'✅','단가 조회 완료 ('+pLen+'개 품목)');
+      } else {
+        setStep(0,'⚠️','단가 조회 불가 — 일반 데이터로 대체 (주류·카페 등은 공공데이터 미지원)');
+        priceData = null; // 빈 데이터면 null로 처리
+      }
+    }catch(e){
+      setStep(0,'⚠️','단가 조회 실패 — 일반 데이터 사용');
+      priceData = null;
+    }
 
     // ── Step 1: SEO 키워드 추출 ──
     setStep(1,'⏳','SEO 키워드 추출 중...');
@@ -2098,13 +2107,13 @@ async function startAutoMode(){
     setStep(2,'⏳','글기획 자동 생성 중...');
     var kwList = selKws.map(function(k){ return k.kw||k.keyword||''; }).join(', ');
     var regions = [...new Set(selKws.map(function(k){ return k.region||''; }).filter(Boolean))].join(', ') || regionSummary;
-    var clPrompt = 'F&B 식자재 블로그 글기획 12개 JSON.\n'
+    var clPrompt = 'F&B 식자재 블로그 글기획 8개 JSON.\n'
       +'업종:'+industry+' / 지역:'+regions+' / 키워드:'+kwList+'\n'
       +'신규창업 사장님 타겟. JSON만:\n'
       +'{"cluster":[{"title":"제목","keyword":"키워드","intent":"창업","priority":"high","region":"서울 강남구","type":"창업컨설팅"}]}\n'
-      +'12개. priority:high/mid/low. type:창업컨설팅/정보성/납품노하우.';
+      +'8개. priority:high/mid/low. type:창업컨설팅/정보성/납품노하우.';
 
-    var clText = await callClaude(clPrompt, 1000, true);
+    var clText = await callClaude(clPrompt, 1800, true); // 토큰 늘려 JSON 잘림 방지
     var clClean = clText.replace(/```json|```/g,'').trim();
     var cS=clClean.indexOf('{'), cE=clClean.lastIndexOf('}');
     if(cS>-1&&cE>-1) clClean=clClean.slice(cS,cE+1);
