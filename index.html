@@ -2178,16 +2178,12 @@ function showSettingGuideModal(){
   var missing = [];
   if(!selDistricts.length) missing.push('📍 지역');
   if(!selItems.length) missing.push('📦 품목');
-  var msg = missing.join(', ') + ' 선택이 필요해요.
-
-키워드&설정 탭에서 선택해주세요!';
-  // 간단한 안내 토스트
   showToast(missing.join(', ')+' 먼저 선택해주세요', 3000);
-  // 키워드&설정 탭으로 자동 이동 (딱 이 경우에만)
   setTimeout(function(){
     goPage('keyword', document.querySelectorAll('.nav-tab')[1]);
   }, 500);
 }
+
 
 
 async function writeSelected(){
