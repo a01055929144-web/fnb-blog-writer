@@ -2601,6 +2601,161 @@ async function fetchRealtimePrice(ind){
 
 
 
+
+/* ═══ 키워드 렌더링 ═══ */
+function renderKeywords(){
+  var groups = {low:[], mid:[], high:[]};
+  kwData.forEach(function(k){ if(groups[k.difficulty]) groups[k.difficulty].push(k); });
+  var labels = {low:'🎯 경쟁 낮음 (최우선)', mid:'📊 경쟁 보통', high:'🔍 틈새 키워드'};
+  var html = '';
+  ['low','mid','high'].forEach(function(diff){
+    if(!groups[diff].length) return;
+    var items = groups[diff].map(function(kw){
+      var on = selKws.find(function(x){ return x.kw===kw.keyword; }) ? ' on' : '';
+      var chk = on ? '✓' : '';
+      var dLabel = diff==='low'?'낮음':diff==='mid'?'보통':'높음';
+      var dClass = diff==='low'?'lo':diff==='mid'?'mi':'hi';
+      return '<div class="kw-item'+on+'" data-ki="'+kw.index+'" onclick="togKwByEl(this)">'
+        +'<div class="kw-chk">'+chk+'</div>'
+        +'<div class="kw-txt">'+esc(kw.keyword)+'</div>'
+        +'<span class="kw-region">'+esc(kw.region)+'</span>'
+        +'<span class="diff d-'+dClass+'">'+dLabel+'</span>'
+        +'</div>';
+    }).join('');
+    html += '<div class="kw-group">'
+      +'<div class="kw-group-title">'+labels[diff]
+      +'<span class="kw-count">'+groups[diff].length+'개</span></div>'
+      +'<div class="kw-list">'+items+'</div></div>';
+  });
+  var container = document.getElementById('kwContainer');
+  if(container) container.innerHTML = html ||
+    '<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">키워드가 없어요</div>';
+  updateKwBtn();
+}
+function togKwByEl(el){
+  var idx = parseInt(el.getAttribute('data-ki')||'0');
+  togKw(idx);
+}
+function togKw(index){
+  var item = kwData[index];
+  if(!item) return;
+  var exists = selKws.find(function(x){ return x.kw===item.keyword; });
+  if(exists){ selKws = selKws.filter(function(x){ return x.kw!==item.keyword; }); }
+  else{
+    if(selKws.length>=10){ showToast('최대 10개까지 선택 가능해요'); return; }
+    selKws.push({kw:item.keyword, keyword:item.keyword, region:item.region||''});
+  }
+  renderKeywords();
+  persistLater('keywordSelect');
+}
+function updateKwBtn(){
+  var cnt = selKws.length;
+  var cntEl = document.getElementById('kwSelCnt');
+  if(cntEl) cntEl.textContent = cnt+'개 선택됨';
+  var btn = document.getElementById('toClusterBtn');
+  if(!btn) return;
+  if(kwData.length > 0){
+    btn.style.display = 'flex';
+    btn.innerHTML = cnt>0
+      ? '<i class="ti ti-sitemap"></i> 선택한 '+cnt+'개로 글기획 생성 →'
+      : '<i class="ti ti-sitemap"></i> 전체 선택 후 글기획 생성 →';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+async function goToCluster(){
+  if(!selKws.length && kwData.length){
+    autoSelectBestKws();
+  }
+  if(!selKws.length){ showToast('키워드를 먼저 추출해주세요'); return; }
+  var info = document.getElementById('clusterKeywordInfo');
+  if(info){
+    info.innerHTML = '<strong>'+selKws.length+'개 키워드 선택됨</strong><br>'
+      +selKws.map(function(k){
+        return '<span style="display:inline-block;background:var(--g2);color:var(--g3);border-radius:6px;padding:2px 8px;font-size:10px;margin:2px;font-weight:600">'+esc(k.kw||k.keyword||'')+'</span>';
+      }).join('');
+  }
+  if(!clusterData.length){
+    goPage('cluster', document.querySelectorAll('.nav-tab')[2]);
+    await genCluster();
+  } else {
+    goPage('cluster', document.querySelectorAll('.nav-tab')[2]);
+  }
+}
+
+/* ═══ 클러스터 렌더링 ═══ */
+function renderCluster(){
+  var el = document.getElementById('clusterGrid');
+  if(!el) return;
+  if(!clusterData.length){
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray);font-size:12px">클러스터가 없어요</div>';
+    return;
+  }
+  el.innerHTML = clusterData.map(function(c, i){
+    var on = selClusters.includes(i) ? ' on' : '';
+    var pColor = c.priority==='high'?'var(--g3)':c.priority==='mid'?'var(--amber)':'var(--gray)';
+    return '<div class="cluster-card'+on+'" data-ci="'+i+'" onclick="togClusterByEl(this)">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+      +'<span style="font-size:10px;font-weight:700;color:'+pColor+';background:var(--bg);border-radius:4px;padding:1px 6px;border:1px solid '+pColor+'">'+(c.priority==='high'?'HIGH':c.priority==='mid'?'MID':'LOW')+'</span>'
+      +'<span style="font-size:10px;color:var(--gray)">'+esc(c.type||c.intent||'')+'</span>'
+      +'</div>'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:3px">'+esc(c.title||c.keyword||'')+'</div>'
+      +'<div style="font-size:10px;color:var(--gray)">'+esc(c.keyword||'')+'</div>'
+      +'</div>';
+  }).join('');
+}
+function togClusterByEl(el){
+  var i = parseInt(el.getAttribute('data-ci')||'0');
+  togCluster(i);
+}
+function togCluster(i){
+  var idx = selClusters.indexOf(i);
+  if(idx>-1) selClusters.splice(idx,1);
+  else selClusters.push(i);
+  renderCluster();
+  persistLater('clusterSelect');
+}
+function selAllCluster(){
+  if(selClusters.length === clusterData.length){
+    selClusters = [];
+    showToast('클러스터 선택 해제');
+  } else {
+    selClusters = clusterData.map(function(_,i){ return i; });
+    showToast(selClusters.length+'개 전체 선택');
+  }
+  renderCluster();
+}
+async function writeSelected(){
+  if(!selClusters.length){ showToast('글 기획을 선택해주세요'); return; }
+  if(autoRunning){ showToast('이미 실행 중이에요'); return; }
+  autoRunning = true;
+  var items = selClusters.map(function(i){ return clusterData[i]; }).filter(Boolean);
+  items.sort(function(a,b){ var p={high:0,mid:1,low:2}; return (p[a.priority]||1)-(p[b.priority]||1); });
+  showAutoModal();
+  setStep(0,'✅','설정 완료');
+  setStep(1,'✅','키워드 준비됨');
+  setStep(2,'✅','글기획 '+items.length+'개 선택');
+  setStep(3,'⏳','글 작성 시작...');
+  var priceData = null;
+  try{ priceData = await fetchRealtimePrice(industry); }catch(e){}
+  var ok=0, total=items.length;
+  for(var i=0; i<items.length; i++){
+    if(!autoRunning) break;
+    var det = document.getElementById('as3d');
+    if(det) det.innerHTML='📝('+(i+1)+'/'+total+') '+(items[i].title||'')+'...';
+    try{ var r=await writeOnePost(items[i],i,total,priceData); if(r&&r.success) ok++; }catch(e){console.warn(e);}
+    var pr=document.getElementById('asPr');
+    if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
+    setStep(3,'⏳','작성중('+(i+1)+'/'+total+') 완료 '+ok+'개');
+  }
+  setStep(3,'✅','완료('+ok+'/'+total+'개)');
+  setStep(4,'✅','시트 저장 완료');
+  var dn=document.getElementById('asDone'); if(dn) dn.style.display='block';
+  var sm=document.getElementById('asSumm'); if(sm) sm.textContent=ok+'개 포스팅 저장!';
+  updateDashboard();
+  autoRunning=false;
+}
+
 </script>
 </body>
 </html>
