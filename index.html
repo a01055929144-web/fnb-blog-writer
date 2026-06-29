@@ -1352,16 +1352,17 @@ async function genKeywords(){
   const gI = useGeneral ? (GENERAL_DATA[industry]||{}) : {};
   const si = gI.season ? (gI.season[String(new Date().getMonth()+1)]||'') : '';
 
-  const prompt = 'F&B 식자재 블로그 네이버 SEO 키워드 20개 JSON.\n'
+  const prompt = 'F&B 식자재 블로그 네이버 SEO 키워드 10개 JSON.\n'
     +'업종:'+industry+' / 지역:'+regionSummary+' / 품목:'+selItems.join(',')+'\n'
     +(si?'이달시황:'+si+'\n':'')
     +'타겟:신규창업 사장님. 구매/창업의도 롱테일. low 60%/mid 30%/high 10%.\n'
     +'예시:"강남 고깃집 창업 납품업체","홍대 삼겹살집 오픈 식재료 비용"\n'
     +'{"keywords":[{"keyword":"...","region":"서울 강남구","intent":"창업","difficulty":"low"}]}\n'
-    +'JSON만. 20개. intent:창업/납품/비용/오픈. difficulty:low/mid/high.';
+    +'JSON만. 10개. intent:창업/납품/비용/오픈. difficulty:low/mid/high.';
 
+  showToast('⏳ SEO 키워드 추출 중... (10~15초 소요)');
   try{
-    const text = await callClaude(prompt, 800, true); // Haiku — 빠른 JSON 추출
+    const text = await callClaude(prompt, 1500, true); // Haiku — JSON 잘림 방지
     let clean = text.replace(/```json|```/g,'').trim();
     const jS = clean.indexOf('{'), jE = clean.lastIndexOf('}');
     if(jS>-1 && jE>-1) clean = clean.slice(jS, jE+1);
@@ -1379,7 +1380,13 @@ async function genKeywords(){
     showToast('추출 실패: '+(e&&e.message?e.message.substring(0,50):String(e)));
     console.error('genKeywords 오류:', e);
   }
-  if(btn){ btn.innerHTML='<i class="ti ti-search"></i> 키워드 추출 + 글기획 자동 생성'; btn.disabled=false; }
+  if(btn){
+    btn.innerHTML='<i class="ti ti-search"></i> 키워드 추출 + 글기획 자동 생성';
+    btn.disabled=false;
+  }
+  // 버튼이 혹시 못 찾았을 경우도 대비
+  var kwBtn = document.getElementById('kwGenBtn');
+  if(kwBtn && kwBtn.disabled){ kwBtn.disabled=false; }
 }
 
 // 우선순위 자동 선택 (low 우선, 중복 제외)
