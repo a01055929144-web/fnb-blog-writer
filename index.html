@@ -289,112 +289,78 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page on" id="page-dashboard">
-  <div class="grid2" style="align-items:start;gap:14px">
 
-    <!-- 좌: 선택 + 원클릭 -->
-    <div style="display:flex;flex-direction:column;gap:12px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;align-items:start">
 
-      <!-- 지역 선택 -->
-      <div class="card">
-        <div class="card-hd"><i class="ti ti-map-pin"></i><h3>① 지역 선택 <span style="font-size:10px;color:var(--gray);font-weight:400">(최대 5개)</span></h3></div>
-        <div class="r-tabs" style="flex-wrap:wrap;gap:4px;margin-bottom:8px">
-          <div class="r-tab on" onclick="selReg(this,'서울')">서울</div>
-          <div class="r-tab" onclick="selReg(this,'경기')">경기</div>
-          <div class="r-tab" onclick="selReg(this,'인천')">인천</div>
-          <div class="r-tab" onclick="selReg(this,'부산')">부산</div>
-          <div class="r-tab" onclick="selReg(this,'대구')">대구</div>
-          <div class="r-tab" onclick="selReg(this,'대전')">대전</div>
-          <div class="r-tab" onclick="selReg(this,'광주')">광주</div>
-          <div class="r-tab" onclick="selReg(this,'울산')">울산</div>
+    <!-- 좌: 원클릭 자동화 — 대시보드에서 선택+실행 -->
+    <div class="card" style="padding:20px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:2px">🚀 원클릭 전체 자동화</div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:14px">선택 후 버튼 1번 → 글 완성까지 자동</div>
+
+      <!-- 지역 선택 (대시보드 인라인) -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--dark);margin-bottom:5px">📍 지역 선택 <span style="font-weight:400;color:var(--gray)">(최대 3개)</span></div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px">
+          <div class="r-tab on" onclick="selReg(this,'서울')" style="font-size:10px;padding:3px 8px">서울</div>
+          <div class="r-tab" onclick="selReg(this,'경기')" style="font-size:10px;padding:3px 8px">경기</div>
+          <div class="r-tab" onclick="selReg(this,'인천')" style="font-size:10px;padding:3px 8px">인천</div>
+          <div class="r-tab" onclick="selReg(this,'부산')" style="font-size:10px;padding:3px 8px">부산</div>
+          <div class="r-tab" onclick="selReg(this,'대구')" style="font-size:10px;padding:3px 8px">대구</div>
+          <div class="r-tab" onclick="selReg(this,'대전')" style="font-size:10px;padding:3px 8px">대전</div>
         </div>
-        <div class="dist-grid" id="distGridDash" style="margin-bottom:6px"></div>
-        <div class="sel-tags" id="selRegionsDash"></div>
+        <!-- 구/군 빠른 선택 (서울 기본) -->
+        <div id="dashDistGrid" style="display:flex;gap:4px;flex-wrap:wrap;max-height:80px;overflow-y:auto"></div>
+        <div id="dashSelRegions" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px"></div>
       </div>
 
       <!-- 업종 선택 -->
-      <div class="card">
-        <div class="card-hd"><i class="ti ti-category"></i><h3>② 업종 선택</h3></div>
-        <div class="ind-grid" id="industryGridDash"></div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--dark);margin-bottom:5px">🏪 업종 선택</div>
+        <div id="dashIndGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px"></div>
       </div>
 
       <!-- 품목 선택 -->
-      <div class="card">
-        <div class="card-hd"><i class="ti ti-box"></i><h3>③ 품목 선택 <span style="font-size:10px;color:var(--gray);font-weight:400">(최대 5개)</span></h3></div>
-        <div class="item-grid" id="itemGridDash"></div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--dark);margin-bottom:5px">📦 품목 선택 <span style="font-weight:400;color:var(--gray)">(최대 3개)</span></div>
+        <div id="dashItemGrid" style="display:flex;gap:4px;flex-wrap:wrap"></div>
       </div>
 
-      <!-- 원클릭 버튼 -->
-      <button onclick="startAutoMode()" id="startBtn"
-        style="width:100%;padding:16px;background:linear-gradient(135deg,#166534,#15803D);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 14px rgba(22,101,52,.3)">
-        <span style="font-size:22px">🚀</span> 지금 시작하기
-      </button>
-      <div style="font-size:10px;color:var(--gray);text-align:center;margin-top:-6px">
-        단가조회 → 키워드추출 → 글기획 → SEO글작성 → 시트저장 (전부 자동)
+      <!-- 단계 표시 -->
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;font-size:11px;color:var(--gray)">
+        <div style="display:flex;align-items:center;gap:7px"><span style="background:var(--g2);color:var(--g3);border-radius:4px;padding:1px 6px;font-weight:700;font-size:10px">0</span>실시간 단가 조회</div>
+        <div style="display:flex;align-items:center;gap:7px"><span style="background:#EFF6FF;color:#1E40AF;border-radius:4px;padding:1px 6px;font-weight:700;font-size:10px">1</span>SEO 키워드 자동 추출</div>
+        <div style="display:flex;align-items:center;gap:7px"><span style="background:#F5F3FF;color:#5B21B6;border-radius:4px;padding:1px 6px;font-weight:700;font-size:10px">2</span>글기획 자동 생성</div>
+        <div style="display:flex;align-items:center;gap:7px"><span style="background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 6px;font-weight:700;font-size:10px">3</span>SEO 글 전체 자동 작성</div>
+        <div style="display:flex;align-items:center;gap:7px"><span style="background:#DCFCE7;color:#166534;border-radius:4px;padding:1px 6px;font-weight:700;font-size:10px">4</span>구글 시트 저장</div>
       </div>
+
+      <button onclick="startAutoMode()"
+        style="width:100%;padding:14px;background:linear-gradient(135deg,#166534,#15803D);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+        🚀 지금 시작하기
+      </button>
     </div>
 
-    <!-- 우: KPI + 최근 포스팅 -->
-    <div style="display:flex;flex-direction:column;gap:12px">
-
-      <!-- KPI -->
+    <!-- 우: KPI -->
+    <div style="display:flex;flex-direction:column;gap:10px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="stat">
-          <div class="stat-label">오늘 생성 글</div>
-          <div class="stat-val" id="stat-today">0</div>
-          <div class="stat-sub" id="stat-total-sub">전체 0개</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">커버 지역</div>
-          <div class="stat-val" id="stat-regions">0</div>
-          <div class="stat-sub">수도권·광역시</div>
-        </div>
-        <div class="stat" style="border-left:3px solid var(--g)">
-          <div class="stat-label">✅ 발행완료</div>
-          <div class="stat-val" style="color:var(--g)" id="stat-done">0</div>
-        </div>
-        <div class="stat" style="border-left:3px solid var(--amber)">
-          <div class="stat-label">⏳ 미발행</div>
-          <div class="stat-val" style="color:var(--amber)" id="stat-pending">0</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">예상 월 유입</div>
-          <div class="stat-val" id="stat-traffic">0</div>
-          <div class="stat-sub">글당 평균 50 UV</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">예상 월 상담</div>
-          <div class="stat-val" id="stat-leads">0</div>
-          <div class="stat-sub">유입 전환율 3%</div>
-        </div>
+        <div class="stat"><div class="stat-label">오늘 생성 글</div><div class="stat-val" id="stat-today">0</div><div class="stat-sub" id="stat-total-sub">전체 0개</div></div>
+        <div class="stat"><div class="stat-label">커버 지역</div><div class="stat-val" id="stat-regions">0</div><div class="stat-sub">전국 주요 상권</div></div>
       </div>
-
-      <!-- 최근 포스팅 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="stat" style="border-left:3px solid var(--g)"><div class="stat-label">✅ 발행완료</div><div class="stat-val" style="color:var(--g)" id="stat-done">0</div></div>
+        <div class="stat" style="border-left:3px solid var(--amber)"><div class="stat-label">⏳ 미발행</div><div class="stat-val" style="color:var(--amber)" id="stat-pending">0</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="stat"><div class="stat-label">예상 월 유입</div><div class="stat-val" id="stat-traffic">0</div><div class="stat-sub">글당 평균 50 UV</div></div>
+        <div class="stat"><div class="stat-label">예상 월 상담</div><div class="stat-val" id="stat-leads">0</div><div class="stat-sub">전환율 3%</div></div>
+      </div>
       <div class="card">
-        <div class="card-hd"><i class="ti ti-clock"></i><h3>최근 생성 포스팅</h3></div>
-        <div id="dash-recent">
-          <div style="text-align:center;padding:24px 0;color:var(--gray);font-size:12px">
-            <div style="font-size:28px;margin-bottom:6px">✍️</div>
-            아직 포스팅이 없어요<br>🚀 지금 시작하기를 눌러주세요
-          </div>
-        </div>
-      </div>
-
-      <!-- 진행 단계 안내 -->
-      <div class="card" style="background:var(--g2);border-color:var(--g3)">
-        <div class="card-hd"><i class="ti ti-info-circle" style="color:var(--g3)"></i><h3 style="color:var(--g3)">원클릭 자동화 흐름</h3></div>
-        <div style="display:flex;flex-direction:column;gap:6px;font-size:11px;color:#166534">
-          <div style="display:flex;align-items:center;gap:8px"><span style="background:var(--g3);color:#fff;border-radius:4px;padding:1px 7px;font-weight:700;font-size:10px">0</span> 실시간 단가 조회 (공공데이터)</div>
-          <div style="display:flex;align-items:center;gap:8px"><span style="background:var(--g3);color:#fff;border-radius:4px;padding:1px 7px;font-weight:700;font-size:10px">1</span> SEO 키워드 자동 추출 (Haiku)</div>
-          <div style="display:flex;align-items:center;gap:8px"><span style="background:var(--g3);color:#fff;border-radius:4px;padding:1px 7px;font-weight:700;font-size:10px">2</span> 글기획 자동 생성 12개 (Haiku)</div>
-          <div style="display:flex;align-items:center;gap:8px"><span style="background:var(--g3);color:#fff;border-radius:4px;padding:1px 7px;font-weight:700;font-size:10px">3</span> 팩트 기반 SEO 글 전체 작성 (Sonnet)</div>
-          <div style="display:flex;align-items:center;gap:8px"><span style="background:var(--g3);color:#fff;border-radius:4px;padding:1px 7px;font-weight:700;font-size:10px">4</span> 구글 시트 자동 저장</div>
-          <div style="margin-top:4px;padding:6px 10px;background:#fff;border-radius:6px;font-weight:600">
-            완료 후 → Analytics 탭에서 복사 → 네이버 발행만 하면 끝!
-          </div>
-        </div>
+        <div class="card-hd"><i class="ti ti-clock"></i><h3>최근 포스팅</h3></div>
+        <div id="dash-recent"><div style="text-align:center;padding:20px;color:var(--gray);font-size:11px">✍️ 아직 없어요</div></div>
       </div>
     </div>
   </div>
+
 </div>
 
 <!-- ═══ KEYWORD ENGINE ═══ -->
@@ -1014,6 +980,7 @@ function goPage(id, el){
     renderDist();
     renderItems();
   }
+  if(id==='dashboard'){ try{ renderDashInline(); }catch(e){} }
   if(id==='cluster'){ renderCluster(); }
   if(id==='analytics'){ updateAnalytics(); filterHistory('all'); }
   persistLater('page:'+id);
@@ -1959,6 +1926,7 @@ async function initApp(){
   try{ renderHistList(); }catch(e){}
   try{ updateDashboard(); }catch(e){}
   try{ updateAnalytics(); }catch(e){}
+  try{ renderDashInline(); }catch(e){}
   console.log('✅ F&B Lead Engine 초기화 완료');
 }
 initApp();
@@ -2843,6 +2811,74 @@ async function writeSelected(){
   var sm=document.getElementById('asSumm'); if(sm) sm.textContent=ok+'개 포스팅 저장!';
   updateDashboard();
   autoRunning=false;
+}
+
+/* ═══ Dashboard 인라인 선택 렌더 ═══ */
+function renderDashInline(){
+  // 구/군 그리드
+  var dg = document.getElementById('dashDistGrid');
+  if(dg && typeof REGION_TABS!=='undefined' && curRegion){
+    var dists = REGION_TABS[curRegion] || [];
+    dg.innerHTML = dists.slice(0,12).map(function(name){
+      var on = selDistricts.find(function(d){ return d.district===name; }) ? 'background:#15803D;color:#fff;' : 'background:#F1F5F9;color:#374151;';
+      return '<div onclick="dashTogDist(this,''+name+'')" data-dist="'+name+'" '
+        +'style="padding:3px 7px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;'+on+'">'+name+'</div>';
+    }).join('');
+  }
+  // 선택된 지역 태그
+  var sr = document.getElementById('dashSelRegions');
+  if(sr){
+    sr.innerHTML = selDistricts.map(function(d){
+      return '<span style="background:var(--g2);color:var(--g3);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600">'+d.region+' '+d.district+' ×</span>';
+    }).join('');
+  }
+  // 업종 그리드
+  var ig = document.getElementById('dashIndGrid');
+  if(ig && typeof INDUSTRIES!=='undefined'){
+    ig.innerHTML = INDUSTRIES.map(function(ind){
+      var on = ind.name===industry ? 'border:2px solid var(--g3);background:var(--g2);' : 'border:1.5px solid var(--bd);background:#fff;';
+      return '<div onclick="dashSelInd(''+ind.name+'')" '
+        +'style="padding:5px 3px;border-radius:6px;cursor:pointer;text-align:center;font-size:9px;font-weight:600;'+on+'">'
+        +'<div style="font-size:14px">'+ind.icon+'</div>'+ind.name+'</div>';
+    }).join('');
+  }
+  // 품목 그리드
+  var pmg = document.getElementById('dashItemGrid');
+  if(pmg && typeof ITEMS!=='undefined'){
+    var items = (ITEMS[industry]||[]).slice(0,10);
+    pmg.innerHTML = items.map(function(name){
+      var on = selItems.includes(name) ? 'background:#15803D;color:#fff;border-color:#15803D;' : '';
+      return '<div onclick="dashTogItem(''+name+'')" '
+        +'style="padding:4px 10px;border-radius:5px;border:1.5px solid var(--bd);font-size:10px;font-weight:600;cursor:pointer;'+on+'">'+name+'</div>';
+    }).join('');
+  }
+}
+
+function dashSelInd(name){
+  industry = name;
+  selItems = [];
+  renderDashInline();
+}
+
+function dashTogDist(el, name){
+  var exists = selDistricts.find(function(d){ return d.district===name; });
+  if(exists){
+    selDistricts = selDistricts.filter(function(d){ return d.district!==name; });
+  } else {
+    if(selDistricts.length >= 3){ showToast('최대 3개 지역'); return; }
+    selDistricts.push({region:curRegion, district:name});
+  }
+  renderDashInline();
+}
+
+function dashTogItem(name){
+  if(selItems.includes(name)){
+    selItems = selItems.filter(function(x){ return x!==name; });
+  } else {
+    if(selItems.length >= 3){ showToast('최대 3개 품목'); return; }
+    selItems.push(name);
+  }
+  renderDashInline();
 }
 
 </script>
