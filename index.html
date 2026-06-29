@@ -1207,10 +1207,15 @@ function togDistEl(el){ togDist(el.getAttribute('data-dist')); }
 function renderSelectedRegions(){
   var el = document.getElementById('selRegions');
   if(!el) return;
-  el.innerHTML = selDistricts.map(function(d){
-    return '<div class="sel-tag">'+esc(d.region)+' '+esc(d.district)
-      +'<span onclick="rmDist(''+d.region+'',''+d.district+'')" style="cursor:pointer;margin-left:4px;opacity:.7">×</span></div>';
+  el.innerHTML = selDistricts.map(function(d, i){
+    return '<div class="sel-tag" data-ri="'+i+'">'+esc(d.region)+' '+esc(d.district)
+      +'<span data-ri="'+i+'" onclick="rmDistByEl(this)" style="cursor:pointer;margin-left:4px;opacity:.7">×</span></div>';
   }).join('');
+}
+function rmDistByEl(el){
+  var i = parseInt(el.getAttribute('data-ri')||'0');
+  var d = selDistricts[i];
+  if(d) rmDist(d.region, d.district);
 }
 
 function renderProjDist(reg){
