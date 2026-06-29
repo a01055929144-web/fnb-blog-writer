@@ -2898,6 +2898,19 @@ function dashTogItem(name){
   renderDashInline();
 }
 
+function selAllKw(){
+  if(!kwData.length){ showToast('먼저 키워드를 추출해주세요'); return; }
+  if(selKws.length >= Math.min(kwData.length, 10)){
+    selKws = [];
+    showToast('선택 해제');
+  } else {
+    autoSelectBestKws();
+    return;
+  }
+  renderKeywords();
+  updateKwBtn();
+}
+
 </script>
 </body>
 </html>
