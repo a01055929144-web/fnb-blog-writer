@@ -2345,7 +2345,6 @@ async function writeOnePost(item, idx, total){
 }
 
 
-var currentFilter = 'all';
 async function startAutoMode(){
   // 원터치 자동화 = 지역+업종+품목만 선택하면 나머지 전부 자동
   if(!selDistricts.length){
@@ -2594,18 +2593,6 @@ async function fetchRealtimePrice(ind){
 
 
 
-const INDUSTRIES = [
-  {name:'한식',        icon:'🍚', desc:'국밥·찌개·비빔밥 등 한식 전문점'},
-  {name:'양식',        icon:'🍝', desc:'파스타·스테이크·피자 등 서양 요리'},
-  {name:'일식',        icon:'🍣', desc:'스시·라멘·우동·돈카츠 등 일본 요리'},
-  {name:'중식',        icon:'🥟', desc:'짜장면·짬뽕·마라탕 등 중화 요리'},
-  {name:'샐러드',      icon:'🥗', desc:'샐러드·포케·채식 전문점'},
-  {name:'주류',        icon:'🍺', desc:'술집·호프·이자카야·와인바'},
-  {name:'축산',        icon:'🥩', desc:'정육점·고깃집·삼겹살·한우 전문'},
-  {name:'수산',        icon:'🐟', desc:'횟집·해산물·수산물 전문'},
-  {name:'카페베이커리', icon:'☕', desc:'카페·베이커리·디저트 전문점'},
-  {name:'공산품',      icon:'🏭', desc:'소스·조미료·가공식품·포장재'}
-];
 
 </script>
 </body>
