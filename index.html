@@ -1009,8 +1009,11 @@ function saveApiKey(){
   showToast('API 키가 연결되어 있어요!');
 }
 
-async function callClaude(prompt, maxTokens=2000){
+async function callClaude(prompt, maxTokens=2000, useHaiku=false){
   var _k = ["sk-ant-api03-AZfMCcz71","AK5r5E8rTjUUP4b1gcj5K1wwkTKImd","bcnqrKIL35eVmitvmOzGbI-76leaJ4ALgqFhlCxM__S3gPA-hUuNCAAA"].join("");
+  // 키워드/클러스터(JSON 추출) → Haiku (빠름/저렴)
+  // 글 작성(장문) → Sonnet (품질)
+  var model = useHaiku ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6";
   var res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -1019,7 +1022,7 @@ async function callClaude(prompt, maxTokens=2000){
       "anthropic-version": "2023-06-01",
       "anthropic-dangerous-direct-browser-access": "true"
     },
-    body: JSON.stringify({model:"claude-sonnet-4-6",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
+    body: JSON.stringify({model:model, max_tokens:maxTokens, messages:[{role:"user",content:prompt}]})
   });
   if(!res.ok){
     var err = await res.text();
@@ -1349,28 +1352,16 @@ async function genKeywords(){
   const gI = useGeneral ? (GENERAL_DATA[industry]||{}) : {};
   const si = gI.season ? (gI.season[String(new Date().getMonth()+1)]||'') : '';
 
-  const prompt = '당신은 네이버 블로그 SEO 전문가입니다. F&B 식자재 유통 블로그의 키워드를 추출해주세요.\n\n'
-    +'[타겟] 신규 창업 예정인 식당 사장님 (신규오픈, 창업준비, 식자재 납품처 찾는 중)\n'
-    +'[업종] '+industry+'\n'
-    +'[지역] '+regionSummary+'\n'
-    +'[품목] '+selItems.join(', ')+'\n'
-    +(si?'[이달 시장상황] '+si+'\n':'')
-    +'\n[SEO 키워드 선정 기준]\n'
-    +'- 네이버 검색량 있는 실제 검색어 형태\n'
-    +'- "지역+업종+납품/창업/셋팅/비용" 조합 롱테일\n'
-    +'- 구매/창업 의도 키워드 우선 (정보성 제외)\n'
-    +'- 경쟁 낮음(low): 월 검색량 100-1000, 블로그 경쟁 낮음\n'
-    +'- 경쟁 보통(mid): 월 검색량 1000-5000\n'
-    +'- low 키워드 60%, mid 30%, high 10% 비율\n'
-    +'\n[키워드 예시]\n'
-    +'"강남 고깃집 창업 식자재 납품업체", "홍대 삼겹살집 오픈 준비 비용",\n'
-    +'"부산 해운대 횟집 창업 초기 셋팅", "수산물 납품업체 추천 소규모식당"\n'
-    +'\nJSON만 반환 (코드블록 없이):\n'
-    +'{"keywords":[{"keyword":"강남 고깃집 창업 식자재 납품","region":"서울 강남구","intent":"창업","difficulty":"low"}]}\n'
-    +'\n총 20개. intent: 창업/납품/비용/오픈준비. difficulty: low/mid/high.';
+  const prompt = 'F&B 식자재 블로그 네이버 SEO 키워드 20개 JSON.\n'
+    +'업종:'+industry+' / 지역:'+regionSummary+' / 품목:'+selItems.join(',')+'\n'
+    +(si?'이달시황:'+si+'\n':'')
+    +'타겟:신규창업 사장님. 구매/창업의도 롱테일. low 60%/mid 30%/high 10%.\n'
+    +'예시:"강남 고깃집 창업 납품업체","홍대 삼겹살집 오픈 식재료 비용"\n'
+    +'{"keywords":[{"keyword":"...","region":"서울 강남구","intent":"창업","difficulty":"low"}]}\n'
+    +'JSON만. 20개. intent:창업/납품/비용/오픈. difficulty:low/mid/high.';
 
   try{
-    const text = await callClaude(prompt, 1500);
+    const text = await callClaude(prompt, 800, true); // Haiku — 빠른 JSON 추출
     let clean = text.replace(/```json|```/g,'').trim();
     const jS = clean.indexOf('{'), jE = clean.lastIndexOf('}');
     if(jS>-1 && jE>-1) clean = clean.slice(jS, jE+1);
@@ -1430,7 +1421,7 @@ async function genCluster(){
     +'12개. intent: 창업/납품/정보/원가절감. priority: high/mid/low. type: 창업컨설팅/정보성/납품노하우/원가절감.';
 
   try{
-    const text = await callClaude(prompt, 1500);
+    const text = await callClaude(prompt, 1000, true); // Haiku
     let clean = text.replace(/```json|```/g,'').trim();
     const jS = clean.indexOf('{'), jE = clean.lastIndexOf('}');
     if(jS>-1 && jE>jS) clean = clean.slice(jS, jE+1);
@@ -1982,6 +1973,344 @@ function buildPostPrompt(kw, region, type){
     +'[CTA] 무료상담. 카카오: https://open.kakao.com/o/shEOWEth\n\n'
     +'**해시태그**: #'+kw.replace(/\s/g,'')+'포함 20개';
 }
+async function writeOnePost(item, idx, total){
+  var kw = item.keyword||item.title||'';
+  var region = item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
+  var type = item.type||'정보성 SEO';
+  var text = await callClaude(buildPostPrompt(kw,region,type), 2000);
+  var titleM = text.match(/\*\*제목\*\*[:\s]*(.*)/);
+  var title = titleM ? titleM[1].trim().replace(/\*\*/g,'') : kw;
+  var hashM = text.match(/\*\*해시태그\*\*[:\s]*([\s\S]*?)$/);
+  var tags = hashM ? hashM[1].trim().split(/[\s,\n]+/).filter(function(t){return t.startsWith('#');}) : [];
+  var body = text.replace(/\*\*제목\*\*.*?\n/,'').replace(/\*\*해시태그\*\*[\s\S]*$/,'').replace(/\*\*/g,'').trim();
+  history.unshift({id:'a'+Date.now()+idx,kw:kw,region:region,type:type,title:title,body:body,tags:tags,chars:body.length,date:new Date().toLocaleDateString('ko-KR'),industry:industry,uploadStatus:'pending'});
+  if(history.length>200) history.pop();
+  try{
+    await fetch(SHEET_ENDPOINT,{
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({
+        sheetId: SHEET_ID,
+        date: new Date().toLocaleDateString('ko-KR'),
+        region: region,
+        sido: (region||'').split(' ')[0]||'',
+        gugun: (region||'').split(' ').slice(1).join(' ')||'',
+        keyword: kw,
+        industry: industry,
+        type: type,
+        title: title,
+        body: body.substring(0,500),
+        hashtags: typeof tags==='string'?tags:tags.join(' '),
+        chars: body.length,
+        status: '자동생성'
+      })
+    });
+  }catch(e){ console.warn('시트 저장 실패:',e); }
+  return {success:true,title:title,kw:kw};
+}
+let autoRunning = false;
+var _priceCache = {};
+var currentFilter = 'all';
+async function startAutoMode(){
+  // 원터치 자동화 = 지역+업종+품목만 선택하면 나머지 전부 자동
+  if(!selDistricts.length){
+    goPage('keyword', document.querySelectorAll('.nav-tab')[1]);
+    showToast('① 지역을 먼저 선택해주세요'); return;
+  }
+  if(!selItems.length){
+    goPage('keyword', document.querySelectorAll('.nav-tab')[1]);
+    showToast('③ 품목을 먼저 선택해주세요'); return;
+  }
+  if(autoRunning){ showToast('이미 실행 중이에요'); return; }
+  autoRunning = true;
+  showAutoModal();
+
+  var priceData = null;
+  try{
+    // Step 0: 실시간 단가 조회 (Apps Script 경유)
+    setStep(0,'⏳','실시간 단가 조회 중...');
+    priceData = await fetchRealtimePrice(industry);
+    setStep(0, priceData?'✅':'⚠️',
+      priceData ? '단가 조회 완료 — '+priceData.prices.length+'개 품목' : '기본 데이터 사용');
+
+    // Step 1: SEO 키워드 자동 추출
+    setStep(1,'⏳','SEO 키워드 추출 중...');
+    await genKeywords();
+    if(!kwData.length) throw new Error('키워드 추출 실패');
+    setStep(1,'✅','키워드 '+kwData.length+'개 추출 — 우선순위 '+selKws.length+'개 자동 선택');
+
+    // Step 2: 글기획 자동 생성
+    setStep(2,'⏳','글기획 자동 생성 중...');
+    await genCluster();
+    if(!clusterData.length) throw new Error('글기획 생성 실패');
+
+    // 중복 제목 제외 + 우선순위 정렬
+    var usedTitles = new Set(history.map(function(h){ return (h.title||'').toLowerCase(); }));
+    var sorted = clusterData.slice().sort(function(a,b){
+      var p={high:0,mid:1,low:2};
+      return (p[a.priority]||1)-(p[b.priority]||1);
+    }).filter(function(c){
+      return !usedTitles.has((c.title||'').toLowerCase());
+    });
+    if(!sorted.length) throw new Error('작성할 글 없음 (모두 중복)');
+    setStep(2,'✅','글기획 '+sorted.length+'개 (중복 제외, 우선순위 정렬)');
+
+    // Step 3: 팩트 기반 SEO 글 전체 자동 작성
+    var total = sorted.length, ok = 0;
+    setStep(3,'⏳','SEO 글 작성 시작 (0/'+total+')...');
+    for(var i=0; i<sorted.length; i++){
+      if(!autoRunning) break;
+      var det = document.getElementById('as3d');
+      if(det) det.innerHTML = '📝 ('+(i+1)+'/'+total+') '+(sorted[i].title||sorted[i].keyword||'')+'...';
+      try{
+        var res = await writeOnePost(sorted[i], i, total, priceData);
+        if(res && res.success) ok++;
+      }catch(e){ console.warn('글 '+i+' 실패:', e); }
+      var pr = document.getElementById('asPr');
+      if(pr) pr.style.width = Math.round((i+1)/total*100)+'%';
+      setStep(3,'⏳','작성 중 ('+(i+1)+'/'+total+') — 완료 '+ok+'개');
+    }
+    setStep(3,'✅','글 작성 완료 ('+ok+'/'+total+'개)');
+    setStep(4,'✅','구글 시트 [작성글] 저장 완료');
+
+    var dn = document.getElementById('asDone');
+    var sm = document.getElementById('asSumm');
+    if(dn) dn.style.display = 'block';
+    if(sm) sm.textContent = '총 '+ok+'개 포스팅 완료! Analytics에서 복사 후 블로그 발행하세요.';
+    updateDashboard();
+    try{ renderHistList(); }catch(e){}
+
+  }catch(e){
+    var er = document.getElementById('asErr');
+    var em = document.getElementById('asErrM');
+    if(er) er.style.display = 'block';
+    if(em) em.textContent = e.message || String(e);
+    console.error('자동화 오류:', e);
+  }
+  autoRunning = false;
+}
+
+
+async function writeSelected(){
+  if(!selClusters.length){ showToast('글 기획을 선택해주세요'); return; }
+  if(autoRunning){ showToast('이미 실행 중이에요'); return; }
+  autoRunning=true;
+  var items = selClusters.map(function(i){ return clusterData[i]; }).filter(Boolean);
+  items.sort(function(a,b){var p={high:0,mid:1,low:2};return (p[a.priority]||1)-(p[b.priority]||1);});
+  showAutoModal();
+  setStep(0,'✅','클러스터 선택 완료');
+  setStep(1,'✅','키워드 준비됨');
+  setStep(2,'✅','글 기획 '+items.length+'개 선택');
+  setStep(3,'⏳','글 작성 시작...');
+  var priceData = await fetchRealtimePrice(industry);
+  var ok=0, total=items.length;
+  for(var i=0;i<items.length;i++){
+    if(!autoRunning) break;
+    try{ var r=await writeOnePost(items[i],i,total,priceData); if(r&&r.success) ok++; }catch(e){console.warn(e);}
+    var pr=document.getElementById('asPr');
+    if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
+    setStep(3,'⏳','작성 중('+(i+1)+'/'+total+') 완료 '+ok+'개');
+  }
+  setStep(3,'✅','완료('+ok+'/'+total+'개)');
+  setStep(4,'✅','구글 시트 저장 완료');
+  var dn=document.getElementById('asDone'); if(dn) dn.style.display='block';
+  var sm=document.getElementById('asSumm'); if(sm) sm.textContent=ok+'개 포스팅 저장 완료!';
+  updateDashboard(); renderHistList();
+  autoRunning=false;
+}
+function filterHistory(filter, search){
+  if(filter !== undefined) currentFilter = filter;
+  var f = currentFilter || 'all';
+  var q = (search !== undefined ? search : (document.getElementById('anSearch')||{}).value||'').toLowerCase();
+
+  // 필터 버튼 활성화
+  ['all','pending','done'].forEach(function(k){
+    var btn = document.getElementById('f'+k.charAt(0).toUpperCase()+k.slice(1));
+    if(btn) btn.style.fontWeight = (k===f) ? '800' : '400';
+  });
+
+  var list = history.filter(function(h){
+    var matchFilter = f==='all' || (f==='pending' && h.uploadStatus!=='done') || (f==='done' && h.uploadStatus==='done');
+    var matchQ = !q || (h.title||'').toLowerCase().includes(q) || (h.region||'').toLowerCase().includes(q) || (h.industry||'').toLowerCase().includes(q);
+    return matchFilter && matchQ;
+  });
+
+  var cnt = document.getElementById('anCount');
+  if(cnt) cnt.textContent = list.length+'개';
+
+  var el = document.getElementById('histList');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--gray);font-size:13px">해당하는 글이 없어요</div>';
+    return;
+  }
+
+  // data-idx 방식으로 따옴표 충돌 방지
+  window._anaList = list;
+  el.innerHTML = list.map(function(h, i){
+    var isDone = h.uploadStatus === 'done';
+    var bgBadge = isDone ? '#DCFCE7' : '#FEF3C7';
+    var coBadge = isDone ? '#166534' : '#92400E';
+    var bgBtn   = isDone ? '#FEF2F2' : '#F0FDF4';
+    var coBtn   = isDone ? '#DC2626' : '#166534';
+    var bdBtn   = isDone ? '#FCA5A5' : '#86EFAC';
+    var labelBadge = isDone ? '✅ 발행완료' : '⏳ 미발행';
+    var labelBtn   = isDone ? '↩ 미발행으로' : '→ 발행완료';
+    return '<div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;gap:12px">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:13px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(h.title||h.kw||'제목없음')+'</div>'
+      +'<div style="font-size:11px;color:var(--gray);margin-bottom:6px">'+esc(h.date||'')+' · '+esc(h.region||'')+' · '+esc(h.industry||'')+' · '+(h.chars||0)+'자</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<button data-ai="'+i+'" onclick="copyPost(this)" style="padding:4px 10px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer"><i class="ti ti-copy"></i> 복사</button>'
+      +'<button data-ai="'+i+'" onclick="showDetail(this)" style="padding:4px 10px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer"><i class="ti ti-eye"></i> 보기</button>'
+      +'</div>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'
+      +'<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;background:'+bgBadge+';color:'+coBadge+'">'+labelBadge+'</span>'
+      +'<button data-ai="'+i+'" onclick="toggleUpload(this)" style="padding:4px 10px;border:1px solid '+bdBtn+';border-radius:5px;background:'+bgBtn+';font-size:10px;cursor:pointer;font-weight:600;color:'+coBtn+'">'+labelBtn+'</button>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function toggleUpload(el){
+  var i = parseInt(el.dataset.ai);
+  var h = window._anaList && window._anaList[i];
+  if(!h) return;
+  h.uploadStatus = (h.uploadStatus==='done') ? 'pending' : 'done';
+  // 시트 업데이트
+  try{
+    fetch(SHEET_ENDPOINT, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'updateStatus', sheetId:SHEET_ID, title:h.title, uploadStatus:h.uploadStatus})
+    });
+  }catch(e){}
+  saveApp();
+  filterHistory();
+  updateDashboard();
+}
+
+function copyPost(el){
+  var i = parseInt(el.dataset.ai);
+  var h = window._anaList && window._anaList[i];
+  if(!h) return;
+  var text = (h.title||'') + '\n\n' + (h.body||'') + '\n\n' + ((h.tags||[]).join(' '));
+  navigator.clipboard.writeText(text).then(function(){ showToast('클립보드에 복사됐어요!'); });
+}
+
+function showDetail(el){
+  var i = parseInt(el.dataset.ai);
+  var h = window._anaList && window._anaList[i];
+  if(!h) return;
+  showToast((h.title||'').substring(0,30)+'...');
+}
+
+function updateAnalytics(){
+  var total = history.length;
+  var done = history.filter(function(h){ return h.uploadStatus==='done'; }).length;
+  var pending = total - done;
+  var pct = total ? Math.round(done/total*100) : 0;
+  var regions = [...new Set(history.map(function(h){ return h.region; }))].length;
+  var s = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+  s('an-total', total); s('an-done', done);
+  s('an-done-pct', '발행률 '+pct+'%');
+  s('an-pending', pending); s('an-regions', regions);
+}
+
+
+/* ═══ 누락 함수 보완 ═══ */
+function closeAutoModal(){
+  autoRunning = false;
+  var m = document.getElementById('autoModal');
+  if(m) m.style.display = 'none';
+}
+function setStep(n, icon, text){
+  var ic = document.getElementById('as'+n+'i');
+  var tx = document.getElementById('as'+n+'t');
+  if(ic) ic.textContent = icon;
+  if(tx) tx.textContent = text;
+}
+function updateAutoModal(step, icon, text){
+  setStep(step.replace('step',''), icon, text);
+}
+function selIndByEl(el){
+  selInd(el, el.getAttribute('data-ind'));
+}
+async function fetchRealtimePrice(ind){
+  var k = ind || industry;
+  if(_priceCache && _priceCache[k] && (Date.now()-_priceCache[k].ts < 3600000)){
+    return _priceCache[k].data;
+  }
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'fetchPrice', industry: k})
+    });
+    var d = await res.json();
+    if(d.success){
+      if(!window._priceCache) window._priceCache = {};
+      window._priceCache[k] = {data:d, ts:Date.now()};
+      return d;
+    }
+  }catch(e){ console.warn('단가 조회 실패:', e); }
+  return null;
+}
+
+
+
+const INDUSTRIES = [
+  {name:'한식',        icon:'🍚', desc:'국밥·찌개·비빔밥 등 한식 전문점'},
+  {name:'양식',        icon:'🍝', desc:'파스타·스테이크·피자 등 서양 요리'},
+  {name:'일식',        icon:'🍣', desc:'스시·라멘·우동·돈카츠 등 일본 요리'},
+  {name:'중식',        icon:'🥟', desc:'짜장면·짬뽕·마라탕 등 중화 요리'},
+  {name:'샐러드',      icon:'🥗', desc:'샐러드·포케·채식 전문점'},
+  {name:'주류',        icon:'🍺', desc:'술집·호프·이자카야·와인바'},
+  {name:'축산',        icon:'🥩', desc:'정육점·고깃집·삼겹살·한우 전문'},
+  {name:'수산',        icon:'🐟', desc:'횟집·해산물·수산물 전문'},
+  {name:'카페베이커리', icon:'☕', desc:'카페·베이커리·디저트 전문점'},
+  {name:'공산품',      icon:'🏭', desc:'소스·조미료·가공식품·포장재'}
+];</script>
+</body>
+
+</htmlfunction buildPostPrompt(kw, region, type, priceData){
+  var month = new Date().getMonth()+1;
+  var mn = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  var parts = (region||'').split(' ');
+  var aI = useLocal ? ((AREA_DATA[parts[0]]||{})[parts.slice(1).join(' ')]||{}) : {};
+  var gI = useGeneral ? (GENERAL_DATA[industry]||{}) : {};
+  var si = gI.season ? (gI.season[String(month)]||'') : '';
+  var priceStr = '';
+  if(priceData && priceData.prices && priceData.prices.length){
+    priceStr = priceData.prices.map(function(p){
+      return p.name+' 도매'+p.wholesale+'원/'+p.unit;
+    }).join(', ');
+  } else if(gI.items_detail){
+    priceStr = gI.items_detail;
+  }
+
+  return '당신은 F&B 식자재 유통 전문가입니다. 네이버 SEO 블로그 글을 작성하세요.\n\n'
+    +'[핵심키워드] "'+kw+'"\n'
+    +'[지역/상권] '+(region||'수도권')+(aI.tags?' ('+aI.tags+')':'')+'\n'
+    +'[업종] '+industry+' | [타입] '+type+' | [시점] '+mn[month]+'\n'
+    +(si?'[시장상황] '+si+'\n':'')
+    +(priceStr?'[실제단가] '+priceStr+' (공공데이터 기준)\n':'')
+    +(gI.cost_tip?'[원가팁] '+gI.cost_tip+'\n':'')
+    +'\n[작성규칙]\n'
+    +'- 단가는 반드시 위 제공 수치 사용 (임의 생성 금지)\n'
+    +'- 수치 언급 시 출처 명시 ("공공데이터 기준")\n'
+    +'- 신규 창업자 관점, 신뢰·전문성 중심\n'
+    +'- 제목에 "'+kw+'" 포함 + 이모지 + 구체적 수치\n\n'
+    +'**제목**:\n\n'
+    +'**본문** (2000자 이상):\n'
+    +'[도입부 200자] '+region+' 창업 사장님 공감 포인트\n'
+    +'[**소제목1** 600자] '+kw+' 핵심정보 + 단가 + 출처\n'
+    +'[**소제목2** 600자] 실전 절감 방법 Before/After\n'
+    +'[**소제목3** 400자] 체크리스트 5개\n'
+    +'[CTA] 무료상담: https://open.kakao.com/o/shEOWEth\n\n'
+    +'**해시태그**: #'+kw.replace(/\s/g,'')+'창업 포함 20개';
+}
+
+
 async function writeOnePost(item, idx, total){
   var kw = item.keyword||item.title||'';
   var region = item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
