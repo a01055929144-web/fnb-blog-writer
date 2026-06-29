@@ -2270,7 +2270,7 @@ const INDUSTRIES = [
   {name:'카페베이커리', icon:'☕', desc:'카페·베이커리·디저트 전문점'},
   {name:'공산품',      icon:'🏭', desc:'소스·조미료·가공식품·포장재'}
 ];
-functionfunction buildPostPrompt(kw, region, type, priceData){
+function buildPostPrompt(kw, region, type, priceData){
   var month = new Date().getMonth()+1;
   var mn = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   var parts = (region||'').split(' ');
