@@ -2815,48 +2815,62 @@ async function writeSelected(){
 
 /* ═══ Dashboard 인라인 선택 렌더 ═══ */
 function renderDashInline(){
-  // 구/군 그리드
+  // 구/군 버튼 — DOM 직접 생성 (따옴표 충돌 방지)
   var dg = document.getElementById('dashDistGrid');
   if(dg && typeof REGION_TABS!=='undefined' && curRegion){
-    var dists = REGION_TABS[curRegion] || [];
-    dg.innerHTML = dists.slice(0,12).map(function(name){
-      var on = selDistricts.find(function(d){ return d.district===name; }) ? 'background:#15803D;color:#fff;' : 'background:#F1F5F9;color:#374151;';
-      return '<div onclick="dashTogDist(this,''+name+'')" data-dist="'+name+'" '
-        +'style="padding:3px 7px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;'+on+'">'+name+'</div>';
-    }).join('');
+    dg.innerHTML = '';
+    (REGION_TABS[curRegion]||[]).slice(0,12).forEach(function(name){
+      var el = document.createElement('div');
+      el.textContent = name;
+      var isOn = selDistricts.find(function(d){ return d.district===name; });
+      el.style.cssText = 'padding:3px 8px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;'
+        +(isOn?'background:#15803D;color:#fff;':'background:#F1F5F9;color:#374151;');
+      el.onclick = function(){ dashTogDist(el, name); };
+      dg.appendChild(el);
+    });
   }
   // 선택된 지역 태그
   var sr = document.getElementById('dashSelRegions');
   if(sr){
-    sr.innerHTML = selDistricts.map(function(d){
-      return '<span style="background:var(--g2);color:var(--g3);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600">'+d.region+' '+d.district+' ×</span>';
-    }).join('');
+    sr.innerHTML = '';
+    selDistricts.forEach(function(d){
+      var el = document.createElement('span');
+      el.textContent = d.region+' '+d.district+' ×';
+      el.style.cssText = 'background:var(--g2);color:var(--g3);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer';
+      el.onclick = function(){ selDistricts = selDistricts.filter(function(x){ return x.district!==d.district; }); renderDashInline(); };
+      sr.appendChild(el);
+    });
   }
   // 업종 그리드
   var ig = document.getElementById('dashIndGrid');
   if(ig && typeof INDUSTRIES!=='undefined'){
-    ig.innerHTML = INDUSTRIES.map(function(ind){
-      var on = ind.name===industry ? 'border:2px solid var(--g3);background:var(--g2);' : 'border:1.5px solid var(--bd);background:#fff;';
-      return '<div onclick="dashSelInd(''+ind.name+'')" '
-        +'style="padding:5px 3px;border-radius:6px;cursor:pointer;text-align:center;font-size:9px;font-weight:600;'+on+'">'
-        +'<div style="font-size:14px">'+ind.icon+'</div>'+ind.name+'</div>';
-    }).join('');
+    ig.innerHTML = '';
+    INDUSTRIES.forEach(function(ind){
+      var el = document.createElement('div');
+      el.innerHTML = '<div style="font-size:14px">'+ind.icon+'</div>'+ind.name;
+      var isOn = ind.name===industry;
+      el.style.cssText = 'padding:5px 3px;border-radius:6px;cursor:pointer;text-align:center;font-size:9px;font-weight:600;'
+        +(isOn?'border:2px solid var(--g3);background:var(--g2);':'border:1.5px solid var(--bd);background:#fff;');
+      el.onclick = (function(n){ return function(){ dashSelInd(n); }; })(ind.name);
+      ig.appendChild(el);
+    });
   }
   // 품목 그리드
   var pmg = document.getElementById('dashItemGrid');
   if(pmg && typeof ITEMS!=='undefined'){
-    var items = (ITEMS[industry]||[]).slice(0,10);
-    pmg.innerHTML = items.map(function(name){
-      var on = selItems.includes(name) ? 'background:#15803D;color:#fff;border-color:#15803D;' : '';
-      return '<div onclick="dashTogItem(''+name+'')" '
-        +'style="padding:4px 10px;border-radius:5px;border:1.5px solid var(--bd);font-size:10px;font-weight:600;cursor:pointer;'+on+'">'+name+'</div>';
-    }).join('');
+    pmg.innerHTML = '';
+    (ITEMS[industry]||[]).slice(0,10).forEach(function(name){
+      var el = document.createElement('div');
+      el.textContent = name;
+      var isOn = selItems.includes(name);
+      el.style.cssText = 'padding:4px 10px;border-radius:5px;border:1.5px solid var(--bd);font-size:10px;font-weight:600;cursor:pointer;'
+        +(isOn?'background:#15803D;color:#fff;border-color:#15803D;':'');
+      el.onclick = (function(n){ return function(){ dashTogItem(n); }; })(name);
+      pmg.appendChild(el);
+    });
   }
 }
 
-function dashTogDistEl(el){ dashTogDist(el, el.getAttribute('data-dd')); }
-function dashSelIndEl(el){ dashSelInd(el.getAttribute('data-ind')); }
-function dashTogItemEl(el){ dashTogItem(el.getAttribute('data-item')); }
 function dashSelInd(name){
   industry = name;
   selItems = [];
