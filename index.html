@@ -1246,8 +1246,14 @@ function togItemEl(el){
 }
 function delItemEl(el){
   var i = parseInt(el.getAttribute('data-i'));
-  var it = window._fnbItems&&window._fnbItems[i];
-  if(it) removeCustomItem(null, it.name);
+  var it = window._fnbItems && window._fnbItems[i];
+  if(!it) return;
+  // customItems에서 제거
+  customItems[industry] = (customItems[industry]||[]).filter(function(x){ return x !== it.name; });
+  selItems = selItems.filter(function(x){ return x !== it.name; });
+  localStorage.setItem('fnb_custom_items', JSON.stringify(customItems));
+  renderItems();
+  persistLater('customItemRemove');
 }
 
 function addCustomItem(){
@@ -1442,9 +1448,20 @@ function togKw(index){
   persistLater('keywordSelect');
 }
 function selAllKw(){
-  selKws = [];
-  kwData.slice(0,10).forEach(k=>selKws.push({kw:k.keyword,region:k.region}));
+  // 이미 전체 선택된 상태면 전체 해제
+  if(selKws.length >= Math.min(kwData.length, 10)){
+    selKws = [];
+    showToast('키워드 선택 해제');
+  } else {
+    selKws = [];
+    kwData.slice(0,10).forEach(function(k){
+      selKws.push({kw:k.keyword, keyword:k.keyword, region:k.region||''});
+    });
+    showToast(selKws.length+'개 키워드 전체 선택');
+  }
   renderKeywords();
+  var cnt = document.getElementById('kwSelCnt');
+  if(cnt) cnt.textContent = selKws.length+'개 선택됨';
   persistLater('keywordSelectAll');
 }
 function clearKw(){ selKws=[]; renderKeywords(); persistLater('keywordClear'); }
@@ -2330,9 +2347,8 @@ async function fetchRealtimePrice(ind){
 }
 
 
-</script>
-</body>
-</html>const INDUSTRIES = [
+
+const INDUSTRIES = [
   {name:'한식',        icon:'🍚', desc:'국밥·찌개·비빔밥 등 한식 전문점'},
   {name:'양식',        icon:'🍝', desc:'파스타·스테이크·피자 등 서양 요리'},
   {name:'일식',        icon:'🍣', desc:'스시·라멘·우동·돈카츠 등 일본 요리'},
@@ -2691,4 +2707,8 @@ async function fetchRealtimePrice(ind){
   </div>
 
 </body>
+
+</script>
+</body>
+
 </html>
