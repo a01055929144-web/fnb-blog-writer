@@ -478,6 +478,7 @@ function updateResto_(data) {
     }
   }
   if (targetRow === -1) return {success: false, message: '찾을 수 없음'};
+  if (data.title   !== undefined) sheet.getRange(targetRow, 6).setValue(data.title);
   if (data.content !== undefined) sheet.getRange(targetRow, 7).setValue(data.content);
   if (data.status  !== undefined) {
     var c = sheet.getRange(targetRow, 8);
