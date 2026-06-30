@@ -558,11 +558,17 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     <button onclick="resetAnFilters()" style="padding:6px 10px;border:1px solid var(--bd);border-radius:6px;background:#fff;font-size:11px;cursor:pointer;color:var(--gray)"><i class="ti ti-x"></i> 필터 초기화</button>
   </div>
 
-  <!-- 요약 KPI -->
+  <!-- 요약 KPI (클릭 시 필터링) -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-    <div class="stat"><div class="stat-label">총 작성 글</div><div class="stat-val" id="an-total">0</div></div>
-    <div class="stat" style="border-left:3px solid var(--g)"><div class="stat-label">✅ 발행완료</div><div class="stat-val" style="color:var(--g)" id="an-done">0</div><div class="stat-sub" id="an-done-pct"></div></div>
-    <div class="stat" style="border-left:3px solid var(--amber)"><div class="stat-label">⏳ 미발행</div><div class="stat-val" style="color:var(--amber)" id="an-pending">0</div></div>
+    <div class="stat" onclick="filterHistory('all')" style="cursor:pointer;transition:.15s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+      <div class="stat-label">총 작성 글</div><div class="stat-val" id="an-total">0</div>
+    </div>
+    <div class="stat" onclick="filterHistory('done')" style="border-left:3px solid var(--g);cursor:pointer;transition:.15s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+      <div class="stat-label">✅ 발행완료</div><div class="stat-val" style="color:var(--g)" id="an-done">0</div><div class="stat-sub" id="an-done-pct"></div>
+    </div>
+    <div class="stat" onclick="filterHistory('pending')" style="border-left:3px solid var(--amber);cursor:pointer;transition:.15s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+      <div class="stat-label">⏳ 미발행</div><div class="stat-val" style="color:var(--amber)" id="an-pending">0</div>
+    </div>
   </div>
 
   <!-- 글 목록 -->
