@@ -351,6 +351,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
         <div class="card-hd"><i class="ti ti-table"></i><h3>지역 × 업종 발행 현황</h3>
           <span class="badge badge-green" id="matrixTotalBadge" style="margin-left:auto"></span>
         </div>
+        <div id="matrixRegionTabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px"></div>
         <div id="dashMatrix" style="overflow-x:auto">
           <div style="text-align:center;padding:30px;color:var(--gray);font-size:11px">아직 생성된 글이 없어요</div>
         </div>
@@ -536,22 +537,32 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
 
   <!-- 상단 필터 + 검색 -->
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
     <div style="display:flex;gap:4px">
       <button onclick="filterHistory('all')" id="fAll" class="btn btn-outline" style="font-size:11px;padding:5px 12px;font-weight:700">전체</button>
       <button onclick="filterHistory('pending')" id="fPending" class="btn btn-outline" style="font-size:11px;padding:5px 12px">⏳ 미발행</button>
       <button onclick="filterHistory('done')" id="fDone" class="btn btn-outline" style="font-size:11px;padding:5px 12px">✅ 발행완료</button>
     </div>
-    <input id="anSearch" class="mini-search" placeholder="제목·지역·업종 검색" oninput="filterHistory(currentFilter,this.value)" style="flex:1;max-width:260px">
+    <input id="anSearch" class="mini-search" placeholder="제목 검색" oninput="filterHistory(currentFilter,undefined,undefined,this.value)" style="flex:1;max-width:200px">
     <span id="anCount" style="font-size:11px;color:var(--gray);margin-left:auto">0개</span>
   </div>
 
+  <!-- 지역/업종 드롭다운 필터 -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <select id="anRegionFilter" onchange="filterHistory(currentFilter, this.value)" style="padding:6px 10px;border:1px solid var(--bd);border-radius:6px;font-size:11px;background:#fff;cursor:pointer">
+      <option value="">📍 전체 지역</option>
+    </select>
+    <select id="anIndustryFilter" onchange="filterHistory(currentFilter, undefined, this.value)" style="padding:6px 10px;border:1px solid var(--bd);border-radius:6px;font-size:11px;background:#fff;cursor:pointer">
+      <option value="">🏪 전체 업종</option>
+    </select>
+    <button onclick="resetAnFilters()" style="padding:6px 10px;border:1px solid var(--bd);border-radius:6px;background:#fff;font-size:11px;cursor:pointer;color:var(--gray)"><i class="ti ti-x"></i> 필터 초기화</button>
+  </div>
+
   <!-- 요약 KPI -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
     <div class="stat"><div class="stat-label">총 작성 글</div><div class="stat-val" id="an-total">0</div></div>
     <div class="stat" style="border-left:3px solid var(--g)"><div class="stat-label">✅ 발행완료</div><div class="stat-val" style="color:var(--g)" id="an-done">0</div><div class="stat-sub" id="an-done-pct"></div></div>
     <div class="stat" style="border-left:3px solid var(--amber)"><div class="stat-label">⏳ 미발행</div><div class="stat-val" style="color:var(--amber)" id="an-pending">0</div></div>
-    <div class="stat"><div class="stat-label">커버 지역</div><div class="stat-val" id="an-regions">0</div></div>
   </div>
 
   <!-- 글 목록 -->
@@ -1824,16 +1835,39 @@ function updateDashboard(){
   var badgeEl  = document.getElementById('matrixTotalBadge');
   if(badgeEl) badgeEl.textContent = _hist.length+'개';
 
+  // 시도 탭 렌더링
+  var tabsEl = document.getElementById('matrixRegionTabs');
+  if(tabsEl){
+    var sidoSet = {};
+    _hist.forEach(function(h){
+      var sido = (h.region||'').split(' ')[0];
+      if(sido) sidoSet[sido] = (sidoSet[sido]||0) + 1;
+    });
+    var sidoList = Object.keys(sidoSet).sort(function(a,b){ return sidoSet[b]-sidoSet[a]; });
+    var curSido = window._matrixSido || '';
+    var tabsHtml = '<div onclick="setMatrixSido(\'\')" style="padding:3px 10px;border-radius:14px;font-size:10px;font-weight:700;cursor:pointer;'
+      +(curSido===''?'background:var(--dark);color:#fff;':'background:#F1F5F9;color:var(--gray);')+'">전체</div>';
+    sidoList.forEach(function(s){
+      tabsHtml += '<div onclick="setMatrixSido(\''+s+'\')" style="padding:3px 10px;border-radius:14px;font-size:10px;font-weight:700;cursor:pointer;'
+        +(curSido===s?'background:var(--dark);color:#fff;':'background:#F1F5F9;color:var(--gray);')+'">'+esc(s)+' <span style="opacity:.6">'+sidoSet[s]+'</span></div>';
+    });
+    tabsEl.innerHTML = tabsHtml;
+  }
+
   if(matrixEl){
-    if(!_hist.length){
-      matrixEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray);font-size:11px">아직 생성된 글이 없어요</div>';
+    var _matrixHist = window._matrixSido
+      ? _hist.filter(function(h){ return (h.region||'').split(' ')[0] === window._matrixSido; })
+      : _hist;
+
+    if(!_matrixHist.length){
+      matrixEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray);font-size:11px">'+(window._matrixSido?'해당 지역에 글이 없어요':'아직 생성된 글이 없어요')+'</div>';
     } else {
       // 지역(시/구 단위)별, 업종별 카운트 집계
       var regionList = [];   // 순서 보존
       var indList    = [];
       var matrix = {};       // matrix[region][industry] = {total, done}
 
-      _hist.forEach(function(h){
+      _matrixHist.forEach(function(h){
         var reg = h.region || '미지정';
         var ind = h.industry || '미지정';
         if(regionList.indexOf(reg)===-1) regionList.push(reg);
@@ -1913,13 +1947,7 @@ function updateDashboard(){
   }).join('');
 }
 
-function updateAnalytics(){
-  const total = history.length;
-  document.getElementById('an-total').textContent = total;
-  document.getElementById('an-traffic').textContent = (total*50).toLocaleString();
-  document.getElementById('an-leads').textContent = Math.round(total*50*0.03);
-  document.getElementById('an-kw').textContent = [...new Set(history.map(h=>h.kw))].length;
-}
+
 
 function renderHistList(){
   const el = document.getElementById('histList');
@@ -2380,10 +2408,50 @@ async function writeSelected(){
   updateDashboard(); renderHistList();
   autoRunning=false;
 }
-function filterHistory(filter, search){
+var anFilterRegion = '';
+var anFilterIndustry = '';
+
+function populateAnFilters(){
+  var _h = Array.isArray(history) ? history : [];
+  var regions = []; var industries = [];
+  _h.forEach(function(h){
+    if(h.region && regions.indexOf(h.region)===-1) regions.push(h.region);
+    if(h.industry && industries.indexOf(h.industry)===-1) industries.push(h.industry);
+  });
+  regions.sort(); industries.sort();
+
+  var regSel = document.getElementById('anRegionFilter');
+  if(regSel){
+    var curReg = regSel.value;
+    regSel.innerHTML = '<option value="">📍 전체 지역</option>'
+      + regions.map(function(r){ return '<option value="'+esc(r)+'">'+esc(r)+'</option>'; }).join('');
+    regSel.value = curReg;
+  }
+  var indSel = document.getElementById('anIndustryFilter');
+  if(indSel){
+    var curInd = indSel.value;
+    indSel.innerHTML = '<option value="">🏪 전체 업종</option>'
+      + industries.map(function(i){ return '<option value="'+esc(i)+'">'+esc(i)+'</option>'; }).join('');
+    indSel.value = curInd;
+  }
+}
+
+function resetAnFilters(){
+  anFilterRegion = ''; anFilterIndustry = '';
+  var regSel = document.getElementById('anRegionFilter'); if(regSel) regSel.value = '';
+  var indSel = document.getElementById('anIndustryFilter'); if(indSel) indSel.value = '';
+  var searchInput = document.getElementById('anSearch'); if(searchInput) searchInput.value = '';
+  filterHistory('all', '', '', '');
+}
+
+function filterHistory(filter, region, industry, search){
   if(filter !== undefined) currentFilter = filter;
+  if(region !== undefined) anFilterRegion = region;
+  if(industry !== undefined) anFilterIndustry = industry;
   var f = currentFilter || 'all';
   var q = ((search !== undefined ? search : '') || ((document.getElementById('anSearch')||{}).value||'')).toLowerCase();
+
+  populateAnFilters();
 
   // 필터 버튼 스타일
   ['All','Pending','Done'].forEach(function(k){
@@ -2398,10 +2466,10 @@ function filterHistory(filter, search){
   var list = (history||[]).filter(function(h){
     var isDone = h.uploadStatus === 'done';
     var mf = f==='all' || (f==='pending' && !isDone) || (f==='done' && isDone);
-    var mq = !q || (h.title||'').toLowerCase().includes(q)
-           || (h.region||'').toLowerCase().includes(q)
-           || (h.industry||'').toLowerCase().includes(q);
-    return mf && mq;
+    var mq = !q || (h.title||'').toLowerCase().includes(q);
+    var mr = !anFilterRegion || h.region === anFilterRegion;
+    var mi = !anFilterIndustry || h.industry === anFilterIndustry;
+    return mf && mq && mr && mi;
   });
 
   window._anaList = list;
@@ -3009,14 +3077,17 @@ function goToFilteredPosts(region, industry){
   var navTabs = document.querySelectorAll('.nav-tab');
   if(navTabs[1]) goPage('analytics', navTabs[1]);
 
-  // 검색창에 지역/업종 채우기
-  var q = industry ? (region+' '+industry) : region;
-  var searchInput = document.getElementById('anSearch');
-  if(searchInput) searchInput.value = q;
-
   currentFilter = 'all';
-  filterHistory('all', q);
-  showToast('🔍 '+(industry?region+' · '+industry:region)+' 글만 보기');
+  setTimeout(function(){
+    populateAnFilters();
+    var regSel = document.getElementById('anRegionFilter');
+    var indSel = document.getElementById('anIndustryFilter');
+    if(regSel) regSel.value = region || '';
+    if(indSel) indSel.value = industry || '';
+    var searchInput = document.getElementById('anSearch'); if(searchInput) searchInput.value='';
+    filterHistory('all', region||'', industry||'', '');
+    showToast('🔍 '+(industry?region+' · '+industry:region)+' 글만 보기');
+  }, 50);
 }
 
 function goToEditFromDashboard(el){
@@ -3045,6 +3116,11 @@ function goToEditFromDashboard(el){
       if(m) m.style.display='flex';
     }
   }, 150);
+}
+
+function setMatrixSido(sido){
+  window._matrixSido = sido;
+  updateDashboard();
 }
 </script>
 </body>
