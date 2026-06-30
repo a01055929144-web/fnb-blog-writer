@@ -244,17 +244,78 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 .hist-meta{font-size:9px;color:var(--gray)}
 .hist-saved{font-size:9px;color:var(--g);font-weight:600}
 
-/* ── 모바일 ── */
+/* ── 모바일 (768px 이하) ── */
 @media(max-width:768px){
+  body{font-size:14px}
+  .header{padding:10px 14px!important;flex-wrap:wrap;gap:8px}
+  .header h1, .header .logo-text{font-size:14px!important}
+  .header .subtitle{display:none}
+  .nav{overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;padding:0 8px}
+  .nav-tab{flex-shrink:0;padding:10px 12px!important;font-size:12px!important}
+  .page{padding:10px!important}
+
+  /* 모든 2단/3단/4단 인라인 grid를 강제로 1단으로 */
+  .page > div[style*="grid-template-columns"],
+  .page div[style*="display:grid"][style*="1fr 1fr"]{
+    display:flex!important;flex-direction:column!important;
+  }
+  /* Dashboard 좌우 분할 레이아웃 → 세로 스택 */
+  #page-dashboard > div[style*="grid-template-columns:1fr 1fr"]{
+    display:flex!important;flex-direction:column!important;
+  }
+  /* 키워드/맛집홍보 좌우 분할(.grid2) → 세로 스택 */
+  .grid2{display:flex!important;flex-direction:column!important;gap:12px!important}
+
+  /* KPI 카드들 (3단/4단) → 2단으로 */
+  div[style*="grid-template-columns:repeat(3,1fr)"],
+  div[style*="grid-template-columns:repeat(4,1fr)"]{
+    grid-template-columns:1fr 1fr!important;
+  }
+
+  /* 업종 카드 그리드 (5단) → 모바일 3단 */
+  #dashIndGrid, .ind-grid{grid-template-columns:repeat(3,1fr)!important}
+
+  /* 클러스터/카드형 그리드 1단 */
   .stat-grid{grid-template-columns:1fr 1fr}
   .proj-grid{grid-template-columns:1fr}
   .grid3{grid-template-columns:1fr}
   .grid4{grid-template-columns:1fr 1fr}
-  .ind-grid{grid-template-columns:repeat(4,1fr)}
   .cluster-grid{grid-template-columns:1fr}
   .cta-channels{grid-template-columns:1fr}
   .analytics-row{grid-template-columns:1fr}
-  .page{padding:12px}
+  #channelGrid{grid-template-columns:1fr 1fr!important}
+
+  /* 자동화 모달 — 화면 꽉 차게 */
+  #autoModal > div{width:94vw!important;max-width:94vw!important;margin:0 10px}
+
+  /* 편집 모달 — 화면 꽉 차게 */
+  #editModal > div{width:94vw!important;max-width:94vw!important;max-height:90vh!important}
+
+  /* 글 카드 액션 버튼들 줄바꿈 허용 */
+  #histList button{font-size:10px!important;padding:5px 10px!important}
+
+  /* 지역×업종 매트릭스 테이블 가로 스크롤 */
+  #dashMatrix{overflow-x:auto!important}
+  #dashMatrix table{min-width:480px}
+
+  /* 필터/검색 영역 줄바꿈 */
+  #anRegionFilter, #anIndustryFilter{flex:1;min-width:110px}
+  #anSearch{min-width:140px!important;max-width:none!important}
+
+  /* 시트 동기화/내보내기 버튼 영역 — 세로 스택 */
+  div[style*="저장 현황 배너"]{flex-direction:column!important}
+}
+
+/* ── 초소형 모바일 (480px 이하) ── */
+@media(max-width:480px){
+  #dashIndGrid, .ind-grid{grid-template-columns:repeat(2,1fr)!important}
+  div[style*="grid-template-columns:repeat(3,1fr)"],
+  div[style*="grid-template-columns:repeat(4,1fr)"]{
+    grid-template-columns:1fr!important;
+  }
+  #channelGrid{grid-template-columns:1fr!important}
+  .stat-val{font-size:20px!important}
+  #histList button{flex:1;min-width:0}
 }
 
 .channel-card{padding:10px;border-radius:8px;border:2px solid var(--bd);background:#fff;cursor:pointer;text-align:center;transition:.15s}
