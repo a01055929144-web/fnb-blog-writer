@@ -2074,6 +2074,7 @@ async function writeOnePost(item, idx, total, priceData){
 }
 let autoRunning = false;
 var _priceCache = {};
+var priceData = null; // 전역 단가 데이터
 var currentFilter = 'all';
 async function startAutoMode(){
   // 선택 검사 — 탭 이동 없이 모달 안내
