@@ -2796,8 +2796,6 @@ function loadRestoApp(){
   try{ var s=localStorage.getItem('fnb_resto'); if(s){ var p=JSON.parse(s); if(Array.isArray(p)&&p.length>0){ restoHistory=p; return true; } } }catch(e){}
   return false;
 }
-gEl.textContent  = msg || '';
-}
 
 function closeAutoModal(){
   var m = document.getElementById('autoModal');
