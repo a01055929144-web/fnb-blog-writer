@@ -2052,21 +2052,16 @@ async function startAutoMode(){
   showAutoModal();
 
   try{
-    // ── Step 0: 실시간 단가 조회 (5초 타임아웃, 실패해도 계속) ──
-    setStep(0,'⏳','단가 조회 중...');
+    // ── Step 0: 단가 조회 (백그라운드, 멈추지 않음) ──
+    setStep(0,'✅','기본 데이터 사용 (단가 백그라운드 조회)');
     var priceData = null;
-    try{
-      var _p = await Promise.race([
-        fetchRealtimePrice(industry),
-        new Promise(function(res){ setTimeout(function(){ res({prices:[],summary:''}); }, 5000); })
-      ]);
-      var pLen = (_p && _p.prices) ? _p.prices.length : 0;
-      priceData = pLen > 0 ? _p : null;
-      setStep(0, pLen>0?'✅':'⚠️', pLen>0?('단가 '+pLen+'개 조회'):'단가 없음 — 기본 데이터 사용');
-    }catch(e){
-      setStep(0,'⚠️','단가 건너뜀');
-      priceData = null;
-    }
+    // 백그라운드로만 시도 — await 없이 바로 다음 단계로
+    fetchRealtimePrice(industry).then(function(p){
+      if(p && p.prices && p.prices.length > 0){
+        priceData = p;
+        setStep(0,'✅','단가 '+p.prices.length+'개 조회 완료');
+      }
+    }).catch(function(){});
 
     // ── Step 1: SEO 키워드 추출 ──
     setStep(1,'⏳','SEO 키워드 추출 중...');
