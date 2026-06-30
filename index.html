@@ -2006,7 +2006,7 @@ async function writeOnePost(item, idx, total){
   var kw = item.keyword||item.title||'';
   var region = item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
   var type = item.type||'정보성 SEO';
-  var text = await callClaude(buildPostPrompt(kw,region,type), 2000);
+  var text = await callClaude(buildPostPrompt(kw,region,type,priceData), 1500, true) // Haiku;
   var titleM = text.match(/\*\*제목\*\*[:\s]*(.*)/);
   var title = titleM ? titleM[1].trim().replace(/\*\*/g,'') : kw;
   var hashM = text.match(/\*\*해시태그\*\*[:\s]*([\s\S]*?)$/);
