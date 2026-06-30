@@ -2939,6 +2939,69 @@ function closeAutoModal(){
   if(m) m.style.display = 'none';
   autoRunning = false;
 }
+
+/* ═══ 웹 저장/복원 ═══ */
+function saveApp(){
+  try{
+    localStorage.setItem('fnb_history', JSON.stringify((history||[]).slice(0,300)));
+    localStorage.setItem('fnb_savedAt', new Date().toISOString());
+  }catch(e){ console.warn('웹 저장 실패:', e); }
+}
+
+function loadSavedPosts(){
+  try{
+    var s = localStorage.getItem('fnb_history');
+    if(s){ var p=JSON.parse(s); if(Array.isArray(p)&&p.length>0){ history=p; return true; } }
+  }catch(e){}
+  return false;
+}
+
+function exportAllPosts(){
+  if(!(history&&history.length)){ showToast('저장된 글이 없어요'); return; }
+  var lines = (history||[]).map(function(h,i){
+    return '===== ['+(i+1)+'] '+(h.title||'')+'=====
+'
+      +'날짜:'+(h.date||'')+' | 지역:'+(h.region||'')+' | 업종:'+(h.industry||'')+'
+
+'
+      +(h.body||'')+'
+
+'
+      +((h.tags||[]).join?' '#+(h.tags||[]).join(' '):(h.tags||''))+'
+';
+  }).join('
+
+');
+  var blob = new Blob([lines],{type:'text/plain;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fnb_posts_'+new Date().toLocaleDateString('ko-KR').replace(/\s/g,'')+'.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('✅ '+history.length+'개 내보내기 완료!');
+}
+
+async function syncToSheet(){
+  if(!(history&&history.length)){ showToast('저장된 글이 없어요'); return; }
+  showToast('⏳ 시트 동기화 중...');
+  var ok=0;
+  for(var i=0;i<history.length;i++){
+    var h=history[i]; if(!h.title) continue;
+    try{
+      await fetch(SHEET_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({sheetId:SHEET_ID,date:h.date||'',
+          sido:(h.region||'').split(' ')[0]||'', gugun:(h.region||'').split(' ').slice(1).join(' ')||'',
+          industry:h.industry||'', type:h.type||'', keyword:h.kw||h.keyword||'',
+          title:h.title||'', body:h.body||'',
+          hashtags:(h.tags&&h.tags.join)?h.tags.join(' '):(h.tags||''),
+          chars:h.chars||0, status:h.uploadStatus==='done'?'발행완료':'미발행'})
+      });
+      ok++;
+    }catch(e){}
+    await new Promise(function(r){setTimeout(r,200);});
+  }
+  showToast('✅ '+ok+'개 시트 동기화 완료!');
+}
 </script>
 </body>
 </html>
