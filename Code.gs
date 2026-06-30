@@ -392,8 +392,9 @@ function savePost_(data) {
   // 발행상태(12번) 스타일
   sheet.getRange(newRow, 12)
     .setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
-  // 본문(9번) 줄바꿈
-  sheet.getRange(newRow, 9).setWrap(true);
+  // 본문(9번) 줄바꿈 끄기 + 행 높이 21px 고정 (긴 본문이 행을 늘리지 않도록)
+  sheet.getRange(newRow, 9).setWrap(false);
+  sheet.setRowHeight(newRow, 21);
 
   updateRegion_(ss, sido + (gugun ? ' ' + gugun : ''), data.industry);
   return {success: true, row: newRow};
@@ -463,7 +464,8 @@ function saveResto_(data) {
   var newRow = sheet.getLastRow();
   if (newRow % 2 === 0) sheet.getRange(newRow,1,1,RESTO_HEADERS.length).setBackground('#F8FAFC');
   sheet.getRange(newRow, 8).setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
-  sheet.getRange(newRow, 7).setWrap(true);
+  sheet.getRange(newRow, 7).setWrap(false);
+  sheet.setRowHeight(newRow, 21);
   return {success: true, row: newRow};
 }
 
@@ -779,6 +781,15 @@ function cleanupSheets() {
        .setFontWeight('bold').setHorizontalAlignment('center');
     sh.setFrozenRows(1);
   });
+
+  // 기존 데이터 행들도 21px로 일괄 고정 + 줄바꿈 해제
+  var lastDataRow = postSheet.getLastRow();
+  if (lastDataRow > 1) {
+    postSheet.getRange(2, 9, lastDataRow - 1, 1).setWrap(false); // 본문 컬럼 줄바꿈 해제
+    for (var rr = 2; rr <= lastDataRow; rr++) {
+      postSheet.setRowHeight(rr, 21);
+    }
+  }
 
   Logger.log('✅ 시트 정비 완료: ' + postSheet.getLastRow() + '개 데이터 행');
   SpreadsheetApp.flush();
