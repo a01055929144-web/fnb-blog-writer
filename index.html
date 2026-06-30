@@ -2689,91 +2689,78 @@ function setStep(step, icon, msg){
   var msgEl  = document.getElementById('as'+step+'d');
   if(iconEl) iconEl.textContent = icon;
   if(msgEl)  msgEl.textContent  = msg || '';
-}
 
 /* ═══ 맛집 홍보 콘텐츠 ═══ */
 function togChannel(el){
-  var ch = el.getAttribute('data-ch');
-  var i  = selChannels.indexOf(ch);
+  var ch=el.getAttribute('data-ch');
+  var i=selChannels.indexOf(ch);
   if(i>-1){
     if(selChannels.length===1){ showToast('최소 1개 채널 선택'); return; }
-    selChannels.splice(i,1);
-    el.classList.remove('on');
-    el.style.cssText='border:1.5px solid var(--bd);background:#fff';
+    selChannels.splice(i,1); el.classList.remove('on');
   } else {
-    selChannels.push(ch);
-    el.classList.add('on');
-    el.style.cssText='border:1.5px solid #F97316;background:#FFF7ED';
+    selChannels.push(ch); el.classList.add('on');
   }
 }
 
 async function genRestContent(){
-  var name    =(document.getElementById('restName')||{}).value||'';
-  var loc     =(document.getElementById('restLocation')||{}).value||'';
-  var menu    =(document.getElementById('restMenu')||{}).value||'';
-  var price   =(document.getElementById('restPrice')||{}).value||'';
-  var feature =(document.getElementById('restFeature')||{}).value||'';
-  var hours   =(document.getElementById('restHours')||{}).value||'';
+  var name=(document.getElementById('restName')||{}).value||'';
+  var loc=(document.getElementById('restLocation')||{}).value||'';
+  var menu=(document.getElementById('restMenu')||{}).value||'';
+  var price=(document.getElementById('restPrice')||{}).value||'';
+  var feature=(document.getElementById('restFeature')||{}).value||'';
+  var hours=(document.getElementById('restHours')||{}).value||'';
   if(!name){ showToast('식당 이름을 입력해주세요'); return; }
-  if(!loc){  showToast('위치를 입력해주세요');    return; }
-  var btn = document.getElementById('restGenBtn');
+  if(!loc){  showToast('위치를 입력해주세요'); return; }
+  var btn=document.getElementById('restGenBtn');
   if(btn){ btn.innerHTML='<i class="ti ti-loader-2"></i> 4채널 생성 중...'; btn.disabled=true; }
-  var area = document.getElementById('restContentArea');
+  var area=document.getElementById('restContentArea');
   if(area) area.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)">⏳ 4개 채널 동시 생성 중...</div>';
   var info=['식당명:'+name,'위치:'+loc];
-  if(menu)    info.push('메뉴:'+menu);
-  if(price)   info.push('가격:'+price);
+  if(menu) info.push('메뉴:'+menu);
+  if(price) info.push('가격:'+price);
   if(feature) info.push('특징:'+feature);
-  if(hours)   info.push('영업:'+hours);
+  if(hours) info.push('영업:'+hours);
   var base=info.join(' | ');
   var labels={blog:'📝 네이버 블로그',insta:'📸 인스타그램',tiktok:'🎵 틱톡/릴스',kakao:'💬 카카오 채널'};
   var prompts={
-    blog:'네이버 블로그 맛집 리뷰 SEO 1500자. 정보:'+base+'. **제목**(이모지+식당명), **본문**(도입/메뉴/분위기/총평), **해시태그**20개. 실제방문처럼.',
+    blog:'네이버 블로그 맛집 리뷰 SEO 1500자. 정보:'+base+'. **제목**(이모지+식당명), **본문**(도입/메뉴/분위기/총평), **해시태그**20개.',
     insta:'인스타그램 맛집 캡션. 정보:'+base+'. 감성 300자+해시태그30개.',
-    tiktok:'틱톡/릴스 60초 스크립트. 정보:'+base+'. [0-3초]훅 [4-40초]음식 [41-60초]정보+CTA 자막포함.',
+    tiktok:'틱톡/릴스 60초 스크립트. 정보:'+base+'. [0-3초]훅 [4-40초]음식 [41-60초]정보+CTA.',
     kakao:'카카오채널 단골메시지 200자. 정보:'+base+'. 친근+이모지+재방문유도.'
   };
   var today=new Date().toLocaleDateString('ko-KR');
   var chs=['blog','insta','tiktok','kakao'];
-  var promises=chs.map(function(ch){
-    return callClaude(prompts[ch], ch==='blog'?2000:800, ch!=='blog')
+  var results=await Promise.all(chs.map(function(ch){
+    return callClaude(prompts[ch],ch==='blog'?2000:800,ch!=='blog')
       .then(function(t){ return {ch:ch,label:labels[ch],content:t,uploadStatus:'pending',rowId:null}; })
-      .catch(function(e){ return {ch:ch,label:labels[ch],content:'생성실패:'+e.message,uploadStatus:'pending',rowId:null}; });
-  });
-  var results=await Promise.all(promises);
+      .catch(function(e){ return {ch:ch,label:labels[ch],content:'오류:'+e.message,uploadStatus:'pending',rowId:null}; });
+  }));
   window._restResults=results;
   if(!Array.isArray(restoHistory)) restoHistory=[];
-  results.forEach(function(r){
-    restoHistory.unshift({date:today,restName:name,location:loc,ch:r.ch,label:r.label,content:r.content,uploadStatus:'pending',rowId:null});
-  });
+  results.forEach(function(r){ restoHistory.unshift({date:today,restName:name,location:loc,ch:r.ch,label:r.label,content:r.content,uploadStatus:'pending',rowId:null}); });
   saveRestoApp();
   var sheetOk=0;
   for(var i=0;i<results.length;i++){
-    var r=results[i];
     try{
       var res=await fetch(SHEET_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify({action:'saveResto',sheetId:SHEET_ID,date:today,
-          restName:name,location:loc,channel:r.label,title:name+' '+r.label,content:r.content,status:'미발행'})});
+        body:JSON.stringify({action:'saveResto',sheetId:SHEET_ID,date:today,restName:name,location:loc,
+          channel:results[i].label,title:name+' '+results[i].label,content:results[i].content,status:'미발행'})});
       var d=await res.json();
       if(d.success){ results[i].rowId=d.row; restoHistory[i].rowId=d.row; sheetOk++; }
     }catch(e){}
   }
   saveRestoApp();
   var badge=document.getElementById('restContentBadge');
-  if(badge){ badge.style.display='inline'; badge.textContent=results.length+'개 채널 생성됨'; }
+  if(badge){ badge.style.display='inline'; badge.textContent=results.length+'개 채널'; }
   renderRestoContents(results);
-  showToast('✅ 4채널 생성 완료! 시트 '+sheetOk+'개 저장');
+  showToast('✅ 4채널 생성! 시트 '+sheetOk+'개 저장');
   if(btn){ btn.innerHTML='<i class="ti ti-wand"></i> 맛집 홍보 콘텐츠 자동 생성'; btn.disabled=false; }
 }
 
 function renderRestoContents(results){
   var area=document.getElementById('restContentArea');
   if(!area) return;
-  if(!results||!results.length){
-    area.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)">콘텐츠 없음</div>';
-    return;
-  }
-  area.innerHTML=results.map(function(r,i){
+  area.innerHTML=(results||[]).map(function(r,i){
     var isDone=r.uploadStatus==='done';
     return '<div style="margin-bottom:14px;border:1.5px solid '+(isDone?'#86EFAC':'var(--bd)')+';border-radius:10px;overflow:hidden">'
       +'<div style="background:#F8FAFC;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)">'
@@ -2793,14 +2780,11 @@ function copyRestoItem(el){
   navigator.clipboard.writeText(r.content||'').then(function(){
     r.uploadStatus='done';
     if(restoHistory[i]) restoHistory[i].uploadStatus='done';
-    try{
-      fetch(SHEET_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify({action:'updateResto',sheetId:SHEET_ID,rowId:r.rowId,status:'발행완료'})
-      }).catch(function(){});
-    }catch(e){}
+    try{ fetch(SHEET_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'updateResto',sheetId:SHEET_ID,rowId:r.rowId,status:'발행완료'})}).catch(function(){}); }catch(e){}
     saveRestoApp();
     renderRestoContents(window._restResults);
-    showToast('✅ 복사 완료! 발행완료 처리됨');
+    showToast('✅ 복사! 발행완료 처리됨');
   });
 }
 
@@ -2809,10 +2793,7 @@ function saveRestoApp(){
 }
 
 function loadRestoApp(){
-  try{
-    var s=localStorage.getItem('fnb_resto');
-    if(s){ var p=JSON.parse(s); if(Array.isArray(p)&&p.length>0){ restoHistory=p; return true; } }
-  }catch(e){}
+  try{ var s=localStorage.getItem('fnb_resto'); if(s){ var p=JSON.parse(s); if(Array.isArray(p)&&p.length>0){ restoHistory=p; return true; } } }catch(e){}
   return false;
 }
 gEl.textContent  = msg || '';
