@@ -2666,7 +2666,7 @@ function renderDashInline(){
   var dg = document.getElementById('dashDistGrid');
   if(dg && typeof REGION_TABS!=='undefined' && curRegion){
     dg.innerHTML = '';
-    (REGION_TABS[curRegion]||[]).slice(0,15).forEach(function(name){
+    (REGION_TABS[curRegion]||[]).forEach(function(name){
       var el = document.createElement('div');
       el.textContent = name;
       var isOn = selDistricts.find(function(d){ return d.district===name; });
