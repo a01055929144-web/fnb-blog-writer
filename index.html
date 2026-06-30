@@ -2052,7 +2052,7 @@ function buildPostPrompt(kw, region, type, priceData){
 
     +'[출력 형식 — 정확히 이 라벨 순서로]\n'
     +'제목: (이모지 1개 + "'+kw+'" 포함, 25자 이내)\n\n'
-    +'본문: (위 글 구조 1~8을 자연스러운 문단으로, 단락 사이는 줄바꿈 두 번, 2000자 이상, 마크다운 기호 없이)\n\n'
+    +'본문: (위 글 구조 1~8을 자연스러운 문단으로, 단락 사이는 줄바꿈 두 번, 정확히 2000~2300자 사이로 작성, 마크다운 기호 없이. 이 글자수 범위를 반드시 지켜서 FAQ와 요약, 해시태그까지 끝까지 작성할 공간을 남길 것)\n\n'
     +'FAQ:\n'
     +'Q1. (질문)\nA1. (API데이터 또는 공식자료 기반 답변만, 추측 금지)\n'
     +'Q2. (질문)\nA2. (사실 기반 답변)\n'
@@ -2066,7 +2066,7 @@ async function writeOnePost(item, idx, total, priceData){
   var type   = item.type||'정보성 SEO';
 
   // 글 작성 (Haiku)
-  var text = await callClaude(buildPostPrompt(kw, region, type, priceData||null), 4500, true); // v2.0: 2553자본문+FAQ5개+요약+해시태그까지 끝까지 생성 보장
+  var text = await callClaude(buildPostPrompt(kw, region, type, priceData||null), 5500, true); // v2.0: 본문2000~2300자 제한+FAQ+요약+해시태그 전체 완주 보장
 
   // 제목 파싱 ("제목:" 라벨 기준)
   var titleM = text.match(/제목\s*[:：]\s*(.+)/);
