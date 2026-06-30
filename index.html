@@ -2625,6 +2625,35 @@ function dashTogItem(name){
   else{ if(selItems.length>=3){ showToast('최대 3개 품목'); return; } selItems.push(name); }
   renderDashInline();
 }
+
+/* ═══ 실시간 단가 조회 ═══ */
+async function fetchRealtimePrice(ind){
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'fetchPrice', industry: ind})
+    });
+    var d = await res.json();
+    return d;
+  }catch(e){
+    return {prices:[], summary:''};
+  }
+}
+
+/* ═══ 자동화 모달 단계 표시 ═══ */
+function setStep(step, icon, msg){
+  var iconEl = document.getElementById('as'+step+'i');
+  var msgEl  = document.getElementById('as'+step+'d');
+  if(iconEl) iconEl.textContent = icon;
+  if(msgEl)  msgEl.textContent  = msg || '';
+}
+
+function closeAutoModal(){
+  var m = document.getElementById('autoModal');
+  if(m) m.style.display = 'none';
+  autoRunning = false;
+}
 </script>
 </body>
 </html>
