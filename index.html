@@ -2097,6 +2097,7 @@ async function writeOnePost(item, idx, total, priceData){
 let autoRunning = false;
 var _priceCache = {};
 var priceData = null;     // 전역 단가 데이터
+var CTA_TEXT = '\n\n식자재 단가 비교 & 무료 상담\n카카오톡 채널: https://open.kakao.com/o/shEOWEth\n네이버 블로그: https://blog.naver.com/yeong44'; // 고정 CTA
 var restoHistory = [];    // 맛집홍보 글 목록
 var selChannels = ['blog','insta','tiktok','kakao']; // 기본 전채널 선택
 var currentFilter = 'all';
@@ -2340,7 +2341,7 @@ function publishCopy(el){
   var h = window._anaList && window._anaList[i];
   if(!h) return;
   var tags = Array.isArray(h.tags) ? h.tags.join(' ') : (h.tags||'');
-  var text = (h.title||'') + '\n\n' + (h.body||'') + '\n\n' + tags;
+  var text = (h.title||'') + '\n\n' + (h.body||'') + CTA_TEXT + '\n\n' + tags;
   navigator.clipboard.writeText(text).then(function(){
     // 발행완료 토글도 자동으로
     h.uploadStatus = 'done';
@@ -2490,15 +2491,15 @@ function copyEdit(){
   var title = document.getElementById('editTitle').value;
   var body  = document.getElementById('editBody').value;
   var tags  = document.getElementById('editTags').value;
-  navigator.clipboard.writeText(title+'\n\n'+body+'\n\n'+tags)
-    .then(function(){ showToast('전체 복사 완료!'); });
+  navigator.clipboard.writeText(title+'\n\n'+body+CTA_TEXT+'\n\n'+tags)
+    .then(function(){ showToast('전체 복사 완료! (CTA 포함)'); });
 }
 
 function copyTitleBody(){
   var title = document.getElementById('editTitle').value;
   var body  = document.getElementById('editBody').value;
-  navigator.clipboard.writeText(title+'\n\n'+body)
-    .then(function(){ showToast('제목+본문 복사 완료!'); });
+  navigator.clipboard.writeText(title+'\n\n'+body+CTA_TEXT)
+    .then(function(){ showToast('제목+본문 복사 완료! (CTA 포함)'); });
 }
 
 function updateAnalytics(){
@@ -2535,8 +2536,8 @@ function copyPost(el){
   var h = window._anaList && window._anaList[i];
   if(!h) return;
   var tags = (h.tags||[]).join ? (h.tags||[]).join(' ') : (h.tags||'');
-  navigator.clipboard.writeText((h.title||'')+'\n\n'+(h.body||'')+'\n\n'+tags)
-    .then(function(){ showToast('복사됐어요!'); });
+  navigator.clipboard.writeText((h.title||'')+'\n\n'+(h.body||'')+CTA_TEXT+'\n\n'+tags)
+    .then(function(){ showToast('복사됐어요! (CTA 포함)'); });
 }
 
 
