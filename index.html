@@ -1846,10 +1846,10 @@ function updateDashboard(){
     var sidoList = Object.keys(sidoSet).sort(function(a,b){ return sidoSet[b]-sidoSet[a]; });
     var curSido = window._matrixSido || '';
     var tabsHtml = '<div onclick="setMatrixSido(\'\')" style="padding:3px 10px;border-radius:14px;font-size:10px;font-weight:700;cursor:pointer;'
-      +(curSido===''?'background:var(--dark);color:#fff;':'background:#F1F5F9;color:var(--gray);')+'">전체</div>';
+      +(curSido===''?'background:var(--d);color:#fff;':'background:#F1F5F9;color:var(--gray);')+'">전체</div>';
     sidoList.forEach(function(s){
       tabsHtml += '<div onclick="setMatrixSido(\''+s+'\')" style="padding:3px 10px;border-radius:14px;font-size:10px;font-weight:700;cursor:pointer;'
-        +(curSido===s?'background:var(--dark);color:#fff;':'background:#F1F5F9;color:var(--gray);')+'">'+esc(s)+' <span style="opacity:.6">'+sidoSet[s]+'</span></div>';
+        +(curSido===s?'background:var(--d);color:#fff;':'background:#F1F5F9;color:var(--gray);')+'">'+esc(s)+' <span style="opacity:.6">'+sidoSet[s]+'</span></div>';
     });
     tabsEl.innerHTML = tabsHtml;
   }
@@ -1891,7 +1891,7 @@ function updateDashboard(){
       indList.forEach(function(ind){
         html += '<th style="text-align:center;padding:6px 6px;border-bottom:2px solid var(--bd);color:var(--gray);font-weight:700;white-space:nowrap">'+esc(ind)+'</th>';
       });
-      html += '<th style="text-align:center;padding:6px 8px;border-bottom:2px solid var(--bd);color:var(--dark);font-weight:800">합계</th></tr>';
+      html += '<th style="text-align:center;padding:6px 8px;border-bottom:2px solid var(--bd);color:var(--d);font-weight:800">합계</th></tr>';
 
       // 데이터 행
       regionList.forEach(function(reg){
@@ -1901,7 +1901,7 @@ function updateDashboard(){
         });
         html += '<tr style="border-bottom:1px solid var(--bd)">';
         html += '<td onclick="goToFilteredPosts(\''+esc(reg).replace(/'/g,"\\'")+'\',\'\')" '
-          +'style="padding:6px 8px;font-weight:700;white-space:nowrap;cursor:pointer;color:var(--dark)" '
+          +'style="padding:6px 8px;font-weight:700;white-space:nowrap;cursor:pointer;color:var(--d)" '
           +'onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'\'">'+esc(reg)+'</td>';
         indList.forEach(function(ind){
           var cell = matrix[reg][ind];
@@ -1910,7 +1910,7 @@ function updateDashboard(){
             html += '<td onclick="goToFilteredPosts(\''+esc(reg).replace(/'/g,"\\'")+'\',\''+esc(ind).replace(/'/g,"\\'")+'\')" '
               +'style="text-align:center;padding:6px;cursor:pointer;border-radius:6px;transition:.15s" '
               +'onmouseover="this.style.background=\'var(--g1)\'" onmouseout="this.style.background=\'\'">'
-              +'<div style="font-weight:700;color:var(--dark)">'+cell.total+'</div>'
+              +'<div style="font-weight:700;color:var(--d)">'+cell.total+'</div>'
               +'<div style="font-size:9px;color:'+(pct===100?'var(--g3)':'var(--gray)')+'">'+cell.done+'/'+cell.total+'</div>'
               +'</td>';
           } else {
@@ -2459,8 +2459,8 @@ function filterHistory(filter, region, industry, search){
     if(!btn) return;
     var active = (k==='All'&&f==='all')||(k==='Pending'&&f==='pending')||(k==='Done'&&f==='done');
     btn.style.cssText = active
-      ? 'padding:5px 14px;border:none;border-radius:20px;background:var(--dark);color:#fff;font-size:11px;font-weight:700;cursor:pointer'
-      : 'padding:5px 14px;border:1px solid var(--bd);border-radius:20px;background:#fff;color:var(--gray);font-size:11px;cursor:pointer';
+      ? 'padding:5px 14px;border:none;border-radius:20px;background:#0F172A;color:#ffffff;font-size:11px;font-weight:700;cursor:pointer'
+      : 'padding:5px 14px;border:1px solid #E2E8F0;border-radius:20px;background:#ffffff;color:#64748B;font-size:11px;cursor:pointer';
   });
 
   var list = (history||[]).filter(function(h){
