@@ -2066,7 +2066,7 @@ async function writeOnePost(item, idx, total, priceData){
   var type   = item.type||'정보성 SEO';
 
   // 글 작성 (Haiku)
-  var text = await callClaude(buildPostPrompt(kw, region, type, priceData||null), 3500, true); // v2.0: 2000자본문+사람냄새규칙+FAQ+요약 모두 포함해 토큰 재상향
+  var text = await callClaude(buildPostPrompt(kw, region, type, priceData||null), 4500, true); // v2.0: 2553자본문+FAQ5개+요약+해시태그까지 끝까지 생성 보장
 
   // 제목 파싱 ("제목:" 라벨 기준)
   var titleM = text.match(/제목\s*[:：]\s*(.+)/);
