@@ -1916,6 +1916,7 @@ async function initApp(){
     var localOk = loadSavedPosts();
     if(localOk) console.log('✅ 로컬 저장 글 복원:', history.length+'개');
   }catch(e){}
+  try{ loadRestoApp(); }catch(e){}   // 맛집홍보 복원
   try{ hydrateControls(); }catch(e){ console.warn('hydrate 실패:', e); }
   try{ renderIndustryOptions(); }catch(e){ console.warn('renderInd 실패:', e); }
   try{ renderDist(); }catch(e){ console.warn('renderDist 실패:', e); }
@@ -1937,6 +1938,7 @@ async function initApp(){
   try{ renderHistList(); }catch(e){}
   try{ updateDashboard(); }catch(e){}
   try{ updateAnalytics(); }catch(e){}
+  try{ filterHistory('all'); }catch(e){}  // 내 글 관리 초기 렌더
   try{ renderDashInline(); }catch(e){}
   console.log('✅ F&B Lead Engine 초기화 완료');
 }
@@ -2074,7 +2076,9 @@ async function writeOnePost(item, idx, total, priceData){
 }
 let autoRunning = false;
 var _priceCache = {};
-var priceData = null; // 전역 단가 데이터
+var priceData = null;     // 전역 단가 데이터
+var restoHistory = [];    // 맛집홍보 글 목록
+var selChannels = ['blog','insta','tiktok','kakao']; // 기본 전채널 선택
 var currentFilter = 'all';
 async function startAutoMode(){
   // 선택 검사 — 탭 이동 없이 모달 안내
@@ -2682,7 +2686,252 @@ function setStep(step, icon, msg){
   var iconEl = document.getElementById('as'+step+'i');
   var msgEl  = document.getElementById('as'+step+'d');
   if(iconEl) iconEl.textContent = icon;
-  if(msgEl)  msgEl.textContent  = msg || '';
+  if(msgEl)  ms
+/* ═══ 맛집 홍보 콘텐츠 ═══ */
+
+function togChannel(el){
+  var ch = el.getAttribute('data-ch');
+  var idx = selChannels.indexOf(ch);
+  if(idx>-1){
+    if(selChannels.length===1){ showToast('최소 1개 채널 선택 필요'); return; }
+    selChannels.splice(idx,1);
+    el.classList.remove('on');
+    el.style.borderColor='var(--bd)'; el.style.background='#fff';
+  } else {
+    selChannels.push(ch);
+    el.classList.add('on');
+    el.style.borderColor='#F97316'; el.style.background='#FFF7ED';
+  }
+}
+
+async function genRestContent(){
+  var name     = (document.getElementById('restName')||{}).value||'';
+  var location = (document.getElementById('restLocation')||{}).value||'';
+  var menu     = (document.getElementById('restMenu')||{}).value||'';
+  var price    = (document.getElementById('restPrice')||{}).value||'';
+  var feature  = (document.getElementById('restFeature')||{}).value||'';
+  var hours    = (document.getElementById('restHours')||{}).value||'';
+
+  if(!name){ showToast('식당 이름을 입력해주세요'); return; }
+  if(!location){ showToast('위치를 입력해주세요'); return; }
+  if(!selChannels.length){ showToast('채널을 1개 이상 선택해주세요'); return; }
+
+  var btn = document.getElementById('restGenBtn');
+  if(btn){ btn.innerHTML='<i class="ti ti-loader-2"></i> 4개 채널 생성 중...'; btn.disabled=true; }
+  var area = document.getElementById('restContentArea');
+  if(area) area.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)"><div style="font-size:28px;margin-bottom:10px">⏳</div>4개 채널 콘텐츠 생성 중...</div>';
+
+  var info = ['식당명:'+name,'위치:'+location];
+  if(menu)    info.push('메뉴:'+menu);
+  if(price)   info.push('가격:'+price);
+  if(feature) info.push('특징:'+feature);
+  if(hours)   info.push('영업:'+hours);
+  var baseInfo = info.join(' | ');
+
+  var chLabels = {blog:'📝 네이버 블로그', insta:'📸 인스타그램', tiktok:'🎵 틱톡/릴스', kakao:'💬 카카오 채널'};
+  var prompts = {
+    blog: '네이버 블로그 맛집 리뷰 (1500자 이상, SEO). 정보:'+baseInfo
+      +'. **제목**(이모지+식당명+SEO키워드), **본문**(도입/메뉴리뷰/분위기/총평), **해시태그**20개. 실제방문한것처럼.',
+    insta: '인스타그램 맛집 피드. 정보:'+baseInfo
+      +'. 감성적인 캡션 300자 + 줄바꿈 후 해시태그 30개. MZ감성체.',
+    tiktok: '틱톡/릴스 60초 숏폼 스크립트. 정보:'+baseInfo
+      +'. [0-3초]훅 [4-15초]외관 [16-40초]음식 [41-55초]정보 [56-60초]CTA. 자막텍스트 포함.',
+    kakao: '카카오 채널 단골고객 메시지 200자. 정보:'+baseInfo+'. 친근한톤. 이모지. 재방문유도.'
+  };
+
+  var today = new Date().toLocaleDateString('ko-KR');
+  // 4채널 동시 생성 (Promise.all)
+  var allChannels = ['blog','insta','tiktok','kakao'];
+  var promises = allChannels.map(function(ch){
+    if(!selChannels.includes(ch)) return Promise.resolve(null);
+    var useHaiku = (ch !== 'blog');
+    return callClaude(prompts[ch], ch==='blog'?2000:800, useHaiku)
+      .then(function(text){ return {ch:ch, label:chLabels[ch], content:text}; })
+      .catch(function(e){ return {ch:ch, label:chLabels[ch], content:'생성 실패: '+e.message}; });
+  });
+
+  var results = (await Promise.all(promises)).filter(Boolean);
+
+  // ① 웹 저장 (restoHistory)
+  results.forEach(function(r){
+    restoHistory.unshift({
+      id: 'r'+Date.now()+'_'+r.ch,
+      date: today,
+      restName: name, location: location,
+      channel: r.ch, channelLabel: r.label,
+      content: r.content,
+      uploadStatus: 'pending', rowId: null
+    });
+  });
+  saveRestoApp();
+
+  // ② 구글 시트 저장 (채널별 행)
+  var sheetOk = 0;
+  for(var i=0; i<results.length; i++){
+    var r = results[i];
+    try{
+      var res = await fetch(SHEET_ENDPOINT,{
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({
+          action:'saveResto', sheetId:SHEET_ID,
+          date:today, restName:name, location:location,
+          channel:r.label, title:name+' '+r.label,
+          content:r.content, status:'미발행'
+        })
+      });
+      var d = await res.json();
+      if(d.success){
+        restoHistory[i].rowId = d.row;
+        sheetOk++;
+      }
+    }catch(e){ console.warn('시트 저장 실패:', e); }
+  }
+  saveRestoApp();
+
+  // 결과 렌더링
+  var badge = document.getElementById('restContentBadge');
+  if(badge){ badge.style.display='inline'; badge.textContent=results.length+'개 채널'; }
+  window._restResults = results;
+  renderRestoContents(results);
+
+  showToast('✅ '+results.length+'개 채널 생성 완료! (시트 '+sheetOk+'개 저장)');
+  if(btn){ btn.innerHTML='<i class="ti ti-wand"></i> 맛집 홍보 콘텐츠 자동 생성'; btn.disabled=false; }
+}
+
+function renderRestoContents(results){
+  var area = document.getElementById('restContentArea');
+  if(!area) return;
+  if(!results||!results.length){
+    area.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)">콘텐츠가 없어요</div>';
+    return;
+  }
+  area.innerHTML = results.map(function(r,i){
+    var isDone = r.uploadStatus==='done';
+    return '<div style="margin-bottom:14px;border:1.5px solid '+(isDone?'#86EFAC':'var(--bd)')+';border-radius:10px;overflow:hidden">'
+      // 헤더
+      +'<div style="background:#F8FAFC;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)">'
+      +'<div style="font-size:12px;font-weight:800;flex:1">'+esc(r.label||r.channelLabel||r.ch)+'</div>'
+      // 발행 토글
+      +'<div onclick="togRestoStatus('+i+')" style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:3px 10px;border-radius:20px;border:1.5px solid '+(isDone?'var(--g3)':'#CBD5E1')+';background:'+(isDone?'var(--g2)':'#fff')+';font-size:10px;font-weight:700;color:'+(isDone?'var(--g3)':'var(--gray)')+'">'
+      +'<div style="width:7px;height:7px;border-radius:50%;background:'+(isDone?'var(--g3)':'#CBD5E1')+'"></div>'
+      +(isDone?'발행완료':'미발행')+'</div>'
+      +'<button data-ri="'+i+'" onclick="editResto(this)" style="padding:3px 10px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:10px;cursor:pointer"><i class="ti ti-pencil"></i> 편집</button>'
+      +'<button data-ri="'+i+'" onclick="copyResto(this)" style="padding:3px 10px;border:1px solid var(--g3);border-radius:5px;background:var(--g2);font-size:10px;cursor:pointer;color:var(--g3);font-weight:700"><i class="ti ti-copy"></i> 복사</button>'
+      +'</div>'
+      // 본문 미리보기
+      +'<div style="padding:12px 14px;font-size:11px;line-height:1.7;white-space:pre-wrap;max-height:200px;overflow-y:auto;color:#334155">'
+      +esc(r.content||'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+  window._restResults = results;
+}
+
+function togRestoStatus(i){
+  var r = window._restResults && window._restResults[i];
+  if(!r) return;
+  r.uploadStatus = r.uploadStatus==='done' ? 'pending' : 'done';
+  // 시트 업데이트
+  try{
+    fetch(SHEET_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'updateResto',sheetId:SHEET_ID,rowId:r.rowId,status:r.uploadStatus==='done'?'발행완료':'미발행'})
+    }).catch(function(){});
+  }catch(e){}
+  saveRestoApp();
+  renderRestoContents(window._restResults);
+}
+
+function editResto(el){
+  var i = parseInt(el.getAttribute('data-ri'));
+  var r = window._restResults && window._restResults[i];
+  if(!r) return;
+  // 편집 모달 재활용
+  window._editRestoIdx = i;
+  window._editRestoMode = true;
+  document.getElementById('editTitle').value = (r.label||r.channelLabel||r.ch);
+  document.getElementById('editBody').value  = r.content||'';
+  document.getElementById('editTags').value  = '';
+  updateCharCount();
+  var m = document.getElementById('editModal');
+  if(m) m.style.display='flex';
+}
+
+function saveEdit(){
+  if(window._editRestoMode){
+    var i = window._editRestoIdx;
+    var r = window._restResults && window._restResults[i];
+    if(r){
+      r.content = document.getElementById('editBody').value;
+      try{
+        fetch(SHEET_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body:JSON.stringify({action:'updateResto',sheetId:SHEET_ID,rowId:r.rowId,content:r.content})
+        }).catch(function(){});
+      }catch(e){}
+      saveRestoApp();
+      renderRestoContents(window._restResults);
+    }
+    window._editRestoMode = false;
+    closeEdit();
+    showToast('✅ 수정 저장 (웹+시트)');
+    return;
+  }
+  // 기존 글 편집 로직
+  _saveEditPost();
+}
+
+async function _saveEditPost(){
+  var h = window._anaList && window._anaList[_editIdx];
+  if(!h) return;
+  var oldTitle = h.title;
+  h.title = document.getElementById('editTitle').value;
+  h.body  = document.getElementById('editBody').value;
+  var tags = document.getElementById('editTags').value;
+  h.tags  = tags.split ? tags.split(/[\s,]+/).filter(Boolean) : [];
+  h.chars = h.body.length;
+  saveApp();
+  closeEdit();
+  filterHistory();
+  try{
+    showToast('⏳ 시트 반영 중...');
+    var res = await fetch(SHEET_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'updatePost',sheetId:SHEET_ID,rowId:h.rowId,oldTitle:oldTitle,title:h.title,body:h.body,hashtags:h.tags.join(' ')})
+    });
+    var d = await res.json();
+    showToast(d.success?'✅ 저장 완료 (웹+시트)':'✅ 웹 저장 완료');
+  }catch(e){ showToast('✅ 웹 저장 완료'); }
+  updateDashboard();
+}
+
+function copyResto(el){
+  var i = parseInt(el.getAttribute('data-ri'));
+  var r = window._restResults && window._restResults[i];
+  if(!r) return;
+  navigator.clipboard.writeText(r.content||'').then(function(){
+    // 자동 발행완료 토글
+    r.uploadStatus = 'done';
+    try{
+      fetch(SHEET_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'updateResto',sheetId:SHEET_ID,rowId:r.rowId,status:'발행완료'})
+      }).catch(function(){});
+    }catch(e){}
+    saveRestoApp();
+    renderRestoContents(window._restResults);
+    showToast('✅ 복사! 해당 채널에 붙여넣기하세요. 발행완료 처리됨');
+  });
+}
+
+function saveRestoApp(){
+  try{ localStorage.setItem('fnb_resto', JSON.stringify((restoHistory||[]).slice(0,200))); }catch(e){}
+}
+
+function loadRestoApp(){
+  try{
+    var s = localStorage.getItem('fnb_resto');
+    if(s){ var p=JSON.parse(s); if(Array.isArray(p)&&p.length>0){ restoHistory=p; return true; } }
+  }catch(e){}
+  return false;
+}
+gEl.textContent  = msg || '';
 }
 
 function closeAutoModal(){
