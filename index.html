@@ -2983,34 +2983,82 @@ async function genRestContent(){
   var info=['식당명:'+name,'위치:'+loc];
   if(memo) info.push('참고메모:'+memo);
   var base=info.join(' | ');
-  var toneGuide = '\n작성 톤: 실제로 방문해본 듯한 자연스러운 후기. 음식 맛과 서비스가 좋았다는 내용을 중심으로 쓰고, '
-    +'"식재료도 신선한 것 같았다" 정도의 한 문장만 자연스럽게 곁들이세요. 식자재를 따로 강조하거나 특별한 재료를 부각하지 마세요 '
-    +'(모든 식당이 좋은 재료를 쓴다고 말하므로 과한 어필은 오히려 광고처럼 보입니다). '
-    +(memo ? '참고메모에 있는 내용만 사실로 사용하고 추측하지 마세요.\n' : '구체적인 메뉴·가격 정보가 없으니 막연하게 "다양한 메뉴", "정성스러운 한끼" 식으로 일반적인 표현을 쓰고, 없는 숫자나 메뉴명을 지어내지 마세요.\n');
+
+  var toneGuide = '\n[절대 규칙]\n'
+    +'1. 마크다운 기호(#, ##, **, -, *) 절대 사용 금지. 순수 텍스트로만 작성.\n'
+    +'2. 이모지는 제목에 1개만, 본문/캡션에는 사용 금지.\n'
+    +'3. 작성 톤: 실제로 방문해본 듯한 자연스러운 후기. 음식 맛과 서비스가 좋았다는 내용을 중심으로 쓰고, '
+    +'"식재료도 신선한 것 같았다" 정도의 한 문장만 자연스럽게 곁들이세요. 식자재를 따로 강조하거나 특별한 재료를 부각하지 마세요.\n'
+    +(memo ? '4. 참고메모에 있는 내용만 사실로 사용하고 추측하지 마세요.\n' : '4. 구체적인 메뉴·가격 정보가 없으니 막연하게 "다양한 메뉴", "정성스러운 한끼" 식으로 일반적인 표현을 쓰고, 없는 숫자나 메뉴명을 지어내지 마세요.\n');
+
   var labels={blog:'📝 네이버 블로그',insta:'📸 인스타그램',tiktok:'🎵 틱톡/릴스',kakao:'💬 카카오 채널'};
+
   var prompts={
-    blog:'네이버 블로그 맛집 후기 1500자 이상.'+toneGuide+'정보:'+base+'. **제목**(이모지+식당명), **본문**(방문계기/메뉴·맛/분위기·서비스/총평), **해시태그**20개.',
-    insta:'인스타그램 맛집 캡션.'+toneGuide+'정보:'+base+'. 감성적인 300자+해시태그30개.',
-    tiktok:'틱톡/릴스 60초 스크립트.'+toneGuide+'정보:'+base+'. [0-3초]훅 [4-30초]외관·분위기 [31-50초]음식 [51-60초]정보+CTA.',
-    kakao:'카카오채널 단골메시지 200자.'+toneGuide+'정보:'+base+'. 친근+이모지+재방문유도.'
+    blog:'네이버 블로그 맛집 후기 작성.'+toneGuide+'정보:'+base+'\n\n'
+      +'[출력 형식]\n제목: (이모지 1개 + 식당명 포함, 25자 이내)\n\n'
+      +'본문: (방문계기 → 메뉴·맛 → 분위기·서비스 → 총평 순서, 1500자 이상, 마크다운 없이)\n\n'
+      +'해시태그: #로 시작하는 키워드 15개, 공백으로 구분',
+    insta:'인스타그램 맛집 캡션 작성.'+toneGuide+'정보:'+base+'\n\n'
+      +'[출력 형식]\n제목: (이모지 1개 + 식당명 포함, 25자 이내)\n\n'
+      +'본문: (감성적인 300자 캡션, 마크다운 없이)\n\n'
+      +'해시태그: #로 시작하는 키워드 20개, 공백으로 구분',
+    tiktok:'틱톡/릴스 60초 스크립트 작성.'+toneGuide+'정보:'+base+'\n\n'
+      +'[출력 형식]\n제목: (이모지 1개 + 식당명 포함, 25자 이내)\n\n'
+      +'본문: ([0-3초]훅 [4-30초]외관·분위기 [31-50초]음식 [51-60초]정보+CTA 순서로 자막 텍스트 작성, 마크다운 없이)\n\n'
+      +'해시태그: #로 시작하는 키워드 10개, 공백으로 구분',
+    kakao:'카카오채널 단골 메시지 작성.'+toneGuide+'정보:'+base+'\n\n'
+      +'[출력 형식]\n제목: (식당명 포함, 25자 이내)\n\n'
+      +'본문: (친근한 200자 메시지, 재방문 유도, 마크다운 없이)\n\n'
+      +'해시태그: 없음 (빈 줄로 두세요)'
   };
+
   var today=new Date().toLocaleDateString('ko-KR');
   var chs=['blog','insta','tiktok','kakao'];
-  var results=await Promise.all(chs.map(function(ch){
-    return callClaude(prompts[ch],ch==='blog'?2000:800,ch!=='blog')
-      .then(function(t){ return {ch:ch,label:labels[ch],content:t,uploadStatus:'pending',rowId:null}; })
-      .catch(function(e){ return {ch:ch,label:labels[ch],content:'오류:'+e.message,uploadStatus:'pending',rowId:null}; });
+  var rawResults=await Promise.all(chs.map(function(ch){
+    return callClaude(prompts[ch],ch==='blog'?2200:1000,ch!=='blog')
+      .then(function(t){ return {ch:ch,label:labels[ch],raw:t}; })
+      .catch(function(e){ return {ch:ch,label:labels[ch],raw:'제목: 오류\n\n본문: 생성 실패 - '+e.message}; });
   }));
+
+  // 제목/본문/해시태그 파싱 + 마크다운 후처리 제거
+  var results = rawResults.map(function(r){
+    var titleM = r.raw.match(/제목\s*[:：]\s*(.+)/);
+    var title  = titleM ? titleM[1].trim().replace(/[#*]/g,'') : (name+' '+r.label);
+
+    var bodyM = r.raw.match(/본문\s*[:：]\s*([\s\S]*?)(?=해시태그\s*[:：]|$)/);
+    var body  = (bodyM ? bodyM[1] : r.raw)
+      .replace(/^#{1,6}\s*/gm, '')
+      .replace(/\*\*/g, '')
+      .replace(/^[-*]\s+/gm, '')
+      .trim();
+
+    var tags = r.raw.match(/#[\w가-힣]+/g) || [];
+
+    // 복붙용 최종 콘텐츠: 제목 + 본문 + 해시태그를 하나로 합침
+    var fullContent = title + '\n\n' + body + (tags.length ? '\n\n' + tags.join(' ') : '');
+
+    return {
+      ch: r.ch, label: r.label,
+      title: title, body: body, tags: tags,
+      content: fullContent,           // 복붙용 전체 텍스트
+      uploadStatus:'pending', rowId:null
+    };
+  });
+
   window._restResults=results;
   if(!Array.isArray(restoHistory)) restoHistory=[];
-  results.forEach(function(r){ restoHistory.unshift({date:today,restName:name,location:loc,ch:r.ch,label:r.label,content:r.content,uploadStatus:'pending',rowId:null}); });
+  results.forEach(function(r){
+    restoHistory.unshift({date:today,restName:name,location:loc,ch:r.ch,label:r.label,title:r.title,body:r.body,tags:r.tags,content:r.content,uploadStatus:'pending',rowId:null});
+  });
   saveRestoApp();
+
+  // 시트 저장 — SEO 제목(파싱된 title) 사용
   var sheetOk=0;
   for(var i=0;i<results.length;i++){
     try{
       var res=await fetch(SHEET_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
         body:JSON.stringify({action:'saveResto',sheetId:SHEET_ID,date:today,restName:name,location:loc,
-          channel:results[i].label,title:name+' '+results[i].label,content:results[i].content,status:'미발행'})});
+          channel:results[i].label,title:results[i].title,content:results[i].content,status:'미발행'})});
       var d=await res.json();
       if(d.success){ results[i].rowId=d.row; restoHistory[i].rowId=d.row; sheetOk++; }
     }catch(e){}
@@ -3029,14 +3077,32 @@ function renderRestoContents(results){
   area.innerHTML=(results||[]).map(function(r,i){
     var isDone=r.uploadStatus==='done';
     return '<div style="margin-bottom:14px;border:1.5px solid '+(isDone?'#86EFAC':'var(--bd)')+';border-radius:10px;overflow:hidden">'
-      +'<div style="background:#F8FAFC;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)">'
-      +'<div style="font-size:12px;font-weight:800;flex:1">'+esc(r.label||r.ch)+'</div>'
+      +'<div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid var(--bd)">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+      +'<div style="font-size:11px;font-weight:700;color:var(--gray);flex:1">'+esc(r.label||r.ch)+'</div>'
       +'<span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;background:'+(isDone?'#DCFCE7':'#FEF3C7')+';color:'+(isDone?'#166534':'#92400E')+'">'+(isDone?'발행완료':'미발행')+'</span>'
+      +'<button data-ri="'+i+'" onclick="editRestoItem(this)" style="padding:4px 10px;border:1px solid var(--bd);border-radius:5px;background:#fff;font-size:11px;cursor:pointer"><i class="ti ti-pencil"></i> 편집</button>'
       +'<button data-ri="'+i+'" onclick="copyRestoItem(this)" style="padding:4px 12px;border:1.5px solid var(--g3);border-radius:5px;background:var(--g2);font-size:11px;cursor:pointer;font-weight:700;color:var(--g3)"><i class="ti ti-copy"></i> 복사+발행</button>'
+      +'</div>'
+      +'<div style="font-size:13px;font-weight:800">'+esc(r.title||'')+'</div>'
       +'</div>'
       +'<div style="padding:12px 14px;font-size:11px;line-height:1.7;white-space:pre-wrap;max-height:220px;overflow-y:auto">'+esc(r.content||'')+'</div>'
       +'</div>';
   }).join('');
+}
+
+function editRestoItem(el){
+  var i = parseInt(el.getAttribute('data-ri'));
+  var r = window._restResults && window._restResults[i];
+  if(!r) return;
+  window._editRestoIdx = i;
+  window._editRestoMode = true;
+  document.getElementById('editTitle').value = r.title || '';
+  document.getElementById('editBody').value  = r.body  || '';
+  document.getElementById('editTags').value  = (r.tags&&r.tags.join) ? r.tags.join(' ') : '';
+  updateCharCount();
+  var m = document.getElementById('editModal');
+  if(m) m.style.display='flex';
 }
 
 function copyRestoItem(el){
