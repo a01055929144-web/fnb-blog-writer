@@ -10,8 +10,14 @@ const PRICE_API_BASE = 'https://apis.data.go.kr/B552845/perDay';
 
 const SHEET = {
   posts:   '작성글',
-  regions: '지역현황'
+  regions: '지역현황',
+  resto:   '맛집홍보'   // 맛집 홍보 콘텐츠 시트
 };
+
+// 맛집홍보 시트 헤더 (8컬럼)
+const RESTO_HEADERS = [
+  '번호', '날짜', '식당명', '위치', '채널', '제목', '콘텐츠', '발행상태'
+];
 
 // 작성글: 본문 전체 저장 (잘리지 않음), 발행상태 토글
 const POST_HEADERS = [
@@ -205,6 +211,9 @@ function doPost(e) {
     if (data.action === 'fetchPrice')     return out.setContent(JSON.stringify(fetchPrice_(data)));
     if (data.action === 'updateStatus')   return out.setContent(JSON.stringify(updateStatus_(data)));
     if (data.action === 'updatePost')     return out.setContent(JSON.stringify(updatePost_(data)));
+    if (data.action === 'saveResto')      return out.setContent(JSON.stringify(saveResto_(data)));
+    if (data.action === 'updateResto')    return out.setContent(JSON.stringify(updateResto_(data)));
+    if (data.action === 'deleteResto')    return out.setContent(JSON.stringify(deleteResto_(data)));
     if (data.action === 'deletePost')     return out.setContent(JSON.stringify(deletePost_(data)));
     return out.setContent(JSON.stringify(savePost_(data)));
   } catch (err) {
@@ -434,6 +443,64 @@ function updatePost_(data) {
 /* ══════════════════════════════════════
    글 삭제 (시트 행 삭제)
 ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   맛집홍보 저장/수정/삭제
+══════════════════════════════════════ */
+function saveResto_(data) {
+  var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var sheet = ensureSheet_(ss, SHEET.resto, RESTO_HEADERS);
+  var rowNum = sheet.getLastRow();
+  sheet.appendRow([
+    rowNum,
+    data.date     || new Date().toLocaleDateString('ko-KR'),
+    data.restName || '',
+    data.location || '',
+    data.channel  || '',
+    data.title    || (data.restName + ' ' + data.channel),
+    data.content  || '',
+    '미발행'
+  ]);
+  var newRow = sheet.getLastRow();
+  if (newRow % 2 === 0) sheet.getRange(newRow,1,1,RESTO_HEADERS.length).setBackground('#F8FAFC');
+  sheet.getRange(newRow, 8).setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
+  sheet.getRange(newRow, 7).setWrap(true);
+  return {success: true, row: newRow};
+}
+
+function updateResto_(data) {
+  var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var sheet = ensureSheet_(ss, SHEET.resto, RESTO_HEADERS);
+  var lastRow = sheet.getLastRow();
+  var targetRow = -1;
+  for (var r = 2; r <= lastRow; r++) {
+    if (sheet.getRange(r,1).getValue() == data.rowId || sheet.getRange(r,6).getValue() === data.oldTitle) {
+      targetRow = r; break;
+    }
+  }
+  if (targetRow === -1) return {success: false, message: '찾을 수 없음'};
+  if (data.content !== undefined) sheet.getRange(targetRow, 7).setValue(data.content);
+  if (data.status  !== undefined) {
+    var c = sheet.getRange(targetRow, 8);
+    c.setValue(data.status);
+    c.setBackground(data.status==='발행완료'?'#DCFCE7':'#FEF3C7')
+     .setFontColor(data.status==='발행완료'?'#166534':'#92400E').setFontWeight('bold');
+  }
+  return {success: true, row: targetRow};
+}
+
+function deleteResto_(data) {
+  var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var sheet = ensureSheet_(ss, SHEET.resto, RESTO_HEADERS);
+  var lastRow = sheet.getLastRow();
+  for (var r = 2; r <= lastRow; r++) {
+    if (sheet.getRange(r,1).getValue() == data.rowId || sheet.getRange(r,6).getValue() === data.title) {
+      sheet.deleteRow(r);
+      return {success: true, deleted: true};
+    }
+  }
+  return {success: false, message: '찾을 수 없음'};
+}
+
 function deletePost_(data) {
   var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
   var sheet = ensureSheet_(ss, SHEET.posts, POST_HEADERS);
@@ -699,6 +766,10 @@ function cleanupSheets() {
   ensureSheet_(ss, '지역현황', [
     '지역', '시도', '시/구', '총글수', '발행완료', '미발행', '주요업종', '최종업데이트'
   ]);
+  // 맛집홍보 탭
+  var restoSheet = ensureSheet_(ss, '맛집홍보', ['번호','날짜','식당명','위치','채널','제목','콘텐츠','발행상태']);
+  restoSheet.setColumnWidth(7, 500);
+  restoSheet.setColumnWidth(6, 300);
 
   // 6. 헤더 스타일 재적용
   [postSheet].forEach(function(sh) {
@@ -719,6 +790,7 @@ function ensureAllSheets_() {
   var ss = SpreadsheetApp.openById(getSheetId_());
   ensureSheet_(ss, SHEET.posts,   POST_HEADERS);
   ensureSheet_(ss, SHEET.regions, REGION_HEADERS);
+  ensureSheet_(ss, SHEET.resto,   RESTO_HEADERS);
 }
 
 function ensureSheet_(ss, name, headers) {
@@ -729,6 +801,15 @@ function ensureSheet_(ss, name, headers) {
     var h = sheet.getRange(1, 1, 1, headers.length);
     h.setBackground('#0F172A').setFontColor('#ffffff').setFontWeight('bold').setHorizontalAlignment('center');
     sheet.setFrozenRows(1);
+    if (name === SHEET.resto) {
+      sheet.setColumnWidth(1, 50);
+      sheet.setColumnWidth(3, 120);
+      sheet.setColumnWidth(4, 150);
+      sheet.setColumnWidth(5, 80);
+      sheet.setColumnWidth(6, 280);
+      sheet.setColumnWidth(7, 500);
+      sheet.setColumnWidth(8, 80);
+    }
     if (name === SHEET.posts) {
       sheet.setColumnWidth(1,  50);   // 번호
       sheet.setColumnWidth(2,  90);   // 날짜
