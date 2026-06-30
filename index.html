@@ -2688,7 +2688,9 @@ function setStep(step, icon, msg){
   var iconEl = document.getElementById('as'+step+'i');
   var msgEl  = document.getElementById('as'+step+'d');
   if(iconEl) iconEl.textContent = icon;
-  if(msgEl)  ms
+  if(msgEl)  msgEl.textContent  = msg || '';
+}
+
 /* ═══ 맛집 홍보 콘텐츠 ═══ */
 
 function togChannel(el){
