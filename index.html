@@ -2052,20 +2052,19 @@ async function startAutoMode(){
   showAutoModal();
 
   try{
-    // ── Step 0: 실시간 단가 조회 ──
-    setStep(0,'⏳','실시간 단가 조회 중...');
+    // ── Step 0: 실시간 단가 조회 (5초 타임아웃, 실패해도 계속) ──
+    setStep(0,'⏳','단가 조회 중...');
     var priceData = null;
     try{
-      priceData = await fetchRealtimePrice(industry);
-      var pLen = (priceData && priceData.prices) ? priceData.prices.length : 0;
-      if(pLen > 0){
-        setStep(0,'✅','단가 조회 완료 ('+pLen+'개 품목)');
-      } else {
-        setStep(0,'⚠️','단가 조회 불가 — 일반 데이터로 대체 (주류·카페 등은 공공데이터 미지원)');
-        priceData = null; // 빈 데이터면 null로 처리
-      }
+      var _p = await Promise.race([
+        fetchRealtimePrice(industry),
+        new Promise(function(res){ setTimeout(function(){ res({prices:[],summary:''}); }, 5000); })
+      ]);
+      var pLen = (_p && _p.prices) ? _p.prices.length : 0;
+      priceData = pLen > 0 ? _p : null;
+      setStep(0, pLen>0?'✅':'⚠️', pLen>0?('단가 '+pLen+'개 조회'):'단가 없음 — 기본 데이터 사용');
     }catch(e){
-      setStep(0,'⚠️','단가 조회 실패 — 일반 데이터 사용');
+      setStep(0,'⚠️','단가 건너뜀');
       priceData = null;
     }
 
@@ -2629,11 +2628,16 @@ function dashTogItem(name){
 /* ═══ 실시간 단가 조회 ═══ */
 async function fetchRealtimePrice(ind){
   try{
+    // 5초 타임아웃 — 응답 없으면 건너뜀
+    var controller = new AbortController();
+    var tid = setTimeout(function(){ controller.abort(); }, 5000);
     var res = await fetch(SHEET_ENDPOINT, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({action:'fetchPrice', industry: ind})
+      body: JSON.stringify({action:'fetchPrice', industry: ind}),
+      signal: controller.signal
     });
+    clearTimeout(tid);
     var d = await res.json();
     return d;
   }catch(e){
