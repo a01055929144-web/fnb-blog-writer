@@ -339,21 +339,24 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       </button>
     </div>
 
-    <!-- 우: KPI + 최근 포스팅 -->
+    <!-- 우: 발행현황 + 매트릭스 + 최근 포스팅 -->
     <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="stat"><div class="stat-label">오늘 생성</div><div class="stat-val" id="stat-today">0</div><div class="stat-sub" id="stat-total-sub">전체 0개</div></div>
-        <div class="stat"><div class="stat-label">커버 지역</div><div class="stat-val" id="stat-regions">0</div><div class="stat-sub">전국 상권</div></div>
-      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="stat" style="border-left:3px solid var(--g)"><div class="stat-label">✅ 발행완료</div><div class="stat-val" style="color:var(--g)" id="stat-done">0</div></div>
         <div class="stat" style="border-left:3px solid var(--amber)"><div class="stat-label">⏳ 미발행</div><div class="stat-val" style="color:var(--amber)" id="stat-pending">0</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="stat"><div class="stat-label">예상 월 유입</div><div class="stat-val" id="stat-traffic">0</div><div class="stat-sub">글당 평균 50 UV</div></div>
-        <div class="stat"><div class="stat-label">예상 월 상담</div><div class="stat-val" id="stat-leads">0</div><div class="stat-sub">전환율 3%</div></div>
+
+      <!-- 지역 × 업종 매트릭스 -->
+      <div class="card" style="flex:1;display:flex;flex-direction:column">
+        <div class="card-hd"><i class="ti ti-table"></i><h3>지역 × 업종 발행 현황</h3>
+          <span class="badge badge-green" id="matrixTotalBadge" style="margin-left:auto"></span>
+        </div>
+        <div id="dashMatrix" style="overflow-x:auto">
+          <div style="text-align:center;padding:30px;color:var(--gray);font-size:11px">아직 생성된 글이 없어요</div>
+        </div>
       </div>
-      <div class="card" style="flex:1">
+
+      <div class="card">
         <div class="card-hd"><i class="ti ti-clock"></i><h3>최근 포스팅</h3></div>
         <div id="dash-recent"><div style="text-align:center;padding:20px;color:var(--gray);font-size:11px">✍️ 아직 없어요</div></div>
       </div>
