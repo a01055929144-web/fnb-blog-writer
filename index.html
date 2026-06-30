@@ -467,22 +467,10 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
             <input id="restLocation" class="mini-search" placeholder="예) 서울 강남구 역삼동" style="width:100%">
           </div>
           <div>
-            <div style="font-size:10px;font-weight:700;color:var(--gray);margin-bottom:3px">대표 메뉴</div>
-            <input id="restMenu" class="mini-search" placeholder="예) 참숯 갈비, 냉면, 된장찌개" style="width:100%">
+            <div style="font-size:10px;font-weight:700;color:var(--gray);margin-bottom:3px">추가 메모 <span style="font-weight:400;color:#94A3B8">(선택, 아는 만큼만)</span></div>
+            <textarea id="restMemo" class="mini-search" placeholder="예) 참숯갈비 전문, 1인 2~3만원대, 단체룸 있음" style="width:100%;min-height:60px;resize:vertical;font-family:inherit"></textarea>
+            <div style="font-size:9px;color:#94A3B8;margin-top:3px">메뉴·가격·분위기·영업시간 중 아는 것만 자유롭게 적어주세요. 비워두면 일반적인 후기로 작성돼요</div>
           </div>
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--gray);margin-bottom:3px">가격대</div>
-            <input id="restPrice" class="mini-search" placeholder="예) 1인 2~3만원대, 점심특선 1.2만원" style="width:100%">
-          </div>
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--gray);margin-bottom:3px">분위기·특징</div>
-            <input id="restFeature" class="mini-search" placeholder="예) 30년 전통, 단체룸 보유, 주차 가능" style="width:100%">
-          </div>
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--gray);margin-bottom:3px">영업시간</div>
-            <input id="restHours" class="mini-search" placeholder="예) 11:30~22:00, 매주 일요일 휴무" style="width:100%">
-          </div>
-
         </div>
       </div>
 
@@ -2985,10 +2973,7 @@ function togChannel(el){
 async function genRestContent(){
   var name=(document.getElementById('restName')||{}).value||'';
   var loc=(document.getElementById('restLocation')||{}).value||'';
-  var menu=(document.getElementById('restMenu')||{}).value||'';
-  var price=(document.getElementById('restPrice')||{}).value||'';
-  var feature=(document.getElementById('restFeature')||{}).value||'';
-  var hours=(document.getElementById('restHours')||{}).value||'';
+  var memo=(document.getElementById('restMemo')||{}).value||'';
   if(!name){ showToast('식당 이름을 입력해주세요'); return; }
   if(!loc){  showToast('위치를 입력해주세요'); return; }
   var btn=document.getElementById('restGenBtn');
@@ -2996,14 +2981,12 @@ async function genRestContent(){
   var area=document.getElementById('restContentArea');
   if(area) area.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray)">⏳ 4개 채널 동시 생성 중...</div>';
   var info=['식당명:'+name,'위치:'+loc];
-  if(menu) info.push('메뉴:'+menu);
-  if(price) info.push('가격:'+price);
-  if(feature) info.push('특징:'+feature);
-  if(hours) info.push('영업:'+hours);
+  if(memo) info.push('참고메모:'+memo);
   var base=info.join(' | ');
   var toneGuide = '\n작성 톤: 실제로 방문해본 듯한 자연스러운 후기. 음식 맛과 서비스가 좋았다는 내용을 중심으로 쓰고, '
     +'"식재료도 신선한 것 같았다" 정도의 한 문장만 자연스럽게 곁들이세요. 식자재를 따로 강조하거나 특별한 재료를 부각하지 마세요 '
-    +'(모든 식당이 좋은 재료를 쓴다고 말하므로 과한 어필은 오히려 광고처럼 보입니다). 메뉴·가격·분위기는 입력된 정보만 사용하고 추측하지 마세요.\n';
+    +'(모든 식당이 좋은 재료를 쓴다고 말하므로 과한 어필은 오히려 광고처럼 보입니다). '
+    +(memo ? '참고메모에 있는 내용만 사실로 사용하고 추측하지 마세요.\n' : '구체적인 메뉴·가격 정보가 없으니 막연하게 "다양한 메뉴", "정성스러운 한끼" 식으로 일반적인 표현을 쓰고, 없는 숫자나 메뉴명을 지어내지 마세요.\n');
   var labels={blog:'📝 네이버 블로그',insta:'📸 인스타그램',tiktok:'🎵 틱톡/릴스',kakao:'💬 카카오 채널'};
   var prompts={
     blog:'네이버 블로그 맛집 후기 1500자 이상.'+toneGuide+'정보:'+base+'. **제목**(이모지+식당명), **본문**(방문계기/메뉴·맛/분위기·서비스/총평), **해시태그**20개.',
