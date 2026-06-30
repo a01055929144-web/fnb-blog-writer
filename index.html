@@ -254,26 +254,23 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
   .nav-tab{flex-shrink:0;padding:10px 12px!important;font-size:12px!important}
   .page{padding:10px!important}
 
-  /* 모든 2단/3단/4단 인라인 grid를 강제로 1단으로 */
-  .page > div[style*="grid-template-columns"],
-  .page div[style*="display:grid"][style*="1fr 1fr"]{
+  /* class 기반 강제 세로 스택 (인라인 스타일보다 더 구체적인 선택자로 이김) */
+  div.responsive-split[style]{
     display:flex!important;flex-direction:column!important;
   }
-  /* Dashboard 좌우 분할 레이아웃 → 세로 스택 */
-  #page-dashboard > div[style*="grid-template-columns:1fr 1fr"]{
-    display:flex!important;flex-direction:column!important;
-  }
-  /* 키워드/맛집홍보 좌우 분할(.grid2) → 세로 스택 */
-  .grid2{display:flex!important;flex-direction:column!important;gap:12px!important}
+  .grid2[style]{display:flex!important;flex-direction:column!important;gap:12px!important}
 
   /* KPI 카드들 (3단/4단) → 2단으로 */
-  div[style*="grid-template-columns:repeat(3,1fr)"],
-  div[style*="grid-template-columns:repeat(4,1fr)"]{
+  div[style*="grid-template-columns:repeat(3,1fr)"][style]{
+    grid-template-columns:1fr 1fr!important;
+  }
+  div[style*="grid-template-columns:repeat(4,1fr)"][style]{
     grid-template-columns:1fr 1fr!important;
   }
 
   /* 업종 카드 그리드 (5단) → 모바일 3단 */
-  #dashIndGrid, .ind-grid{grid-template-columns:repeat(3,1fr)!important}
+  #dashIndGrid{grid-template-columns:repeat(3,1fr)!important}
+  .ind-grid{grid-template-columns:repeat(4,1fr)}
 
   /* 클러스터/카드형 그리드 1단 */
   .stat-grid{grid-template-columns:1fr 1fr}
@@ -301,9 +298,6 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
   /* 필터/검색 영역 줄바꿈 */
   #anRegionFilter, #anIndustryFilter{flex:1;min-width:110px}
   #anSearch{min-width:140px!important;max-width:none!important}
-
-  /* 시트 동기화/내보내기 버튼 영역 — 세로 스택 */
-  div[style*="저장 현황 배너"]{flex-direction:column!important}
 }
 
 /* ── 초소형 모바일 (480px 이하) ── */
@@ -353,7 +347,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page on" id="page-dashboard">
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
+  <div class="responsive-split" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
 
     <!-- 좌: 원클릭 자동화 -->
     <div class="card" style="padding:18px">
