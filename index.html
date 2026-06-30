@@ -1805,29 +1805,31 @@ function savePhone(){
    Dashboard / Analytics
 ══════════════════════════════════════ */
 function updateDashboard(){
+  var _hist = Array.isArray(history) ? history : [];
   var today = new Date().toLocaleDateString('ko-KR');
-  var todayCnt = history.filter(function(h){ return h.date===today; }).length;
-  var doneCnt  = history.filter(function(h){ return h.uploadStatus==='done'; }).length;
-  var pendCnt  = history.length - doneCnt;
-  var regions  = [...new Set(history.map(function(h){ return h.region; }))].length;
+  var todayCnt = _hist.filter(function(h){ return h.date===today; }).length;
+  var doneCnt  = _hist.filter(function(h){ return h.uploadStatus==='done'; }).length;
+  var pendCnt  = _hist.length - doneCnt;
+  var regionSet = {}; _hist.forEach(function(h){ if(h.region) regionSet[h.region]=1; });
+  var regions  = Object.keys(regionSet).length;
 
   var s = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
   s('stat-today',   todayCnt);
-  s('stat-total-sub', '전체 '+history.length+'개');
+  s('stat-total-sub', '전체 '+_hist.length+'개');
   s('stat-regions', regions);
   s('stat-done',    doneCnt);
   s('stat-pending', pendCnt);
-  s('stat-traffic', history.length * 50);
-  s('stat-leads',   Math.round(history.length * 50 * 0.03));
+  s('stat-traffic', _hist.length * 50);
+  s('stat-leads',   Math.round(_hist.length * 50 * 0.03));
 
   // 최근 포스팅 5개
   var el = document.getElementById('dash-recent');
   if(!el) return;
-  if(!history.length){
+  if(!_hist.length){
     el.innerHTML = '<div style="text-align:center;padding:24px 0;color:var(--gray);font-size:12px"><div style="font-size:28px;margin-bottom:6px">✍️</div>아직 생성된 포스팅이 없어요<br>원클릭 자동화로 시작해보세요</div>';
     return;
   }
-  el.innerHTML = history.slice(0,5).map(function(h){
+  el.innerHTML = _hist.slice(0,5).map(function(h){
     var isDone = h.uploadStatus==='done';
     return '<div style="padding:8px 10px;border-radius:var(--rs);background:var(--g1);border:1px solid var(--bd);display:flex;align-items:center;gap:8px">'
       +'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:'+(isDone?'#DCFCE7':'#FEF3C7')+';color:'+(isDone?'#166534':'#92400E')+';flex-shrink:0">'+(isDone?'발행완료':'미발행')+'</span>'
