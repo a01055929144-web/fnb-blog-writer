@@ -2959,19 +2959,11 @@ function loadSavedPosts(){
 function exportAllPosts(){
   if(!(history&&history.length)){ showToast('저장된 글이 없어요'); return; }
   var lines = (history||[]).map(function(h,i){
-    return '===== ['+(i+1)+'] '+(h.title||'')+'=====
-'
-      +'날짜:'+(h.date||'')+' | 지역:'+(h.region||'')+' | 업종:'+(h.industry||'')+'
-
-'
-      +(h.body||'')+'
-
-'
-      +((h.tags||[]).join?' '#+(h.tags||[]).join(' '):(h.tags||''))+'
-';
-  }).join('
-
-');
+    var tags = (h.tags&&h.tags.join)?h.tags.join(' '):(h.tags||'');
+    return '===== ['+(i+1)+'] '+(h.title||'').replace(/\n/g,' ')+'\n'
+      +'날짜:'+(h.date||'')+' | 지역:'+(h.region||'')+' | 업종:'+(h.industry||'')+'\n\n'
+      +(h.body||'')+'\n\n'+tags+'\n';
+  }).join('\n\n');
   var blob = new Blob([lines],{type:'text/plain;charset=utf-8'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
