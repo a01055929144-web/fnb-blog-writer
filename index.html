@@ -2076,16 +2076,16 @@ async function writeOnePost(item, idx, total, priceData){
   // 해시태그 파싱
   var tags = text.match(/#[\w가-힣]+/g) || [];
 
-  // FAQ 파싱 (Q1~Q3, A1~A3)
-  var faqM = text.match(/FAQ\s*[:：][\s\S]*?(?=요약\s*[:：]|해시태그\s*[:：]|$)/);
+  // FAQ 파싱 (해시태그 이후 ~ 요약 이전)
+  var faqM = text.match(/FAQ\s*[:：][\s\S]*?(?=요약\s*[:：]|본문\s*[:：]|$)/);
   var faq  = faqM ? faqM[0].replace(/FAQ\s*[:：]\s*/, '').trim() : '';
 
-  // GEO 요약 파싱
-  var summaryM = text.match(/요약\s*[:：]\s*([\s\S]*?)(?=해시태그\s*[:：]|$)/);
+  // GEO 요약 파싱 (요약 이후 ~ 본문 이전)
+  var summaryM = text.match(/요약\s*[:：]\s*([\s\S]*?)(?=본문\s*[:：]|$)/);
   var summary  = summaryM ? summaryM[1].trim() : '';
 
-  // 본문 파싱 ("본문:" 라벨만 추출, FAQ/요약/해시태그 이전까지)
-  var bodyM = text.match(/본문\s*[:：]\s*([\s\S]*?)(?=FAQ\s*[:：]|요약\s*[:：]|해시태그\s*[:：]|$)/);
+  // 본문 파싱 ("본문:" 라벨 이후 끝까지 — 이제 본문이 마지막 항목)
+  var bodyM = text.match(/본문\s*[:：]\s*([\s\S]*?)$/);
   var body  = (bodyM ? bodyM[1] : text)
     .replace(/^#{1,6}\s*/gm, '')      // # 헤더 기호 제거
     .replace(/\*\*/g, '')            // 굵게 기호 제거
