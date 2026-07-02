@@ -3249,6 +3249,19 @@ function openNaverPlace(){
   if(!/^https?:\/\//.test(link)){ showToast('올바른 링크 형식이 아니에요 (https://로 시작)'); return; }
   window.open(link, '_blank');
 }
+
+async function runFixRowHeights(){
+  showToast('⏳ 기존 행 높이 정리 중...');
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'fixRowHeights', sheetId:SHEET_ID})
+    });
+    var d = await res.json();
+    if(d.success) showToast('✅ ' + d.message);
+    else showToast('❌ 실패: ' + (d.message||''));
+  }catch(e){ showToast('❌ 오류: '+e.message); }
+}
 </script>
 </body>
 </html>
