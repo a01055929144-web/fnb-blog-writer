@@ -116,6 +116,7 @@ function doPost(e) {
     if (data.action === 'updateResto')   return out.setContent(JSON.stringify(updateResto_(data)));
     if (data.action === 'deleteResto')   return out.setContent(JSON.stringify(deleteResto_(data)));
     if (data.action === 'deletePost')    return out.setContent(JSON.stringify(deletePost_(data)));
+    if (data.action === 'fixRowHeights')  return out.setContent(JSON.stringify(fixRowHeights_(data)));
     return out.setContent(JSON.stringify(savePost_(data)));
   } catch (err) {
     return out.setContent(JSON.stringify({success: false, message: err.toString()}));
@@ -269,6 +270,47 @@ function updatePost_(data) {
   }
   return {success: true, row: targetRow};
 }
+
+/* ══════════════════════════════════════
+   기존 행 높이 일괄 21px 고정 (웹에서 호출)
+══════════════════════════════════════ */
+function fixRowHeights_(data) {
+  var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var fixed = 0;
+
+  // 작성글 탭
+  var postSheet = ss.getSheetByName(SHEET.posts);
+  if (postSheet) {
+    var lastRow = postSheet.getLastRow();
+    if (lastRow > 1) {
+      postSheet.getRange(2, 9, lastRow - 1, 1)
+               .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+      for (var r = 2; r <= lastRow; r++) {
+        postSheet.setRowHeight(r, 21);
+        fixed++;
+      }
+      SpreadsheetApp.flush();
+    }
+  }
+
+  // 맛집홍보 탭
+  var restoSheet = ss.getSheetByName(SHEET.resto);
+  if (restoSheet) {
+    var restoLast = restoSheet.getLastRow();
+    if (restoLast > 1) {
+      restoSheet.getRange(2, 7, restoLast - 1, 1)
+                .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+      for (var r2 = 2; r2 <= restoLast; r2++) {
+        restoSheet.setRowHeight(r2, 21);
+        fixed++;
+      }
+      SpreadsheetApp.flush();
+    }
+  }
+
+  return {success: true, fixed: fixed, message: fixed + '개 행을 21px로 고정했습니다'};
+}
+
 
 function deletePost_(data) {
   var ss    = SpreadsheetApp.openById(data.sheetId || getSheetId_());
