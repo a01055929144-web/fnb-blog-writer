@@ -2230,23 +2230,26 @@ async function writeOnePost(item, idx, total, priceData){
   // 글 작성 (Haiku)
   var text = await callClaude(buildPostPrompt(kw, region, type, priceData||null), 5500, true); // v2.0: 본문2000~2300자 제한+FAQ+요약+해시태그 전체 완주 보장
 
-  // 제목 파싱 ("제목:" 라벨 기준)
-  var titleM = text.match(/제목\s*[:：]\s*(.+)/);
-  var title  = titleM ? titleM[1].trim().replace(/[#*]/g,'') : kw;
+  // ── BIV 출력 순서: 해시태그 → FAQ → AI검색요약 → 본문 → 제목(마지막) ──
 
   // 해시태그 파싱
-  var tags = text.match(/#[\w가-힣]+/g) || [];
+  var tagsM = text.match(/해시태그\s*[:：]\s*([\s\S]*?)(?=FAQ\s*[:：]|AI검색요약\s*[:：]|본문\s*[:：]|제목\s*[:：]|$)/);
+  var tags  = tagsM ? (tagsM[1].match(/#[\w가-힣]+/g)||[]) : (text.match(/#[\w가-힣]+/g)||[]);
 
-  // FAQ 파싱 (해시태그 이후 ~ 요약 이전)
-  var faqM = text.match(/FAQ\s*[:：][\s\S]*?(?=요약\s*[:：]|본문\s*[:：]|$)/);
-  var faq  = faqM ? faqM[0].replace(/FAQ\s*[:：]\s*/, '').trim() : '';
+  // FAQ 파싱
+  var faqM = text.match(/FAQ\s*[:：]\s*([\s\S]*?)(?=AI검색요약\s*[:：]|본문\s*[:：]|제목\s*[:：]|$)/);
+  var faq  = faqM ? faqM[1].trim() : '';
 
-  // GEO 요약 파싱 (요약 이후 ~ 본문 이전)
-  var summaryM = text.match(/요약\s*[:：]\s*([\s\S]*?)(?=본문\s*[:：]|$)/);
+  // AI검색요약 파싱
+  var summaryM = text.match(/AI검색요약\s*[:：]\s*([\s\S]*?)(?=본문\s*[:：]|제목\s*[:：]|$)/);
   var summary  = summaryM ? summaryM[1].trim() : '';
 
-  // 본문 파싱 ("본문:" 라벨 이후 끝까지 — 이제 본문이 마지막 항목)
-  var bodyM = text.match(/본문\s*[:：]\s*([\s\S]*?)$/);
+  // 본문 파싱 (본문: ~ 제목: 이전까지)
+  var bodyM = text.match(/본문\s*[:：]\s*([\s\S]*?)(?=제목\s*[:：]|$)/);
+
+  // 제목 파싱 (마지막)
+  var titleM = text.match(/제목\s*[:：]\s*(.+)/);
+  var title  = titleM ? titleM[1].trim().replace(/[#*]/g,'') : kw;
   var body  = (bodyM ? bodyM[1] : text)
     .replace(/^#{1,6}\s*/gm, '')      // # 헤더 기호 제거
     .replace(/\*\*/g, '')            // 굵게 기호 제거
