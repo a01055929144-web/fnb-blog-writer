@@ -117,6 +117,7 @@ function doPost(e) {
     if (data.action === 'deleteResto')   return out.setContent(JSON.stringify(deleteResto_(data)));
     if (data.action === 'deletePost')    return out.setContent(JSON.stringify(deletePost_(data)));
     if (data.action === 'fixRowHeights')  return out.setContent(JSON.stringify(fixRowHeights_(data)));
+    if (data.action === 'checkRowHeights') return out.setContent(JSON.stringify(checkRowHeights_(data)));
     return out.setContent(JSON.stringify(savePost_(data)));
   } catch (err) {
     return out.setContent(JSON.stringify({success: false, message: err.toString()}));
@@ -274,6 +275,21 @@ function updatePost_(data) {
 /* ══════════════════════════════════════
    기존 행 높이 일괄 21px 고정 (웹에서 호출)
 ══════════════════════════════════════ */
+function checkRowHeights_(data) {
+  var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var sheet = ss.getSheetByName(SHEET.posts);
+  if (!sheet) return {success:false, message:'시트 없음'};
+  var lastRow = sheet.getLastRow();
+  var samples = [];
+  // 마지막 5개 행의 실제 높이 체크
+  var start = Math.max(2, lastRow - 4);
+  for (var r = start; r <= lastRow; r++) {
+    samples.push({row: r, height: sheet.getRowHeight(r)});
+  }
+  return {success: true, lastRow: lastRow, samples: samples};
+}
+
+
 function fixRowHeights_(data) {
   var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
   var fixed = 0;
