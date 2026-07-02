@@ -229,13 +229,15 @@ function savePost_(data) {
     String(data.body || ''),
     data.hashtags || '', Number(data.chars) || 0, '미발행'
   ]);
+  SpreadsheetApp.flush(); // appendRow 완전히 끝날 때까지 대기
   var newRow = sheet.getLastRow();
   if (newRow % 2 === 0) sheet.getRange(newRow, 1, 1, POST_HEADERS.length).setBackground('#F8FAFC');
   sheet.getRange(newRow, 12).setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
-  sheet.getRange(newRow, 9).setWrap(false);
+  // 줄바꿈 완전 차단 + 행 높이 고정
+  sheet.getRange(newRow, 9).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
   sheet.setRowHeight(newRow, 21);
-  SpreadsheetApp.flush(); // 즉시 반영 강제
-  var actualHeight = sheet.getRowHeight(newRow); // 실제 적용된 높이 확인
+  SpreadsheetApp.flush(); // setRowHeight 즉시 반영
+  var actualHeight = sheet.getRowHeight(newRow);
   updateRegion_(ss, sido + (gugun ? ' ' + gugun : ''), data.industry);
   return {success: true, row: newRow, rowHeight: actualHeight};
 }
@@ -320,10 +322,11 @@ function saveResto_(data) {
     data.title    || (data.restName + ' ' + data.channel),
     data.content  || '', '미발행'
   ]);
+  SpreadsheetApp.flush();
   var newRow = sheet.getLastRow();
   if (newRow % 2 === 0) sheet.getRange(newRow, 1, 1, RESTO_HEADERS.length).setBackground('#F8FAFC');
   sheet.getRange(newRow, 8).setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
-  sheet.getRange(newRow, 7).setWrap(false);
+  sheet.getRange(newRow, 7).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
   sheet.setRowHeight(newRow, 21);
   SpreadsheetApp.flush();
   var actualHeight = sheet.getRowHeight(newRow);
@@ -484,7 +487,7 @@ function cleanupSheets() {
   // 7. ★ 작성글 기존 행 전부 21px 고정 + 줄바꿈 해제
   var postLastRow = postSheet.getLastRow();
   if (postLastRow > 1) {
-    postSheet.getRange(2, 9, postLastRow - 1, 1).setWrap(false);
+    postSheet.getRange(2, 9, postLastRow - 1, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
     for (var pr = 2; pr <= postLastRow; pr++) {
       postSheet.setRowHeight(pr, 21);
     }
@@ -494,7 +497,7 @@ function cleanupSheets() {
   // 8. ★ 맛집홍보 기존 행 전부 21px 고정 + 줄바꿈 해제
   var restoLastRow = restoSheet.getLastRow();
   if (restoLastRow > 1) {
-    restoSheet.getRange(2, 7, restoLastRow - 1, 1).setWrap(false);
+    restoSheet.getRange(2, 7, restoLastRow - 1, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
     for (var rr = 2; rr <= restoLastRow; rr++) {
       restoSheet.setRowHeight(rr, 21);
     }
