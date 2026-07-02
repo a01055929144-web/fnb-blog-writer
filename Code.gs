@@ -223,23 +223,23 @@ function savePost_(data) {
   var sido   = data.sido  || region.split(' ')[0] || '';
   var gugun  = data.gugun || region.split(' ').slice(1).join(' ') || '';
   var rowNum = sheet.getLastRow();
+  // 본문은 앞 100자 미리보기만 저장 — 긴 본문이 행 높이를 늘리지 않도록
+  var bodyPreview = String(data.body || '').replace(/\n/g, ' ').substring(0, 100);
   sheet.appendRow([
     rowNum,
     data.date || new Date().toLocaleDateString('ko-KR'),
     sido, gugun,
     data.industry || '', data.type || '',
     data.keyword || data.kw || '', data.title || '',
-    String(data.body || ''),
+    bodyPreview,
     data.hashtags || '', Number(data.chars) || 0, '미발행'
   ]);
-  SpreadsheetApp.flush(); // appendRow 완전히 끝날 때까지 대기
+  SpreadsheetApp.flush();
   var newRow = sheet.getLastRow();
   if (newRow % 2 === 0) sheet.getRange(newRow, 1, 1, POST_HEADERS.length).setBackground('#F8FAFC');
   sheet.getRange(newRow, 12).setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
-  // 줄바꿈 완전 차단 + 행 높이 고정
-  sheet.getRange(newRow, 9).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
   sheet.setRowHeight(newRow, 21);
-  SpreadsheetApp.flush(); // setRowHeight 즉시 반영
+  SpreadsheetApp.flush();
   var actualHeight = sheet.getRowHeight(newRow);
   updateRegion_(ss, sido + (gugun ? ' ' + gugun : ''), data.industry);
   return {success: true, row: newRow, rowHeight: actualHeight};
@@ -328,14 +328,17 @@ function fixRowHeights_(data) {
   var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
   var fixed = 0;
 
-  // 작성글 탭
+  // 작성글 탭 — 본문 셀을 앞 100자로 자르고 21px 고정
   var postSheet = ss.getSheetByName(SHEET.posts);
   if (postSheet) {
     var lastRow = postSheet.getLastRow();
     if (lastRow > 1) {
-      postSheet.getRange(2, 9, lastRow - 1, 1)
-               .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
       for (var r = 2; r <= lastRow; r++) {
+        var cell = postSheet.getRange(r, 9);
+        var val = String(cell.getValue() || '');
+        if (val.length > 100) {
+          cell.setValue(val.replace(/\n/g, ' ').substring(0, 100));
+        }
         postSheet.setRowHeight(r, 21);
         fixed++;
       }
@@ -343,14 +346,17 @@ function fixRowHeights_(data) {
     }
   }
 
-  // 맛집홍보 탭
+  // 맛집홍보 탭 — 콘텐츠 셀을 앞 100자로 자르고 21px 고정
   var restoSheet = ss.getSheetByName(SHEET.resto);
   if (restoSheet) {
     var restoLast = restoSheet.getLastRow();
     if (restoLast > 1) {
-      restoSheet.getRange(2, 7, restoLast - 1, 1)
-                .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
       for (var r2 = 2; r2 <= restoLast; r2++) {
+        var cell2 = restoSheet.getRange(r2, 7);
+        var val2 = String(cell2.getValue() || '');
+        if (val2.length > 100) {
+          cell2.setValue(val2.replace(/\n/g, ' ').substring(0, 100));
+        }
         restoSheet.setRowHeight(r2, 21);
         fixed++;
       }
@@ -407,18 +413,18 @@ function saveResto_(data) {
   var ss    = SpreadsheetApp.openById(data.sheetId || getSheetId_());
   var sheet = ensureSheet_(ss, SHEET.resto, RESTO_HEADERS);
   var rowNum = sheet.getLastRow();
+  var contentPreview = String(data.content || '').replace(/\n/g, ' ').substring(0, 100);
   sheet.appendRow([
     rowNum,
     data.date     || new Date().toLocaleDateString('ko-KR'),
     data.restName || '', data.location || '', data.channel || '',
     data.title    || (data.restName + ' ' + data.channel),
-    data.content  || '', '미발행'
+    contentPreview, '미발행'
   ]);
   SpreadsheetApp.flush();
   var newRow = sheet.getLastRow();
   if (newRow % 2 === 0) sheet.getRange(newRow, 1, 1, RESTO_HEADERS.length).setBackground('#F8FAFC');
   sheet.getRange(newRow, 8).setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
-  sheet.getRange(newRow, 7).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
   sheet.setRowHeight(newRow, 21);
   SpreadsheetApp.flush();
   var actualHeight = sheet.getRowHeight(newRow);
