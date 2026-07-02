@@ -16,7 +16,7 @@ const SHEET = {
 };
 
 const RESTO_HEADERS  = ['번호','날짜','식당명','위치','채널','제목','콘텐츠','발행상태'];
-const POST_HEADERS   = ['번호','날짜','지역(시도)','시/구','업종','콘텐츠타입','핵심키워드','제목','본문(전체)','해시태그','글자수','발행상태'];
+const POST_HEADERS   = ['번호','날짜','지역(시도)','시/구','업종','콘텐츠타입','핵심키워드','제목','본문미리보기','해시태그','글자수','발행상태'];
 const REGION_HEADERS = ['지역','시도','시/구','총글수','발행완료','미발행','주요업종','최종업데이트'];
 
 const ITEM_MAP = {
@@ -223,22 +223,21 @@ function savePost_(data) {
   var sido   = data.sido  || region.split(' ')[0] || '';
   var gugun  = data.gugun || region.split(' ').slice(1).join(' ') || '';
   var rowNum = sheet.getLastRow();
-  // 본문 전체 저장 — 행 높이는 CLIP으로 고정 (내용은 보존, 셀에서 잘려 보임)
+  // 본문 첫 50자 미리보기만 저장 — 한 줄로 유지해 행 높이 고정
+  var preview = String(data.body || '').replace(/\n/g,' ').replace(/\s+/g,' ').trim().substring(0,50);
   sheet.appendRow([
     rowNum,
     data.date || new Date().toLocaleDateString('ko-KR'),
     sido, gugun,
     data.industry || '', data.type || '',
     data.keyword || data.kw || '', data.title || '',
-    String(data.body || ''),
+    preview,
     data.hashtags || '', Number(data.chars) || 0, '미발행'
   ]);
   SpreadsheetApp.flush();
   var newRow = sheet.getLastRow();
   if (newRow % 2 === 0) sheet.getRange(newRow, 1, 1, POST_HEADERS.length).setBackground('#F8FAFC');
   sheet.getRange(newRow, 12).setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
-  // 본문 셀 — CLIP으로 행 높이 확장 차단 (내용 전체 보존, 셀 크기만 고정)
-  sheet.getRange(newRow, 9).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
   sheet.setRowHeight(newRow, 21);
   SpreadsheetApp.flush();
   updateRegion_(ss, sido + (gugun ? ' ' + gugun : ''), data.industry);
@@ -328,14 +327,15 @@ function fixRowHeights_(data) {
   var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
   var fixed = 0;
 
-  // 작성글 탭 — CLIP 적용 + 21px 고정 (본문 내용은 건드리지 않음)
+  // 작성글 탭 — 본문을 50자 한줄로 정리 후 21px 고정
   var postSheet = ss.getSheetByName(SHEET.posts);
   if (postSheet) {
     var lastRow = postSheet.getLastRow();
     if (lastRow > 1) {
-      postSheet.getRange(2, 9, lastRow - 1, 1)
-               .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
       for (var r = 2; r <= lastRow; r++) {
+        var cell = postSheet.getRange(r, 9);
+        var val = String(cell.getValue() || '').replace(/\n/g,' ').replace(/\s+/g,' ').trim();
+        if (val.length > 50) cell.setValue(val.substring(0, 50));
         postSheet.setRowHeight(r, 21);
         fixed++;
       }
