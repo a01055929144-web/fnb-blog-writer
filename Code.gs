@@ -234,8 +234,10 @@ function savePost_(data) {
   sheet.getRange(newRow, 12).setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
   sheet.getRange(newRow, 9).setWrap(false);
   sheet.setRowHeight(newRow, 21);
+  SpreadsheetApp.flush(); // 즉시 반영 강제
+  var actualHeight = sheet.getRowHeight(newRow); // 실제 적용된 높이 확인
   updateRegion_(ss, sido + (gugun ? ' ' + gugun : ''), data.industry);
-  return {success: true, row: newRow};
+  return {success: true, row: newRow, rowHeight: actualHeight};
 }
 
 function updatePost_(data) {
@@ -323,7 +325,9 @@ function saveResto_(data) {
   sheet.getRange(newRow, 8).setBackground('#FEF3C7').setFontColor('#92400E').setFontWeight('bold');
   sheet.getRange(newRow, 7).setWrap(false);
   sheet.setRowHeight(newRow, 21);
-  return {success: true, row: newRow};
+  SpreadsheetApp.flush();
+  var actualHeight = sheet.getRowHeight(newRow);
+  return {success: true, row: newRow, rowHeight: actualHeight};
 }
 
 function updateResto_(data) {
