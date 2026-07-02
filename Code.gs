@@ -118,6 +118,7 @@ function doPost(e) {
     if (data.action === 'deletePost')    return out.setContent(JSON.stringify(deletePost_(data)));
     if (data.action === 'fixRowHeights')  return out.setContent(JSON.stringify(fixRowHeights_(data)));
     if (data.action === 'checkRowHeights') return out.setContent(JSON.stringify(checkRowHeights_(data)));
+    if (data.action === 'cleanTestData')   return out.setContent(JSON.stringify(cleanTestData_(data)));
     return out.setContent(JSON.stringify(savePost_(data)));
   } catch (err) {
     return out.setContent(JSON.stringify({success: false, message: err.toString()}));
@@ -275,6 +276,39 @@ function updatePost_(data) {
 /* ══════════════════════════════════════
    기존 행 높이 일괄 21px 고정 (웹에서 호출)
 ══════════════════════════════════════ */
+/* 테스트 데이터 삭제 */
+function cleanTestData_(data) {
+  var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var testKeywords = ['테스트','진단','행높이','검증','21px','WrapClip','높이'];
+  var deleted = 0;
+
+  // 작성글 탭 정리
+  var postSheet = ss.getSheetByName(SHEET.posts);
+  if (postSheet) {
+    for (var r = postSheet.getLastRow(); r >= 2; r--) {
+      var kw = String(postSheet.getRange(r, 7).getValue());
+      var title = String(postSheet.getRange(r, 8).getValue());
+      var combined = kw + title;
+      var isTest = testKeywords.some(function(t){ return combined.includes(t); });
+      if (isTest) { postSheet.deleteRow(r); deleted++; }
+    }
+  }
+
+  // 지역현황 탭 정리
+  var regSheet = ss.getSheetByName(SHEET.regions);
+  if (regSheet) {
+    for (var r2 = regSheet.getLastRow(); r2 >= 2; r2--) {
+      var reg = String(regSheet.getRange(r2, 1).getValue());
+      var isTest2 = testKeywords.some(function(t){ return reg.includes(t); });
+      if (isTest2) { regSheet.deleteRow(r2); deleted++; }
+    }
+  }
+
+  SpreadsheetApp.flush();
+  return {success: true, deleted: deleted, message: deleted + '개 테스트 행 삭제 완료'};
+}
+
+
 function checkRowHeights_(data) {
   var ss = SpreadsheetApp.openById(data.sheetId || getSheetId_());
   var sheet = ss.getSheetByName(SHEET.posts);
