@@ -2607,16 +2607,37 @@ function publishCopy(el){
   var tags = Array.isArray(h.tags) ? h.tags.join(' ') : (h.tags||'');
   var text = (h.title||'') + '\n\n' + (h.body||'') + CTA_TEXT + '\n\n' + tags;
   navigator.clipboard.writeText(text).then(function(){
-    // history 배열에서 직접 찾아서 수정 (참조 끊김 방지)
-    var target = (history||[]).find(function(x){ return x.title===h.title && x.date===h.date; });
-    if(target) target.uploadStatus = 'done';
-    h.uploadStatus = 'done';
+    // ① history 원본 배열에서 같은 객체 찾아 직접 수정
+    var orig = (history||[]).find(function(x){
+      return x.title === h.title && x.date === h.date;
+    });
+    if(orig){
+      orig.uploadStatus = 'done';
+      h.uploadStatus   = 'done'; // _anaList 참조도 동기화
+    } else {
+      h.uploadStatus = 'done';
+    }
     saveApp();
-    sheetUpdateStatus(h);
+    // ② 시트 업데이트 — rowId 있으면 rowId로, 없으면 title로 찾음
+    sheetUpdateStatus(orig || h);
+    // ③ 화면 재렌더링
     filterHistory();
     updateDashboard();
     updateAnalytics();
     showToast('✅ 복사 완료! 네이버 블로그에 붙여넣기 후 발행하세요.');
+  }).catch(function(){
+    // 클립보드 권한 없을 때도 발행완료 처리
+    var orig = (history||[]).find(function(x){
+      return x.title === h.title && x.date === h.date;
+    });
+    if(orig) orig.uploadStatus = 'done';
+    h.uploadStatus = 'done';
+    saveApp();
+    sheetUpdateStatus(orig || h);
+    filterHistory();
+    updateDashboard();
+    updateAnalytics();
+    showToast('✅ 발행완료 처리됐어요. (클립보드 복사는 직접 해주세요)');
   });
 }
 
@@ -2636,15 +2657,24 @@ function toggleUpload(el){
 /* 시트 발행상태 업데이트 (비동기, 실패해도 무시) */
 function sheetUpdateStatus(h){
   try{
+    // rowId 없으면 title로 fallback — 반드시 둘 중 하나로 찾음
+    if(!h.rowId && !h.title) return;
     fetch(SHEET_ENDPOINT,{
       method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:JSON.stringify({
-        action:'updatePost',
+        action:'updateStatus',
         sheetId: SHEET_ID,
-        rowId: h.rowId,
-        oldTitle: h.title,
-        status: h.uploadStatus==='done'?'발행완료':'미발행'
+        rowId: h.rowId || null,
+        title: h.title,
+        uploadStatus: h.uploadStatus==='done'?'done':'pending'
       })
+    }).then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d && d.row && h.rowId == null){
+        // rowId를 처음 받아온 경우 저장
+        h.rowId = d.row;
+        saveApp();
+      }
     }).catch(function(){});
   }catch(e){}
 }
