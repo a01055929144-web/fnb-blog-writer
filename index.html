@@ -2607,13 +2607,15 @@ function publishCopy(el){
   var tags = Array.isArray(h.tags) ? h.tags.join(' ') : (h.tags||'');
   var text = (h.title||'') + '\n\n' + (h.body||'') + CTA_TEXT + '\n\n' + tags;
   navigator.clipboard.writeText(text).then(function(){
-    // 발행완료 토글도 자동으로
+    // history 배열에서 직접 찾아서 수정 (참조 끊김 방지)
+    var target = (history||[]).find(function(x){ return x.title===h.title && x.date===h.date; });
+    if(target) target.uploadStatus = 'done';
     h.uploadStatus = 'done';
     saveApp();
-    // 시트 상태 업데이트
     sheetUpdateStatus(h);
     filterHistory();
     updateDashboard();
+    updateAnalytics();
     showToast('✅ 복사 완료! 네이버 블로그에 붙여넣기 후 발행하세요.');
   });
 }
