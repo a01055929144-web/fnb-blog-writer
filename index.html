@@ -2423,11 +2423,14 @@ async function startAutoMode(){
     setStep(2,'⏳','글기획 자동 생성 중...');
     var kwList = selKws.map(function(k){ return k.kw||k.keyword||''; }).join(', ');
     var regions = [...new Set(selKws.map(function(k){ return k.region||''; }).filter(Boolean))].join(', ') || regionSummary;
+    var _intent = (typeof currentIntent!=='undefined'?currentIntent:'업체찾기');
     var clPrompt = 'F&B 식자재 블로그 글기획 8개 JSON.\n'
       +'업종:'+industry+' / 지역:'+regions+' / 키워드:'+kwList+'\n'
-      +'신규창업 사장님 타겟. JSON만:\n'
-      +'{"cluster":[{"title":"제목","keyword":"키워드","intent":"창업","priority":"high","region":"서울 강남구","type":"창업컨설팅"}]}\n'
-      +'8개. priority:high/mid/low. type:창업컨설팅/정보성/납품노하우.';
+      +'검색의도:'+_intent+' — 이 의도를 가진 창업자 타겟. JSON만:\n'
+      +'{"cluster":[{"title":"제목","keyword":"키워드","intent":"'+_intent+'","priority":"high","region":"서울 강남구","type":"정보글"}]}\n'
+      +'8개. priority:high/mid/low.\n'
+      +'type은 반드시 이 중에서: 정보글/가이드/체크리스트/비교/TOP5/FAQ/실수/비용/후기형.\n'
+      +'같은 키워드도 type을 다양하게 배분해서 중복 없이.';
 
     var clText = await callClaude(clPrompt, 1800, true); // 토큰 늘려 JSON 잘림 방지
     var clClean = clText.replace(/```json|```/g,'').trim();
