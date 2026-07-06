@@ -226,30 +226,23 @@ function fetchPrice_(params) {
   var today    = new Date();
   var todayStr = Utilities.formatDate(today, 'Asia/Seoul', 'yyyy-MM-dd');
 
-  // KAMIS 실제 응답 구조:
-  // { error_code:"000", price:[{productName, item_name, unit, dpr1(당일), dpr2(1일전), direction}] }
-  // p_productclscode: 100=식량, 200=채소, 400=과일, 600=수산, 700=축산
-
-  var clsMap = {
-    '한식':      ['200','700'],   // 채소 + 축산
-    '양식':      ['200','700'],
-    '일식':      ['600'],         // 수산
-    '중식':      ['200','700'],
-    '샐러드':    ['400','200'],   // 과일 + 채소
-    '축산':      ['700'],
-    '수산':      ['600'],
-    '공산품':    ['100','200'],   // 식량 + 채소
-    '주류':      [],
+  // KAMIS category_code 기반 필터
+  // 100=식량작물, 200=채소류, 300=특용, 400=과일류, 500=축산물, 600=수산물
+  var catMap = {
+    '한식':         ['200','500'],  // 채소 + 축산
+    '양식':         ['200','500'],
+    '일식':         ['600','200'],  // 수산 + 채소
+    '중식':         ['200','500'],
+    '샐러드':       ['400','200'],  // 과일 + 채소
+    '축산':         ['500'],
+    '수산':         ['600'],
+    '공산품':       ['100','200'],  // 식량 + 채소
+    '주류':         ['200'],
     '카페베이커리': ['400','100']
   };
-  var clsCodes = clsMap[key] || ['200'];
+  var catCodes = catMap[key] || ['200'];
 
-  if (!clsCodes.length) {
-    return {success:true, industry:key, date:todayStr, prices:[],
-      summary: key + '은(는) 단가 조회 대상 외 업종입니다.'};
-  }
-
-  var props   = PropertiesService.getScriptProperties();
+  var props    = PropertiesService.getScriptProperties();
   var kamisKey = props.getProperty('KAMIS_CERT_KEY') || '';
   var kamisId  = props.getProperty('KAMIS_CERT_ID')  || '';
   if (!kamisKey) {
@@ -257,52 +250,56 @@ function fetchPrice_(params) {
       message:'KAMIS_CERT_KEY 스크립트 속성 없음'};
   }
 
-  var yyyy   = Utilities.formatDate(today, 'Asia/Seoul', 'yyyy');
+  var yyyy = Utilities.formatDate(today, 'Asia/Seoul', 'yyyy');
   var results = [];
 
-  for (var ci = 0; ci < clsCodes.length; ci++) {
-    try {
-      var url = KAMIS_BASE
-        + '?action=dailySalesList'
-        + '&p_cert_key=' + kamisKey
-        + '&p_cert_id='  + kamisId
-        + '&p_returntype=json'
-        + '&p_productclscode=' + clsCodes[ci]
-        + '&p_yyyy=' + yyyy
-        + '&p_period=1'
-        + '&p_convert_kg_yn=Y';
+  try {
+    // 전체 품목 1회 호출 (p_productclscode 무관하게 동일)
+    var url = KAMIS_BASE
+      + '?action=dailySalesList'
+      + '&p_cert_key=' + kamisKey
+      + '&p_cert_id='  + kamisId
+      + '&p_returntype=json'
+      + '&p_productclscode=01'
+      + '&p_yyyy=' + yyyy
+      + '&p_period=1'
+      + '&p_convert_kg_yn=Y';
 
-      var res = UrlFetchApp.fetch(url, {muteHttpExceptions:true});
-      if (res.getResponseCode() !== 200) continue;
+    var res = UrlFetchApp.fetch(url, {muteHttpExceptions:true});
+    if (res.getResponseCode() !== 200) {
+      return {success:false, industry:key, date:todayStr, prices:[],
+        message:'KAMIS HTTP ' + res.getResponseCode()};
+    }
 
-      var d = JSON.parse(res.getContentText());
-      // 실제 구조: d.price[] (error_code === "000" 이면 정상)
-      if (!d || d.error_code !== '000' || !Array.isArray(d.price)) continue;
+    var d = JSON.parse(res.getContentText());
+    if (!d || d.error_code !== '000' || !Array.isArray(d.price)) {
+      return {success:true, industry:key, date:todayStr, prices:[],
+        message:'KAMIS error_code: ' + (d ? d.error_code : 'null')};
+    }
 
-      // 도매가(product_cls_code=02) 우선, 없으면 소매가(01)
-      var wholesale = d.price.filter(function(it) {
-        return it.product_cls_code === '02' && it.dpr1 && it.dpr1 !== '-';
-      });
-      var items = wholesale.length ? wholesale : d.price.filter(function(it) {
-        return it.dpr1 && it.dpr1 !== '-';
-      });
+    // category_code로 업종별 필터 (각 카테고리 최대 3개)
+    catCodes.forEach(function(cat) {
+      var catItems = d.price.filter(function(it) {
+        return it.category_code === cat
+          && it.dpr1 && it.dpr1 !== '-' && it.dpr1 !== '0';
+      }).slice(0, 3);
 
-      items.slice(0, 4).forEach(function(it) {
+      catItems.forEach(function(it) {
         var dir = it.direction === '1' ? '▲' : it.direction === '2' ? '▼' : '-';
         results.push({
           name:      it.item_name || it.productName || '',
-          unit:      it.unit      || 'kg',
-          wholesale: it.dpr1      || '-',
-          retail:    it.dpr2      || '-',
-          prevDay:   it.dpr2      || '-',
+          unit:      it.unit || 'kg',
+          wholesale: it.dpr1 || '-',
+          retail:    it.dpr2 || '-',
           trend:     dir,
           date:      todayStr
         });
       });
-    } catch(e) {
-      Logger.log('KAMIS 오류: ' + clsCodes[ci] + ' - ' + e);
-    }
-    Utilities.sleep(300);
+    });
+
+  } catch(e) {
+    Logger.log('KAMIS 오류: ' + e);
+    return {success:false, industry:key, date:todayStr, prices:[], message:e.toString()};
   }
 
   return {
