@@ -6,13 +6,12 @@
 const DEFAULT_SHEET_ID = '1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
-// KAMIS API — 한국농수산식품유통공사 (현재 사용)
-const KAMIS_CERT_KEY = '19ec2692-c323-4ec1-8f6d-b87137e92c3d';
-const KAMIS_CERT_ID  = '8670';
-const KAMIS_BASE     = 'http://www.kamis.or.kr/service/price/xml.do';
+// KAMIS API — 한국농수산식품유통공사
+// 키는 스크립트 속성(KAMIS_CERT_KEY, KAMIS_CERT_ID)에서 읽음
+const KAMIS_BASE = 'http://www.kamis.or.kr/service/price/xml.do';
 
 // 기존 공공API — 현재 HTTP 500 오류로 비활성
-const PRICE_API_KEY = 'b8ea502c6a13435db5d67932aa833a5d247d74be30c63b319f047b9907b42cdc';
+const PRICE_API_KEY  = 'b8ea502c6a13435db5d67932aa833a5d247d74be30c63b319f047b9907b42cdc';
 const PRICE_API_BASE = 'https://apis.data.go.kr/B552845/perDay';
 
 const SHEET = {
@@ -207,10 +206,14 @@ function fetchPrice_(params) {
 
   for (var ci = 0; ci < clsCodes.length; ci++) {
     try {
+      var props = PropertiesService.getScriptProperties();
+      var kamisKey = props.getProperty('KAMIS_CERT_KEY') || '';
+      var kamisId  = props.getProperty('KAMIS_CERT_ID')  || '';
+      if (!kamisKey) { Logger.log('KAMIS_CERT_KEY 스크립트 속성 없음'); continue; }
       var url = KAMIS_BASE
         + '?action=dailySalesList'
-        + '&p_cert_key=' + KAMIS_CERT_KEY
-        + '&p_cert_id='  + KAMIS_CERT_ID
+        + '&p_cert_key=' + kamisKey
+        + '&p_cert_id='  + kamisId
         + '&p_returntype=json'
         + '&p_productclscode=' + clsCodes[ci]
         + '&p_yyyy=' + yyyy
