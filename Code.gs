@@ -335,12 +335,21 @@ function fetchPrice_(params) {
     return {success:false, industry:key, date:todayStr, prices:[], message:e.toString()};
   }
 
+  // 품목명 중복 제거 (같은 item_name이 소매/도매로 2번 나올 수 있음)
+  var seen = {};
+  var deduped = results.filter(function(p) {
+    var key2 = p.name;
+    if (seen[key2]) return false;
+    seen[key2] = true;
+    return true;
+  });
+
   return {
     success: true,
     industry: key,
     date: todayStr,
-    prices: results,
-    summary: results.slice(0, 3).map(function(p) {
+    prices: deduped,
+    summary: deduped.slice(0, 4).map(function(p) {
       return p.name + ': ' + p.wholesale + '원/' + p.unit;
     }).join(' | ')
   };
