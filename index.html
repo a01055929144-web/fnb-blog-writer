@@ -2189,11 +2189,11 @@ function buildPostPrompt(kw, region, type, priceData, intent){
     // 패턴5: 지역 뒤로 (업종+창업+지역+키워드)
     industry+' 창업, '+loc+'에서 '+kw+' 납품은 어떻게 준비할까',
     // 패턴6: 실무형
-    loc+' '+kw+' 납품, 실제 상담에서 가장 많이 받는 질문',
+    loc+' '+industry+', '+kw+' 실제 상담에서 가장 많이 받는 질문',
     // 패턴7: 비교형 (키워드 앞으로)
-    kw+' 납품업체, '+loc+' '+industry+'은 무엇을 확인할까',
+    kw+' 공급업체, '+loc+' '+industry+'은 무엇을 확인할까',
     // 패턴8: 체크리스트형
-    industry+' '+kw+' 납품 체크리스트, 계약 전에 확인하세요'
+    industry+' 창업, '+kw+' 계약 전에 확인할 체크리스트'
   ];
   // 키워드 해시로 패턴 고정 (같은 키워드면 항상 같은 패턴)
   var patternIdx = kw.split('').reduce(function(acc,c){return acc+c.charCodeAt(0);},0) % titlePatterns.length;
