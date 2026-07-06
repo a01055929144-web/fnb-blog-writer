@@ -166,48 +166,88 @@ function callClaude_(data) {
 }
 
 /* ══════════════════════════════════════
-   단가 조회 — 시트 저장 없이 결과만 반환
-   (PRICE_HEADERS / SHEET.price 참조 제거)
+   단가 조회 — KAMIS API (한국농수산식품유통공사)
+   구 B552845 API는 HTTP 500 오류로 KAMIS로 교체
 ══════════════════════════════════════ */
 function fetchPrice_(params) {
   var industry = params.industry || '한식';
   var key      = normalizeIndustry_(industry);
-  var items    = ITEM_MAP[key] || [];
   var today    = new Date();
-  var endDay   = Utilities.formatDate(today, 'Asia/Seoul', 'yyyyMMdd');
-  var startDay = Utilities.formatDate(new Date(today.getTime() - 7*24*60*60*1000), 'Asia/Seoul', 'yyyyMMdd');
   var todayStr = Utilities.formatDate(today, 'Asia/Seoul', 'yyyy-MM-dd');
 
-  if (!items.length) {
+  // KAMIS 품목분류코드 매핑
+  // 01:과일류 02:채소류 03:수산물 04:축산물 05:곡물
+  var clsMap = {
+    '한식': ['02','04'],    // 채소 + 축산
+    '양식': ['02','04'],
+    '일식': ['03'],         // 수산
+    '중식': ['02','04'],
+    '샐러드': ['01','02'],  // 과일 + 채소
+    '축산': ['04'],
+    '수산': ['03'],
+    '공산품': ['05','02'],  // 곡물 + 채소
+    '주류': [],
+    '카페베이커리': ['01','05']
+  };
+  var clsCodes = clsMap[key] || ['02'];
+
+  if (!clsCodes.length) {
     return {success: true, industry: key, date: todayStr, prices: [],
-      summary: key + '은(는) 공공데이터 단가 조회 대상 외 업종입니다.'};
+      summary: key + '은(는) 단가 조회 대상 외 업종입니다.'};
   }
 
   var results = [];
-  for (var i = 0; i < items.length; i++) {
-    var item = items[i];
+  var yyyy = Utilities.formatDate(today, 'Asia/Seoul', 'yyyy');
+
+  for (var ci = 0; ci < clsCodes.length; ci++) {
     try {
-      var url = PRICE_API_BASE
-        + '?serviceKey=' + PRICE_API_KEY
-        + '&startDay=' + startDay + '&endDay=' + endDay
-        + '&type=json&itemCode=' + item.code;
+      var url = KAMIS_BASE
+        + '?action=dailySalesList'
+        + '&p_cert_key=' + KAMIS_CERT_KEY
+        + '&p_cert_id='  + KAMIS_CERT_ID
+        + '&p_returntype=json'
+        + '&p_productclscode=' + clsCodes[ci]
+        + '&p_yyyy=' + yyyy
+        + '&p_period=1'
+        + '&p_convert_kg_yn=Y';
+
       var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
-      if (res.getResponseCode() !== 200) continue;
+      if (res.getResponseCode() !== 200) {
+        Logger.log('KAMIS HTTP ' + res.getResponseCode() + ': ' + res.getContentText().substring(0, 200));
+        continue;
+      }
+
       var d = JSON.parse(res.getContentText());
-      var priceItems = (d && d.data && d.data.item) ? d.data.item : [];
-      if (!priceItems.length) continue;
-      var latest = priceItems[priceItems.length - 1];
-      results.push({
-        name: item.name, wholesale: latest.dpr1 || '-', retail: latest.dpr2 || '-',
-        unit: item.unit, date: latest.regday || todayStr,
-        prevDay: latest.dpr3 || '-', prevYear: latest.dpr7 || '-'
+      // KAMIS 응답 구조: {data: {item: [{itemname, dpr1, dpr2, unit, regday, ...}]}}
+      var items = (d && d.data && Array.isArray(d.data.item)) ? d.data.item : [];
+
+      // 업종에 맞는 주요 품목만 필터링 (첫 5개)
+      var filtered = items.filter(function(it) {
+        return it && it.dpr1 && it.dpr1 !== '0' && it.dpr1 !== '-';
+      }).slice(0, 5);
+
+      filtered.forEach(function(it) {
+        results.push({
+          name:     it.itemname || '',
+          unit:     it.unit     || 'kg',
+          wholesale: it.dpr1    || '-',
+          retail:   it.dpr2     || '-',
+          prevDay:  it.dpr2     || '-',
+          date:     todayStr
+        });
       });
-    } catch(e) { Logger.log('단가 조회 실패: ' + item.name + ' - ' + e); }
-    Utilities.sleep(200);
+    } catch(e) {
+      Logger.log('KAMIS 조회 오류: ' + clsCodes[ci] + ' - ' + e);
+    }
+    Utilities.sleep(300);
   }
+
   return {
-    success: true, industry: key, date: todayStr, prices: results,
-    summary: results.map(function(p) {
+    success: true,
+    industry: key,
+    date: todayStr,
+    prices: results,
+    summary: results.slice(0, 3).map(function(p) {
       return p.name + ': 도매 ' + p.wholesale + '원/' + p.unit;
     }).join(' | ')
   };
