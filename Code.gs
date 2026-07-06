@@ -229,16 +229,16 @@ function fetchPrice_(params) {
   // KAMIS category_code 기반 필터
   // 100=식량작물, 200=채소류, 300=특용, 400=과일류, 500=축산물, 600=수산물
   var catMap = {
-    '한식':         ['200','500'],  // 채소 + 축산
-    '양식':         ['200','500'],
-    '일식':         ['600','200'],  // 수산 + 채소
-    '중식':         ['200','500'],
-    '샐러드':       ['400','200'],  // 과일 + 채소
-    '축산':         ['500'],
-    '수산':         ['600'],
-    '공산품':       ['100','200'],  // 식량 + 채소
-    '주류':         ['200'],
-    '카페베이커리': ['400','100']
+    '한식':         ['200','500','300'],  // 채소 + 축산 + 특용(깨,마늘)
+    '양식':         ['200','500','400'],  // 채소 + 축산 + 과일
+    '일식':         ['600','200'],        // 수산 + 채소
+    '중식':         ['200','500'],        // 채소 + 축산
+    '샐러드':       ['400','200'],        // 과일 + 채소
+    '축산':         ['500'],             // 축산
+    '수산':         ['600','200'],        // 수산 + 채소
+    '공산품':       ['100','200','300'],  // 식량 + 채소 + 특용
+    '주류':         ['200','400'],        // 채소 + 과일
+    '카페베이커리': ['400','200','100']   // 과일 + 채소 + 식량
   };
   var catCodes = catMap[key] || ['200'];
 
@@ -277,14 +277,38 @@ function fetchPrice_(params) {
         message:'KAMIS error_code: ' + (d ? d.error_code : 'null')};
     }
 
-    // category_code로 업종별 필터 (각 카테고리 최대 3개)
+    // 업종별 우선 품목 키워드 — 이 키워드가 포함된 품목 우선 표시
+    var priorityMap = {
+      '한식':      ['양파','대파','마늘','배추','상추','삼겹살','닭','계란'],
+      '양식':      ['양파','파프리카','브로콜리','시금치','삼겹살','소'],
+      '일식':      ['연어','광어','고등어','오징어','새우','갈치','조기','상추'],
+      '중식':      ['대파','마늘','양파','배추','돼지','닭'],
+      '샐러드':    ['상추','시금치','파프리카','오이','브로콜리','깻잎','딸기','방울토마토','키위','사과'],
+      '축산':      ['삼겹살','목심','갈비','안심','닭','오리','계란'],
+      '수산':      ['고등어','갈치','오징어','낙지','새우','명태','조기','김'],
+      '공산품':    ['쌀','찹쌀','콩','팥'],
+      '주류':      ['배추','양파','마늘'],
+      '카페베이커리': ['딸기','바나나','키위','사과','계란']
+    };
+    var priorities = priorityMap[key] || [];
+
+    // category_code로 업종별 필터 + 우선 품목 정렬
     catCodes.forEach(function(cat) {
       var catItems = d.price.filter(function(it) {
         return it.category_code === cat
           && it.dpr1 && it.dpr1 !== '-' && it.dpr1 !== '0';
-      }).slice(0, 3);
+      });
 
-      catItems.forEach(function(it) {
+      // 우선 품목 먼저, 나머지 뒤에
+      catItems.sort(function(a, b) {
+        var aName = (a.item_name || '');
+        var bName = (b.item_name || '');
+        var aPri = priorities.some(function(p){ return aName.includes(p); }) ? 0 : 1;
+        var bPri = priorities.some(function(p){ return bName.includes(p); }) ? 0 : 1;
+        return aPri - bPri;
+      });
+
+      catItems.slice(0, 5).forEach(function(it) {
         var dir = it.direction === '1' ? '▲' : it.direction === '2' ? '▼' : '-';
         results.push({
           name:      it.item_name || it.productName || '',
