@@ -176,40 +176,48 @@ function callClaude_(data) {
    구 B552845 API는 HTTP 500 오류로 KAMIS로 교체
 ══════════════════════════════════════ */
 function debugKamis_(data) {
-  var props = PropertiesService.getScriptProperties();
+  var props    = PropertiesService.getScriptProperties();
   var kamisKey = props.getProperty('KAMIS_CERT_KEY') || '';
   var kamisId  = props.getProperty('KAMIS_CERT_ID')  || '';
+  if (!kamisKey) return {success:false, message:'KAMIS_CERT_KEY 없음'};
 
-  if (!kamisKey) return {success:false, message:'KAMIS_CERT_KEY 스크립트 속성 없음'};
+  // p_productclscode 각 값으로 테스트 (02=채소, 04=과일, 06=수산, 07=축산)
+  var testCodes = ['01','02','03','04','05','06','07'];
+  var results = {};
+  var yyyy = new Date().getFullYear() + '';
 
-  var url = KAMIS_BASE
-    + '?action=dailySalesList'
-    + '&p_cert_key=' + kamisKey
-    + '&p_cert_id='  + kamisId
-    + '&p_returntype=json'
-    + '&p_productclscode=02'
-    + '&p_yyyy=' + new Date().getFullYear()
-    + '&p_period=1'
-    + '&p_convert_kg_yn=Y';
+  testCodes.forEach(function(cls) {
+    try {
+      var url = KAMIS_BASE
+        + '?action=dailySalesList'
+        + '&p_cert_key=' + kamisKey
+        + '&p_cert_id='  + kamisId
+        + '&p_returntype=json'
+        + '&p_productclscode=' + cls
+        + '&p_yyyy=' + yyyy
+        + '&p_period=1'
+        + '&p_convert_kg_yn=Y';
+      var res = UrlFetchApp.fetch(url, {muteHttpExceptions:true});
+      var d = JSON.parse(res.getContentText());
+      var items = (d && d.price) ? d.price : [];
+      var cats = {};
+      items.forEach(function(it){
+        var k = it.category_code + '_' + it.category_name;
+        if(!cats[k]) cats[k] = it.item_name;
+      });
+      results['cls_'+cls] = {
+        error_code: d.error_code,
+        item_count: items.length,
+        categories: cats,
+        sample: items[0] ? items[0].item_name + '/' + items[0].dpr1 : '없음'
+      };
+    } catch(e) {
+      results['cls_'+cls] = {error: e.toString()};
+    }
+    Utilities.sleep(200);
+  });
 
-  try {
-    var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
-    var code = res.getResponseCode();
-    var body = res.getContentText();
-    // 구조 파악용 — 앞 1000자만 반환
-    var parsed = null;
-    try { parsed = JSON.parse(body); } catch(e) {}
-    return {
-      success: true,
-      http_code: code,
-      raw: body.substring(0, 1000),
-      parsed_keys: parsed ? Object.keys(parsed) : null,
-      data_keys: (parsed && parsed.data) ? Object.keys(parsed.data) : null,
-      first_item: (parsed && parsed.data && parsed.data.item && parsed.data.item[0]) ? parsed.data.item[0] : null
-    };
-  } catch(e) {
-    return {success: false, message: e.toString()};
-  }
+  return {success:true, results:results};
 }
 
 function fetchPrice_(params) {
