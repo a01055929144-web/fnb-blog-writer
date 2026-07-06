@@ -115,6 +115,7 @@ function doPost(e) {
     var data = JSON.parse(raw);
     if (data.prompt !== undefined)       return out.setContent(JSON.stringify(callClaude_(data)));
     if (data.action === 'fetchPrice')    return out.setContent(JSON.stringify(fetchPrice_(data)));
+    if (data.action === 'debugKamis')    return out.setContent(JSON.stringify(debugKamis_(data)));
     if (data.action === 'updateStatus')  return out.setContent(JSON.stringify(updateStatus_(data)));
     if (data.action === 'updatePost')    return out.setContent(JSON.stringify(updatePost_(data)));
     if (data.action === 'saveResto')     return out.setContent(JSON.stringify(saveResto_(data)));
@@ -174,6 +175,43 @@ function callClaude_(data) {
    단가 조회 — KAMIS API (한국농수산식품유통공사)
    구 B552845 API는 HTTP 500 오류로 KAMIS로 교체
 ══════════════════════════════════════ */
+function debugKamis_(data) {
+  var props = PropertiesService.getScriptProperties();
+  var kamisKey = props.getProperty('KAMIS_CERT_KEY') || '';
+  var kamisId  = props.getProperty('KAMIS_CERT_ID')  || '';
+
+  if (!kamisKey) return {success:false, message:'KAMIS_CERT_KEY 스크립트 속성 없음'};
+
+  var url = KAMIS_BASE
+    + '?action=dailySalesList'
+    + '&p_cert_key=' + kamisKey
+    + '&p_cert_id='  + kamisId
+    + '&p_returntype=json'
+    + '&p_productclscode=02'
+    + '&p_yyyy=' + new Date().getFullYear()
+    + '&p_period=1'
+    + '&p_convert_kg_yn=Y';
+
+  try {
+    var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    var code = res.getResponseCode();
+    var body = res.getContentText();
+    // 구조 파악용 — 앞 1000자만 반환
+    var parsed = null;
+    try { parsed = JSON.parse(body); } catch(e) {}
+    return {
+      success: true,
+      http_code: code,
+      raw: body.substring(0, 1000),
+      parsed_keys: parsed ? Object.keys(parsed) : null,
+      data_keys: (parsed && parsed.data) ? Object.keys(parsed.data) : null,
+      first_item: (parsed && parsed.data && parsed.data.item && parsed.data.item[0]) ? parsed.data.item[0] : null
+    };
+  } catch(e) {
+    return {success: false, message: e.toString()};
+  }
+}
+
 function fetchPrice_(params) {
   var industry = params.industry || '한식';
   var key      = normalizeIndustry_(industry);
