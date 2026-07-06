@@ -17,8 +17,11 @@ const PRICE_API_BASE = 'https://apis.data.go.kr/B552845/perDay';
 const SHEET = {
   posts:   '작성글',
   regions: '지역현황',
-  resto:   '맛집홍보'
+  resto:   '맛집홍보',
+  price:   '단가현황'
 };
+
+const PRICE_HEADERS = ['날짜','업종','품목','단가(원)','전일가(원)','등락','단위'];
 
 const RESTO_HEADERS  = ['번호','날짜','식당명','위치','채널','제목','콘텐츠','발행상태'];
 const POST_HEADERS   = ['번호','날짜','지역(시도)','시/구','업종','콘텐츠타입','핵심키워드','제목','본문(전체)','해시태그','글자수','발행상태'];
@@ -116,6 +119,7 @@ function doPost(e) {
     if (data.prompt !== undefined)       return out.setContent(JSON.stringify(callClaude_(data)));
     if (data.action === 'fetchPrice')    return out.setContent(JSON.stringify(fetchPrice_(data)));
     if (data.action === 'debugKamis')    return out.setContent(JSON.stringify(debugKamis_(data)));
+    if (data.action === 'saveDailyPrice') return out.setContent(JSON.stringify(saveDailyPrice_()));
     if (data.action === 'updateStatus')  return out.setContent(JSON.stringify(updateStatus_(data)));
     if (data.action === 'updatePost')    return out.setContent(JSON.stringify(updatePost_(data)));
     if (data.action === 'saveResto')     return out.setContent(JSON.stringify(saveResto_(data)));
@@ -647,11 +651,165 @@ function updateRegionPublish_(ss, postRow, status) {
    ★ 핵심 수정: keepSheets에 '맛집홍보' 포함
    ★ 기존 행 전부 21px 고정 (작성글 + 맛집홍보)
 ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   일별 단가 자동 저장
+   - 매일 오전 8시 트리거로 실행 (setupDailyPriceTrigger)
+   - 웹에서 수동 호출도 가능 (action:'saveDailyPrice')
+══════════════════════════════════════ */
+function dailyPriceTrigger() {
+  saveDailyPrice_();
+}
+
+function saveDailyPrice_() {
+  var ss      = SpreadsheetApp.openById(getSheetId_());
+  var sheet   = ensureSheet_(ss, SHEET.price, PRICE_HEADERS);
+  var todayStr = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+
+  // 오늘 이미 저장됐으면 스킵
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1 && sheet.getRange(lastRow, 1).getValue() === todayStr) {
+    return {success: true, message: '오늘(' + todayStr + ') 단가는 이미 저장됨', saved: 0};
+  }
+
+  var props    = PropertiesService.getScriptProperties();
+  var kamisKey = props.getProperty('KAMIS_CERT_KEY') || '';
+  var kamisId  = props.getProperty('KAMIS_CERT_ID')  || '';
+  if (!kamisKey) return {success: false, message: 'KAMIS_CERT_KEY 없음'};
+
+  // KAMIS 전체 품목 1회 호출
+  var yyyy = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy');
+  var url = KAMIS_BASE
+    + '?action=dailySalesList'
+    + '&p_cert_key=' + kamisKey
+    + '&p_cert_id='  + kamisId
+    + '&p_returntype=json'
+    + '&p_productclscode=01'
+    + '&p_yyyy=' + yyyy
+    + '&p_period=1'
+    + '&p_convert_kg_yn=Y';
+
+  try {
+    var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    if (res.getResponseCode() !== 200) {
+      return {success: false, message: 'KAMIS HTTP ' + res.getResponseCode()};
+    }
+    var d = JSON.parse(res.getContentText());
+    if (!d || d.error_code !== '000' || !Array.isArray(d.price)) {
+      return {success: false, message: 'KAMIS 응답 오류: ' + (d ? d.error_code : 'null')};
+    }
+
+    // 업종별 카테고리 매핑
+    var industryMap = {
+      '한식':         {cats:['200','500','300'], name:'한식'},
+      '양식':         {cats:['200','500','400'], name:'양식'},
+      '일식':         {cats:['600','200'],       name:'일식'},
+      '중식':         {cats:['200','500'],       name:'중식'},
+      '샐러드':       {cats:['400','200'],       name:'샐러드'},
+      '축산':         {cats:['500'],             name:'축산'},
+      '수산':         {cats:['600'],             name:'수산'},
+      '공산품':       {cats:['100','200','300'], name:'공산품'},
+      '카페베이커리': {cats:['400','100'],       name:'카페베이커리'}
+    };
+
+    // 업종별 우선 품목
+    var priorityMap = {
+      '한식':      ['양파','대파','마늘','배추','상추','깻잎','시금치','무','오이','고추','삼겹살','목심','닭','계란','돼지'],
+      '양식':      ['양파','파프리카','브로콜리','시금치','오이','호박','상추','마늘','소','안심','삼겹살','닭','계란'],
+      '일식':      ['고등어','갈치','오징어','낙지','새우','명태','조기','김','상추','무','오이'],
+      '중식':      ['대파','마늘','양파','배추','무','고추','오이','돼지','삼겹살','목심','닭'],
+      '샐러드':    ['상추','시금치','파프리카','오이','브로콜리','깻잎','딸기','사과','키위','바나나','포도','배'],
+      '축산':      ['삼겹살','목심','앞다리','갈비','안심','닭','오리','계란','돼지','소'],
+      '수산':      ['고등어','갈치','오징어','낙지','새우','명태','조기','김'],
+      '공산품':    ['쌀','찹쌀','콩','팥','녹두','들깨','참깨','땅콩','배추','양파','마늘'],
+      '카페베이커리': ['딸기','바나나','키위','사과','포도','참외','수박','복숭아','계란','쌀']
+    };
+
+    var rows = [];
+    var seen = {};
+
+    Object.keys(industryMap).forEach(function(ind) {
+      var catCodes  = industryMap[ind].cats;
+      var indName   = industryMap[ind].name;
+      var priorities = priorityMap[ind] || [];
+
+      catCodes.forEach(function(cat) {
+        var catItems = d.price.filter(function(it) {
+          return it.category_code === cat
+            && it.dpr1 && it.dpr1 !== '-' && it.dpr1 !== '0';
+        });
+
+        catItems.sort(function(a, b) {
+          var aN = a.item_name || '';
+          var bN = b.item_name || '';
+          var aP = priorities.some(function(p){ return aN.includes(p); }) ? 0 : 1;
+          var bP = priorities.some(function(p){ return bN.includes(p); }) ? 0 : 1;
+          return aP - bP;
+        });
+
+        catItems.slice(0, 8).forEach(function(it) {
+          var key = indName + '_' + it.item_name;
+          if (seen[key]) return;
+          seen[key] = true;
+
+          var dir = it.direction === '1' ? '▲' : it.direction === '2' ? '▼' : '-';
+          var price    = String(it.dpr1 || '-').replace(/,/g, '');
+          var prevPrice = String(it.dpr2 || '-').replace(/,/g, '');
+
+          rows.push([
+            todayStr,
+            indName,
+            it.item_name || it.productName || '',
+            isNaN(price) ? price : Number(price),
+            isNaN(prevPrice) ? prevPrice : Number(prevPrice),
+            dir,
+            it.unit || 'kg'
+          ]);
+        });
+      });
+    });
+
+    if (rows.length > 0) {
+      sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, PRICE_HEADERS.length)
+           .setValues(rows);
+      // 날짜 열 스타일
+      sheet.getRange(sheet.getLastRow() - rows.length + 1, 1, rows.length, 1)
+           .setNumberFormat('yyyy-mm-dd');
+      SpreadsheetApp.flush();
+    }
+
+    Logger.log('단가 저장 완료: ' + rows.length + '개 / ' + todayStr);
+    return {success: true, saved: rows.length, date: todayStr,
+            message: todayStr + ' 단가 ' + rows.length + '개 저장 완료'};
+
+  } catch(e) {
+    Logger.log('단가 저장 오류: ' + e);
+    return {success: false, message: e.toString()};
+  }
+}
+
+/* 매일 오전 8시 트리거 설정 — 1회만 실행하면 됨 */
+function setupDailyPriceTrigger() {
+  // 기존 dailyPriceTrigger 트리거 제거
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'dailyPriceTrigger') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  // 매일 오전 8시 새 트리거 등록
+  ScriptApp.newTrigger('dailyPriceTrigger')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .create();
+  Logger.log('단가 자동 저장 트리거 설정 완료 — 매일 오전 8시');
+}
+
+
 function cleanupSheets() {
   var ss = SpreadsheetApp.openById(getSheetId_());
 
   // ★★★ '맛집홍보' 반드시 포함 — 빠지면 실행 시 탭 삭제됨 ★★★
-  var keepSheets = ['작성글', '지역현황', '맛집홍보'];
+  var keepSheets = ['작성글', '지역현황', '맛집홍보', '단가현황'];
   var sheets = ss.getSheets();
 
   // 1. 불필요한 탭 삭제
@@ -699,7 +857,9 @@ function cleanupSheets() {
 
   // 5. 지역현황 + 맛집홍보 탭 보장
   var regSheet   = ensureSheet_(ss, '지역현황', REGION_HEADERS);
-  var restoSheet = ensureSheet_(ss, '맛집홍보',  RESTO_HEADERS);
+  var restoSheet  = ensureSheet_(ss, '맛집홍보',  RESTO_HEADERS);
+  var priceSheet  = ensureSheet_(ss, '단가현황',  PRICE_HEADERS);
+  priceSheet.setColumnWidth(3, 200); // 품목명 컬럼 넓게
   restoSheet.setColumnWidth(7, 500);
   restoSheet.setColumnWidth(6, 300);
 
