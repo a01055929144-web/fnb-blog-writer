@@ -2164,7 +2164,7 @@ function showAutoModal(){
 function updateAutoModal(step, icon, text){
   setStep(step.replace('step',''), icon, text);
 }
-function buildPostPrompt(kw, region, type, priceData, intent){
+function buildPostPrompt(kw, region, type, priceData, intent, priceStats){
   var month = new Date().getMonth()+1;
   var mn = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   var today = new Date().getFullYear()+'년 '+mn[month];
@@ -2209,7 +2209,10 @@ function buildPostPrompt(kw, region, type, priceData, intent){
     'FAQ':'FAQ형 — 실제 상담에서 나온 질문 중심',
     '실수':'실수형 — 창업자들이 자주 하는 실수',
     '비용':'비용형 — 얼마나 드는지, 어디서 아낄 수 있는지',
-    '후기형':'후기형 — 실제 경험담처럼 자연스럽게'
+    '후기형':'후기형 — 실제 경험담처럼 자연스럽게',
+    '오늘단가':'오늘 단가 분석 — KAMIS 실거래가 기반 당일 시세 정보글',
+    '주간단가':'주간 단가 동향 — 최근 7일 평균 시세 분석글',
+    '월간단가':'월간 단가 리포트 — 최근 1개월 평균·최고·최저가 분석글'
   };
   var typeDesc = typeFormats[type]||typeFormats['정보글'];
 
@@ -2224,6 +2227,19 @@ function buildPostPrompt(kw, region, type, priceData, intent){
     '운영':'매장 운영 효율화. 식자재 관리와 발주 효율화가 핵심.'
   };
   var intentDesc = intentGuide[intent]||intentGuide['업체찾기'];
+
+  // 단가 통계 표 (단가 글 타입일 때)
+  var statsTable = '';
+  var hasStats = priceStats && priceStats.success && priceStats.stats && priceStats.stats.length > 0;
+  if(hasStats){
+    var periodLabel = priceStats.periodLabel || '';
+    statsTable = periodLabel + ' 기준 업종별 단가 (KAMIS 실거래가)\n';
+    statsTable += '품목 | 평균가 | 최저 | 최고 | 단위\n--- | --- | --- | --- | ---\n';
+    var indStats = priceStats.grouped[key] || priceStats.stats.slice(0,10);
+    indStats.slice(0,8).forEach(function(p){
+      statsTable += p.item+'|'+p.avg+'원|'+p.min+'원|'+p.max+'원|'+p.unit+'\n';
+    });
+  }
 
   // 공급가 표
   var priceTable = '';
@@ -2300,7 +2316,7 @@ async function writeOnePost(item, idx, total, priceData){
   var type   = item.type||'정보성 SEO';
 
   // 글 작성 (Haiku)
-  var text = await callClaude(buildPostPrompt(kw, region, type, priceData||null, currentIntent||'업체찾기'), 5500, true); // v2.0: 본문2000~2300자 제한+FAQ+요약+해시태그 전체 완주 보장
+  var text = await callClaude(buildPostPrompt(kw, region, type, priceData||null, currentIntent||'업체찾기', priceStats||null), 5500, true); // v2.0: 본문2000~2300자 제한+FAQ+요약+해시태그 전체 완주 보장
 
   // ── BIV 출력 순서: 해시태그 → FAQ → AI검색요약 → 본문 → 제목(마지막) ──
 
@@ -2462,8 +2478,9 @@ async function startAutoMode(){
       +'검색의도:'+_intent+' — 이 의도를 가진 창업자 타겟. JSON만:\n'
       +'{"cluster":[{"title":"제목","keyword":"키워드","intent":"'+_intent+'","priority":"high","region":"서울 강남구","type":"정보글"}]}\n'
       +'8개. priority:high/mid/low.\n'
-      +'type은 반드시 이 중에서: 정보글/가이드/체크리스트/비교/TOP5/FAQ/실수/비용/후기형.\n'
-      +'같은 키워드도 type을 다양하게 배분해서 중복 없이.';
+      +'type은 반드시 이 중에서: 정보글/가이드/체크리스트/비교/TOP5/FAQ/실수/비용/후기형/오늘단가/주간단가/월간단가.\n'
+      +'같은 키워드도 type을 다양하게 배분해서 중복 없이.\n'
+      +'오늘단가/주간단가/월간단가 타입은 KAMIS 실거래가 기반 단가 정보 글.';
 
     var clText = await callClaude(clPrompt, 1800, true); // 토큰 늘려 JSON 잘림 방지
     var clClean = clText.replace(/```json|```/g,'').trim();
