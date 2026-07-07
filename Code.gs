@@ -120,6 +120,7 @@ function doPost(e) {
     if (data.action === 'fetchPrice')    return out.setContent(JSON.stringify(fetchPrice_(data)));
     if (data.action === 'debugKamis')    return out.setContent(JSON.stringify(debugKamis_(data)));
     if (data.action === 'saveDailyPrice') return out.setContent(JSON.stringify(saveDailyPrice_()));
+    if (data.action === 'getPriceStats')  return out.setContent(JSON.stringify(getPriceStats_(data)));
     if (data.action === 'updateStatus')  return out.setContent(JSON.stringify(updateStatus_(data)));
     if (data.action === 'updatePost')    return out.setContent(JSON.stringify(updatePost_(data)));
     if (data.action === 'saveResto')     return out.setContent(JSON.stringify(saveResto_(data)));
@@ -656,6 +657,108 @@ function updateRegionPublish_(ss, postRow, status) {
    - 매일 오전 8시 트리거로 실행 (setupDailyPriceTrigger)
    - 웹에서 수동 호출도 가능 (action:'saveDailyPrice')
 ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   단가 통계 조회 — 기간별 평균
+   period: 'daily'|'weekly'|'monthly'|'quarterly'|'yearly'
+══════════════════════════════════════ */
+function getPriceStats_(data) {
+  var ss      = SpreadsheetApp.openById(data.sheetId || getSheetId_());
+  var sheet   = ss.getSheetByName(SHEET.price);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return {success: false, message: '단가 데이터 없음 — 먼저 saveDailyPrice 실행 필요'};
+  }
+
+  var industry = data.industry || '';
+  var period   = data.period   || 'daily';  // daily|weekly|monthly|quarterly|yearly
+  var today    = new Date();
+
+  // 기간 범위 계산
+  var cutoff = new Date(today);
+  if      (period === 'daily')     cutoff.setDate(today.getDate() - 1);
+  else if (period === 'weekly')    cutoff.setDate(today.getDate() - 7);
+  else if (period === 'monthly')   cutoff.setMonth(today.getMonth() - 1);
+  else if (period === 'quarterly') cutoff.setMonth(today.getMonth() - 3);
+  else if (period === 'yearly')    cutoff.setFullYear(today.getFullYear() - 1);
+
+  var cutoffStr = Utilities.formatDate(cutoff, 'Asia/Seoul', 'yyyy-MM-dd');
+  var todayStr  = Utilities.formatDate(today,  'Asia/Seoul', 'yyyy-MM-dd');
+
+  // 시트 전체 읽기
+  var rows = sheet.getDataRange().getValues();
+  var headers = rows[0]; // 날짜|업종|품목|단가|전일가|등락|단위
+
+  // 기간+업종 필터링 후 품목별 평균 계산
+  var priceMap = {}; // {품목: {sum, count, unit, latest, trend}}
+  for (var i = 1; i < rows.length; i++) {
+    var row     = rows[i];
+    var date    = String(row[0] || '').substring(0, 10);
+    var ind     = String(row[1] || '');
+    var item    = String(row[2] || '');
+    var price   = parseFloat(String(row[3] || '0').replace(/,/g,''));
+    var unit    = String(row[6] || 'kg');
+    var trend   = String(row[5] || '-');
+
+    if (date < cutoffStr || date > todayStr) continue;
+    if (industry && ind !== industry) continue;
+    if (!item || isNaN(price) || price <= 0) continue;
+
+    var key = ind + '_' + item;
+    if (!priceMap[key]) {
+      priceMap[key] = {industry:ind, item:item, sum:0, count:0, unit:unit,
+                       min:price, max:price, latest:price, trend:trend, latestDate:date};
+    }
+    priceMap[key].sum   += price;
+    priceMap[key].count += 1;
+    priceMap[key].min    = Math.min(priceMap[key].min, price);
+    priceMap[key].max    = Math.max(priceMap[key].max, price);
+    if (date >= priceMap[key].latestDate) {
+      priceMap[key].latest     = price;
+      priceMap[key].latestDate = date;
+      priceMap[key].trend      = trend;
+    }
+  }
+
+  // 결과 변환
+  var stats = Object.values(priceMap).map(function(p) {
+    return {
+      industry: p.industry,
+      item:     p.item,
+      avg:      Math.round(p.sum / p.count),
+      min:      p.min,
+      max:      p.max,
+      latest:   p.latest,
+      trend:    p.trend,
+      unit:     p.unit,
+      days:     p.count
+    };
+  }).filter(function(p){ return p.days > 0; });
+
+  // 업종별 그룹핑
+  var grouped = {};
+  stats.forEach(function(p) {
+    if (!grouped[p.industry]) grouped[p.industry] = [];
+    grouped[p.industry].push(p);
+  });
+
+  var periodLabel = {
+    daily:'오늘', weekly:'최근 7일', monthly:'최근 1개월',
+    quarterly:'최근 3개월', yearly:'최근 1년'
+  }[period] || period;
+
+  return {
+    success:      true,
+    period:       period,
+    periodLabel:  periodLabel,
+    from:         cutoffStr,
+    to:           todayStr,
+    industry:     industry || '전체',
+    totalItems:   stats.length,
+    grouped:      grouped,
+    stats:        stats
+  };
+}
+
+
 function dailyPriceTrigger() {
   saveDailyPrice_();
 }
