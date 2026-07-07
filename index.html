@@ -2235,7 +2235,7 @@ function buildPostPrompt(kw, region, type, priceData, intent, priceStats){
     var periodLabel = priceStats.periodLabel || '';
     statsTable = periodLabel + ' 기준 업종별 단가 (KAMIS 실거래가)\n';
     statsTable += '품목 | 평균가 | 최저 | 최고 | 단위\n--- | --- | --- | --- | ---\n';
-    var indStats = priceStats.grouped[key] || priceStats.stats.slice(0,10);
+    var indStats = (priceStats.grouped && priceStats.grouped[industry]) || priceStats.stats.slice(0,10);
     indStats.slice(0,8).forEach(function(p){
       statsTable += p.item+'|'+p.avg+'원|'+p.min+'원|'+p.max+'원|'+p.unit+'\n';
     });
@@ -2324,7 +2324,7 @@ function buildPostPrompt(kw, region, type, priceData, intent, priceStats){
     +'제목: '+titleTemplate+' (30~35자 이내. 이모지 없음. 이 형식 그대로 사용.)'
     ;
 }
-async function writeOnePost(item, idx, total, priceData){
+async function writeOnePost(item, idx, total, priceData, priceStats){
   var kw     = item.keyword||item.title||'';
   var region = item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
   var type   = item.type||'정보성 SEO';
@@ -2444,6 +2444,7 @@ async function startAutoMode(){
     // ── Step 0: 단가 조회 (백그라운드, 멈추지 않음) ──
     setStep(0,'✅','기본 데이터 사용 (단가 백그라운드 조회)');
     var priceData = null;
+    var priceStatsCache = {daily:null, weekly:null, monthly:null};
     // 백그라운드로만 시도 — await 없이 바로 다음 단계로
     fetchRealtimePrice(industry).then(function(p){
       if(p && p.prices && p.prices.length > 0){
@@ -2451,6 +2452,10 @@ async function startAutoMode(){
         setStep(0,'✅','단가 '+p.prices.length+'개 조회 완료');
       }
     }).catch(function(){});
+    // 단가글(오늘/주간/월간) 타입을 위한 기간별 통계 — 실패해도 파이프라인은 계속 진행
+    Promise.all(['daily','weekly','monthly'].map(function(period){
+      return fetchPriceStats(industry, period).then(function(s){ priceStatsCache[period]=s; });
+    })).catch(function(){});
 
     // ── Step 1: SEO 키워드 추출 ──
     setStep(1,'⏳','SEO 키워드 추출 중...');
@@ -2520,7 +2525,10 @@ async function startAutoMode(){
       var det=document.getElementById('as3d');
       if(det) det.innerHTML='📝 ('+(i+1)+'/'+total+') <strong>'+esc(sorted[i].title||'')+'</strong>';
       try{
-        var res = await writeOnePost(sorted[i], i, total, priceData);
+        var _typeMap = {'오늘단가':'daily','주간단가':'weekly','월간단가':'monthly'};
+        var _statsKey = _typeMap[sorted[i].type];
+        var _stats = _statsKey ? priceStatsCache[_statsKey] : null;
+        var res = await writeOnePost(sorted[i], i, total, priceData, _stats);
         if(res&&res.success) ok++;
       }catch(e){ console.warn('글'+i+' 실패:',e); }
       var pr=document.getElementById('asPr');
@@ -3104,6 +3112,26 @@ async function fetchRealtimePrice(ind){
     return d;
   }catch(e){
     return {prices:[], summary:''};
+  }
+}
+
+// period: 'daily'|'weekly'|'monthly'|'quarterly'|'yearly' — 시트에 쌓인 단가 데이터의 기간별 평균/최저/최고가 조회
+async function fetchPriceStats(ind, period){
+  try{
+    var controller = new AbortController();
+    var tid = setTimeout(function(){ controller.abort(); }, 10000);
+    var res = await fetch(SHEET_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'getPriceStats', industry: ind, period: period||'weekly'}),
+      signal: controller.signal
+    });
+    clearTimeout(tid);
+    var d = await res.json();
+    d.periodLabel = d.periodLabel || ({daily:'오늘',weekly:'이번 주',monthly:'이번 달',quarterly:'최근 3개월',yearly:'최근 1년'})[period||'weekly'];
+    return d;
+  }catch(e){
+    return {success:false, stats:[]};
   }
 }
 
