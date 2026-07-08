@@ -1575,44 +1575,6 @@ function selAllCluster(){
   document.querySelectorAll('.cluster-card').forEach(el=>el.classList.add('on'));
   persistLater('clusterSelectAll');
 }
-async function writeSelected(){
-  if(!selClusters.length){ showToast('글 기획을 선택해주세요'); return; }
-  if(typeof autoRunning !== 'undefined' && autoRunning){ showToast('이미 실행 중이에요'); return; }
-  autoRunning = true;
-
-  var items = selClusters.map(function(i){ return clusterData[i]; }).filter(Boolean);
-  items.sort(function(a,b){
-    var p={high:0,mid:1,low:2};
-    return (p[a.priority]||1)-(p[b.priority]||1);
-  });
-
-  showAutoModal();
-  updateAutoModal('step1','✅','키워드/클러스터 선택 완료');
-  updateAutoModal('step2','✅','글 기획 '+items.length+'개 선택');
-  updateAutoModal('step3','⏳','글 작성 시작...');
-
-  var ok=0, total=items.length;
-  for(var i=0;i<items.length;i++){
-    if(!autoRunning) break;
-    var det=document.getElementById('autoStep3Detail');
-    if(det) det.innerHTML='📝 ('+(i+1)+'/'+total+') '+(items[i].title||items[i].keyword||'')+'...';
-    try{
-      var r=await writeOnePost(items[i],i,total);
-      if(r&&r.success) ok++;
-    }catch(e){ console.warn('글 작성 실패:',e); }
-    var pr=document.getElementById('autoProgress');
-    if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
-    updateAutoModal('step3','⏳','작성 중('+(i+1)+'/'+total+') 완료 '+ok+'개');
-  }
-
-  updateAutoModal('step3','✅','완료('+ok+'/'+total+'개)');
-  updateAutoModal('step4','✅','구글 시트 저장 완료');
-  var dn=document.getElementById('autoDone'); if(dn) dn.style.display='block';
-  var sm=document.getElementById('autoSummary'); if(sm) sm.textContent=ok+'개 포스팅이 저장됐어요!';
-  updateDashboard(); renderHistList();
-  autoRunning=false;
-}
-
 function buildWriterPrompt(kw, region, type, length, options){
   const parts = (region||'').split(' ');
   const regKey = parts[0];
@@ -1792,15 +1754,6 @@ function switchRTab(tab, id, el){
   el.classList.add('on');
   wrap.querySelector(`#${id}-post`).style.display = tab==='post'?'block':'none';
   wrap.querySelector(`#${id}-cta`).style.display = tab==='cta'?'block':'none';
-}
-
-function copyPost(id){
-  const wrap = document.getElementById(id);
-  const title = wrap.querySelector('.post-title').textContent;
-  const body = decodeURIComponent(wrap.querySelector('.post-body').dataset.body);
-  const tags = [...wrap.querySelectorAll('.post-tag')].map(t=>t.textContent).join(' ');
-  const cta = `\n\n━━━━━━━━━━━━━━━━━━━━\n📦 식자재 무료 상담\n💬 카카오: ${KAKAO}\n📝 블로그: ${BLOG}\n📱 전화: ${phone||''}\n━━━━━━━━━━━━━━━━━━━━`;
-  navigator.clipboard.writeText(`${title}\n\n${body}${cta}\n\n${tags}`).then(()=>showToast('복사 완료!'));
 }
 
 function regeneratePost(id, kw, region, type){
@@ -2769,18 +2722,6 @@ function publishCopy(el){
 }
 
 /* 발행 토글 — 웹+시트 동시 반영 */
-function toggleUpload(el){
-  var i = parseInt(el.getAttribute('data-ai'));
-  var h = window._anaList && window._anaList[i];
-  if(!h) return;
-  h.uploadStatus = (h.uploadStatus==='done') ? 'pending' : 'done';
-  saveApp();
-  sheetUpdateStatus(h);
-  filterHistory();
-  updateDashboard();
-  updateAnalytics();
-}
-
 /* 시트 발행상태 업데이트 (비동기, 실패해도 무시) */
 function sheetUpdateStatus(h){
   try{
@@ -2966,70 +2907,6 @@ function copyPost(el){
 
 
 /* ═══ 글 내보내기 / 시트 동기화 ═══ */
-function exportAllPosts(){
-  if(!history.length){ showToast('저장된 글이 없어요'); return; }
-  var lines = history.map(function(h, i){
-    return '===== ['+(i+1)+'] '+h.title+' =====\n'
-      +'날짜: '+(h.date||'')+' | 지역: '+(h.region||'')+' | 업종: '+(h.industry||'')+'\n\n'
-      +(h.body||'')+'\n\n'
-      +((h.tags||[]).join?h.tags.join(' '):(h.tags||''))+'\n';
-  }).join('\n\n');
-  var blob = new Blob([lines], {type:'text/plain;charset=utf-8'});
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'fnb_posts_'+new Date().toLocaleDateString('ko-KR').replace(/\s/g,'')+'.txt';
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('✅ '+history.length+'개 글 내보내기 완료!');
-}
-
-async function syncToSheet(){
-  if(!history.length){ showToast('저장된 글이 없어요'); return; }
-  showToast('⏳ 시트 동기화 중...');
-  var ok = 0;
-  for(var i=0; i<history.length; i++){
-    var h = history[i];
-    if(!h.title) continue;
-    try{
-      await fetch(SHEET_ENDPOINT, {
-        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({
-          sheetId: SHEET_ID,
-          date: h.date || new Date().toLocaleDateString('ko-KR'),
-          sido: (h.region||'').split(' ')[0]||'',
-          gugun: (h.region||'').split(' ').slice(1).join(' ')||'',
-          industry: h.industry||'', type: h.type||'',
-          keyword: h.kw||h.keyword||'',
-          title: h.title||'',
-          body: h.body||'',
-          hashtags: (h.tags||[]).join?h.tags.join(' '):(h.tags||''),
-          chars: h.chars||0,
-          status: h.uploadStatus==='done'?'발행완료':'미발행'
-        })
-      });
-      ok++;
-    }catch(e){}
-    await new Promise(function(r){ setTimeout(r, 300); });
-  }
-  showToast('✅ '+ok+'개 시트 동기화 완료!');
-}
-
-
-function loadSavedPosts(){
-  // 로컬스토리지에서 글 복원
-  try{
-    var saved = localStorage.getItem('fnb_history');
-    if(saved){
-      var parsed = JSON.parse(saved);
-      if(Array.isArray(parsed) && parsed.length > 0){
-        history = parsed;
-        return true;
-      }
-    }
-  }catch(e){}
-  return false;
-}
 /* ═══ Dashboard 인라인 렌더 ═══ */
 function renderDashInline(){
   var dg = document.getElementById('dashDistGrid');
