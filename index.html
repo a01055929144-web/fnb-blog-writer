@@ -2275,8 +2275,7 @@ function buildPostPrompt(kw, region, type, priceData, intent, priceStats){
     +'('+intent+' 관점에서 창업자가 바로 쓸 수 있는 정보. '+typeDesc+'. 이모지 없이.)\n\n'
     +'[실제 사례 입력]\n\n'
     +'마무리\n'
-    +'(1~2줄. 짧고 기억에 남는 문장. 이모지 없이.)\n\n'
-    +'(식자재 업체는 검색해서 찾기 어렵습니다. BIV는 지역과 업종에 맞는 납품 가능한 업체를 찾는 것을 도와드립니다. 카카오톡: https://open.kakao.com/o/shEOWEth 자연스럽게.)\n\n'))
+    +'(1~2줄. 짧고 기억에 남는 문장. 이모지 없이. 연락처나 링크는 언급하지 않음.)\n\n'))
 
     +'제목: '+titleTemplate+' (30~35자 이내. 이모지 없음. 이 형식 그대로 사용.)'
     ;
@@ -2386,7 +2385,7 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
 let autoRunning = false;
 var _priceCache = {};
 var priceData = null;     // 전역 단가 데이터
-var CTA_TEXT = '\n\n식자재 업체는 검색해서 찾기 어렵습니다.\nBIV는 지역과 업종에 맞는 납품 가능한 업체를 찾는 것을 도와드립니다.\n카카오톡: https://open.kakao.com/o/shEOWEth\n네이버 블로그: https://blog.naver.com/yeong44';
+var CTA_TEXT = '\n\n▶ 카카오톡 1:1 상담(BIV 오픈프로필) https://open.kakao.com/me/bivnow';
 var BIV_FIXED_TAGS = '#식자재납품 #식재료도매 #식당창업 #식자재원가 #납품업체 #식재료공급 #창업준비 #외식업창업 #식자재유통 #BIV'; // 고정 CTA
 var restoHistory = [];    // 맛집홍보 글 목록
 var selChannels = ['blog','insta','tiktok','kakao']; // 기본 전채널 선택
