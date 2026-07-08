@@ -1099,7 +1099,11 @@ async function callClaude(prompt, maxTokens=2000, useHaiku=false){
     throw new Error("API "+res.status+": "+err.substring(0,100));
   }
   var d = await res.json();
-  return (d.content&&d.content[0]&&d.content[0].text)||"";
+  var textBlock = d.content && d.content.find(function(b){ return b.type==='text'; });
+  if(!textBlock || !textBlock.text){
+    throw new Error('Claude 응답에 텍스트가 없음 (stop_reason: '+(d.stop_reason||'?')+')');
+  }
+  return textBlock.text;
 }
 
 /* ══════════════════════════════════════
@@ -2372,6 +2376,12 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
   if(faq)     fullBody += '\n\n자주 묻는 질문\n\n' + faq;
   if(summary) fullBody += '\n\n핵심 요약\n\n' + summary;
   body = fullBody.trim();
+
+  // 빈 글 저장 방지 — API 응답 파싱 실패 등으로 title/body가 실질적으로 비어있으면 시트에 쓰지 않고 즉시 실패 처리
+  if(!text || !body || body.trim().length < 30 || !title || !title.trim()){
+    console.warn('⚠️ 빈 콘텐츠 감지, 저장 스킵:', {textLen:(text||'').length, bodyLen:body.length, title:title});
+    return {success:false, title:title||kw||'(제목없음)', kw:kw, message:'생성된 콘텐츠가 비어있어 저장하지 않았습니다'};
+  }
 
   var postItem = {
     id: 'p'+Date.now()+'_'+idx,
