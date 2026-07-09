@@ -2233,7 +2233,9 @@ function buildPostPrompt(kw, region, type, priceData, intent, priceStats){
     +'⑤ 근거 없는 사례/통계 금지 → [실제 사례 입력]으로 남길 것.\n'
     +'⑥ 핵심키워드 "'+kw+'"를 도입/본문/마무리에 각 1회 자연스럽게 포함.\n'
     +'⑦ 문장 짧게, 한 문단 2~4줄.\n'
-    +'⑧ 과장/광고/1위/최고 금지.\n\n'
+    +'⑧ 과장/광고/1위/최고 금지.\n'
+    +(hasPrice ? '⑨ 핵심키워드 "'+kw+'"에 나오는 구체적 식재료명이 아래 공급가 표의 품목과 다르면, 표는 "이 지역/업종의 대표 식재료 시세 참고용"으로 명확히 설명하고, 키워드가 언급한 특정 식재료는 "공공 시세 데이터에 없어 업체별 견적 확인이 필요하다"고 별도로 짚어줄 것. 표에 없는 품목의 가격을 지어내지 말 것.\n' : '')
+    +'\n'
 
     +'[출력 형식 — 이 순서대로]\n\n'
     +'해시태그: BIV 고정태그 10개 반드시 포함 후 SEO 태그 10개 추가, 총 20개\n'
@@ -2407,13 +2409,14 @@ async function startAutoMode(){
     setStep(0,'✅','기본 데이터 사용 (단가 백그라운드 조회)');
     var priceData = null;
     var priceStatsCache = {daily:null, weekly:null, monthly:null};
-    // 백그라운드로만 시도 — await 없이 바로 다음 단계로
-    fetchRealtimePrice(industry).then(function(p){
+    // 백그라운드로 시작하되, Step2 글기획 전에 await해서 실제 품목을 반영함
+    var priceDataPromise = fetchRealtimePrice(industry).then(function(p){
       if(p && p.prices && p.prices.length > 0){
         priceData = p;
         setStep(0,'✅','단가 '+p.prices.length+'개 조회 완료');
       }
-    }).catch(function(){});
+      return p;
+    }).catch(function(){ return null; });
     // 단가글(오늘/주간/월간) 타입을 위한 기간별 통계 — 실패해도 파이프라인은 계속 진행
     Promise.all(['daily','weekly','monthly'].map(function(period){
       return fetchPriceStats(industry, period).then(function(s){ priceStatsCache[period]=s; });
@@ -2451,12 +2454,16 @@ async function startAutoMode(){
 
     // ── Step 2: 글기획 생성 ──
     setStep(2,'⏳','글기획 자동 생성 중...');
+    await priceDataPromise; // 제목이 실제 조회된 품목과 어긋나지 않도록 대기
     var kwList = selKws.map(function(k){ return k.kw||k.keyword||''; }).join(', ');
     var regions = [...new Set(selKws.map(function(k){ return k.region||''; }).filter(Boolean))].join(', ') || regionSummary;
     var _intent = (typeof currentIntent!=='undefined'?currentIntent:'업체찾기');
+    var availItems = (priceData && priceData.prices) ? priceData.prices.map(function(p){return p.name;}).join(', ') : '';
     var clPrompt = 'F&B 식자재 블로그 글기획 8개 JSON.\n'
       +'업종:'+industry+' / 지역:'+regions+' / 키워드:'+kwList+'\n'
       +'검색의도:'+_intent+' — 이 의도를 가진 창업자 타겟. JSON만:\n'
+      +(availItems ? ('오늘 실제 조회된 품목(이 목록에 있는 품목만 제목에 구체적으로 명시 가능): '+availItems+'\n') : '오늘 조회된 구체적 품목 데이터 없음 — 제목에 특정 식재료명 대신 업종/상황 중심 표현 사용\n')
+      +'제목에 특정 식자재명을 넣을 경우 반드시 위 목록에 있는 품목이어야 하며, 본문에서도 그 품목이 실제로 다뤄져야 함. 목록에 없는 식재료명(예: 목록에 없는 수입 소스/오일 등)은 제목에 쓰지 말 것.\n'
       +'{"cluster":[{"title":"제목","keyword":"키워드","intent":"'+_intent+'","priority":"high","region":"서울 강남구","type":"정보글"}]}\n'
       +'8개. priority:high/mid/low.\n'
       +'type은 반드시 이 중에서: 정보글/가이드/체크리스트/비교/TOP5/FAQ/실수/비용/후기형/오늘단가/주간단가/월간단가.\n'
