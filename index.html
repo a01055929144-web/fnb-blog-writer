@@ -3381,7 +3381,7 @@ function parseFreshwayText(){
       var json = JSON.parse(raw);
       var list = json.listGoodsOrderData || [];
       var jsonItems = list.map(function(it){
-        var origin = it.migrOrinatNm || it.lglNdCmpoBd || '';
+        var origin = it.lglNdCmpoBd || it.migrOrinatNm || '';
         var taxType = String(it.taxtYn) === '1' ? '과세' : '면세';
         var supplyPrice = it.saleUnprc || 0;
         var vat = it.vat || 0;
@@ -3390,7 +3390,7 @@ function parseFreshwayText(){
         return {
           code: it.gdNo, name: it.gdBd || it.gdNm,
           origin: origin, storage: it.strgCondNm, taxType: taxType,
-          gPrice: it.calUnprc ? Math.round(it.calUnprc*10)/10 : '',
+          gPrice: (it.calUnprc !== undefined && it.calUnprc !== null) ? it.calUnprc : '',
           vat: vat, priceWithVat: priceWithVat, supplyPrice: supplyPrice,
           eventPrice: eventPrice
         };
