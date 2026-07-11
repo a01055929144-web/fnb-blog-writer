@@ -3375,6 +3375,34 @@ function parseFreshwayText(){
   var previewEl = document.getElementById('fwPreview');
   if(!raw){ statusEl.textContent = '먼저 텍스트를 붙여넣어주세요.'; return; }
 
+  // JSON API 응답 형식이면 (더 정확함) 우선 처리
+  if(raw[0] === '{'){
+    try{
+      var json = JSON.parse(raw);
+      var list = json.listGoodsOrderData || [];
+      var jsonItems = list.map(function(it){
+        var origin = it.migrOrinatNm || it.lglNdCmpoBd || '';
+        var taxType = String(it.taxtYn) === '1' ? '과세' : '면세';
+        var supplyPrice = it.saleUnprc || 0;
+        var vat = it.vat || 0;
+        var priceWithVat = supplyPrice + vat;
+        var eventPrice = String(it.prmtYn) === '1' ? (it.dcUnprc||'') : '';
+        return {
+          code: it.gdNo, name: it.gdBd || it.gdNm,
+          origin: origin, storage: it.strgCondNm, taxType: taxType,
+          gPrice: it.calUnprc ? Math.round(it.calUnprc*10)/10 : '',
+          vat: vat, priceWithVat: priceWithVat, supplyPrice: supplyPrice,
+          eventPrice: eventPrice
+        };
+      });
+      renderFreshwayPreview(jsonItems, statusEl, previewEl);
+      return;
+    }catch(e){
+      statusEl.textContent = 'JSON 형식으로 보이는데 파싱에 실패했어요: ' + e.message;
+      return;
+    }
+  }
+
   var lines = raw.split('\n').map(function(l){ return l.trim(); });
   var items = [];
   var i = 0, n = lines.length;
@@ -3424,9 +3452,13 @@ function parseFreshwayText(){
     }
   }
 
+  renderFreshwayPreview(items, statusEl, previewEl);
+}
+
+function renderFreshwayPreview(items, statusEl, previewEl){
   fwParsedItems = items;
   if(items.length === 0){
-    statusEl.textContent = '품목을 찾지 못했어요. 상품코드(숫자)가 포함되도록 페이지 전체를 복사해주세요.';
+    statusEl.textContent = '품목을 찾지 못했어요. 상품코드(숫자)가 포함되도록 페이지 전체를 복사하거나, ERP API JSON 응답을 붙여넣어주세요.';
     previewEl.innerHTML = '';
     document.getElementById('fwSaveBtn').disabled = true;
     return;
