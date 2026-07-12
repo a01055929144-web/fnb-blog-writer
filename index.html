@@ -2129,6 +2129,7 @@ function showAutoModal(){
       +'<div style="background:#F1F5F9;border-radius:6px;height:6px;margin-bottom:14px">'
       +'<div id="asPr" style="height:100%;background:#22C55E;border-radius:6px;transition:width .3s;width:0%"></div></div>'
       +'<div id="asDone" style="display:none;background:#F0FDF4;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#166534">✅ <strong>완료!</strong> <span id="asSumm"></span></div>'
+      +'<div id="asImages" style="display:none;max-height:260px;overflow-y:auto;margin-bottom:10px"></div>'
       +'<div id="asErr" style="display:none;background:#FEF2F2;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#DC2626">❌ <span id="asErrM"></span></div>'
       +'<button onclick="closeAutoModal()" style="width:100%;padding:10px;border:1.5px solid #E2E8F0;border-radius:8px;background:#fff;cursor:pointer;font-size:12px;font-weight:600">닫기</button>'
       +'</div>';
@@ -2310,6 +2311,67 @@ function buildPostPrompt(kw, region, type, priceData, intent, priceStats){
     +'제목: '+titleTemplate+' (30~35자 이내. 이모지 없음. 이 형식 그대로 사용.)'
     ;
 }
+/* ══════════════════════════════════════
+   글 자동 썸네일 이미지(canvas) 생성 — 모든 글 타입 공용
+══════════════════════════════════════ */
+function wrapCanvasText(ctx, text, maxWidth){
+  var words = text.split('');  // 한글은 글자 단위로 줄바꿈
+  var lines = [], cur = '';
+  for(var i=0;i<words.length;i++){
+    var test = cur + words[i];
+    if(ctx.measureText(test).width > maxWidth && cur){
+      lines.push(cur); cur = words[i];
+    } else { cur = test; }
+  }
+  if(cur) lines.push(cur);
+  return lines;
+}
+
+function generateTitleCardImage(title, region, industry, type){
+  var width = 800, height = 500;
+  var canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  var ctx = canvas.getContext('2d');
+
+  // 배경
+  ctx.fillStyle = '#0F172A'; ctx.fillRect(0,0,width,height);
+  // 좌측 악센트 바
+  ctx.fillStyle = '#22C55E'; ctx.fillRect(0,0,10,height);
+
+  // BIV 워드마크
+  ctx.fillStyle = '#22C55E'; ctx.font = 'bold 22px sans-serif';
+  ctx.fillText('BIV', 50, 60);
+  ctx.fillStyle = '#94A3B8'; ctx.font = '14px sans-serif';
+  ctx.fillText('식자재 유통 · 창업 정보', 110, 60);
+
+  // 제목 (줄바꿈)
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 38px sans-serif';
+  var lines = wrapCanvasText(ctx, title, width-100);
+  var lineH = 52;
+  var startY = height/2 - (lines.length*lineH)/2 + 15;
+  lines.forEach(function(line, i){
+    ctx.fillText(line, 50, startY + i*lineH);
+  });
+
+  // 하단 태그 칩
+  var chipY = height - 60;
+  var chips = [region, industry, type].filter(Boolean);
+  var cx = 50;
+  ctx.font = '15px sans-serif';
+  chips.forEach(function(c){
+    var w = ctx.measureText(c).width + 24;
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(cx, chipY, w, 32, 16) : ctx.rect(cx, chipY, w, 32);
+    ctx.fill();
+    ctx.fillStyle = '#E2E8F0';
+    ctx.fillText(c, cx+12, chipY+21);
+    cx += w + 10;
+  });
+
+  return canvas;
+}
+
 async function writeOnePost(item, idx, total, priceData, priceStats){
   var kw     = item.keyword||item.title||'';
   var region = item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
@@ -2410,7 +2472,16 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
     console.warn('⚠️ 시트 저장 실패 (웹에는 저장됨):', e.message);
   }
 
-  return {success:true, title:title, kw:kw};
+  // ③ 썸네일 이미지 자동 생성
+  var imgDataUrl = null;
+  try{
+    var imgCanvas = generateTitleCardImage(title, region, industry, type);
+    imgDataUrl = imgCanvas.toDataURL('image/png');
+    if(typeof window._batchImages === 'undefined') window._batchImages = [];
+    window._batchImages.push({title:title, region:region, industry:industry, type:type, dataUrl:imgDataUrl});
+  }catch(e){ console.warn('이미지 생성 실패:', e.message); }
+
+  return {success:true, title:title, kw:kw, imgDataUrl:imgDataUrl};
 }
 let autoRunning = false;
 var _priceCache = {};
@@ -2430,6 +2501,7 @@ async function startAutoMode(){
   if(autoRunning){ showToast('이미 실행 중이에요'); return; }
 
   autoRunning = true;
+  window._batchImages = [];
   showAutoModal();
 
   try{
@@ -2541,6 +2613,19 @@ async function startAutoMode(){
     var sm=document.getElementById('asSumm');
     if(sm) sm.innerHTML = '<strong>'+ok+'개 포스팅 완료!</strong><br>'
       +'내 글 관리 탭에서 복사 → 네이버 블로그 발행하세요.';
+
+    // 생성된 썸네일 이미지 갤러리
+    var imgWrap = document.getElementById('asImages');
+    if(imgWrap && window._batchImages && window._batchImages.length){
+      imgWrap.style.display = 'block';
+      imgWrap.innerHTML = window._batchImages.map(function(im, i){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F1F5F9">'
+          +'<img src="'+im.dataUrl+'" style="width:60px;height:38px;object-fit:cover;border-radius:4px;border:1px solid #E2E8F0">'
+          +'<span style="flex:1;font-size:11px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+im.title+'</span>'
+          +'<button onclick="downloadCanvasImage2(window._batchImages['+i+'])" style="font-size:10px;padding:4px 8px;border:1px solid #E2E8F0;border-radius:5px;background:#fff;cursor:pointer;white-space:nowrap">다운로드</button>'
+          +'</div>';
+      }).join('');
+    }
 
     try{ updateDashboard(); }catch(e){}
     try{ if(typeof renderHistList==='function') renderHistList(); }catch(e){}
@@ -3622,6 +3707,13 @@ function downloadCanvasImage(canvas, filename){
   var link = document.createElement('a');
   link.download = filename;
   link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+function downloadCanvasImage2(imgObj){
+  var link = document.createElement('a');
+  link.download = (imgObj.title||'BIV_썸네일').replace(/[\\/:*?"<>|]/g,'') + '.png';
+  link.href = imgObj.dataUrl;
   link.click();
 }
 
