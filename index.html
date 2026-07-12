@@ -700,6 +700,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     </div>
     <button class="btn" onclick="writeFreshwayPost()" id="fwWriteBtn" style="width:100%"><i class="ti ti-pencil"></i> 프레시웨이 판매가 글 작성</button>
     <div id="fwWriteStatus" style="margin-top:10px;font-size:13px;color:var(--tx2)"></div>
+    <div id="fwImageArea" style="margin-top:12px"></div>
   </div>
 </div>
 <script>
@@ -3551,6 +3552,92 @@ function formatFreshwayItemList(items){
   }).join('\n');
 }
 
+/* ══════════════════════════════════════
+   오늘의 판매가 이미지(canvas) 자동 생성
+══════════════════════════════════════ */
+function generateFreshwayPriceImage(special, regular, region, industry){
+  var rowH = 46, headerH = 130, sectionH = 42;
+  var width = 800;
+  var height = headerH
+    + (special.length ? sectionH + special.length*rowH : 0)
+    + (regular.length ? sectionH + regular.length*rowH : 0)
+    + 60;
+  var canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  var ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,width,height);
+
+  ctx.fillStyle = '#0F172A'; ctx.fillRect(0,0,width,headerH);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 30px sans-serif';
+  ctx.fillText('BIV 오늘의 판매가', 30, 55);
+  ctx.font = '18px sans-serif';
+  ctx.fillText(region+' '+industry+' · '+new Date().toLocaleDateString('ko-KR'), 30, 90);
+  ctx.fillStyle = '#94A3B8';
+  ctx.font = '14px sans-serif';
+  ctx.fillText('BIV 식자재 유통 — 카카오톡 1:1 상담', 30, 114);
+
+  var y = headerH;
+  function drawSection(title, list, color){
+    if(!list.length) return;
+    ctx.fillStyle = color; ctx.fillRect(0,y,width,sectionH);
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px sans-serif';
+    ctx.fillText(title, 30, y+28);
+    y += sectionH;
+    list.forEach(function(it, idx){
+      ctx.fillStyle = idx%2===0 ? '#F8FAFC' : '#ffffff';
+      ctx.fillRect(0,y,width,rowH);
+      ctx.fillStyle = '#0F172A'; ctx.font = '16px sans-serif';
+      var name = it.name.length > 26 ? it.name.slice(0,26)+'…' : it.name;
+      ctx.fillText(name, 30, y+29);
+      ctx.textAlign = 'right';
+      if(it.eventPrice){
+        var origText = Number(it.supplyPrice).toLocaleString()+'원';
+        ctx.fillStyle = '#94A3B8'; ctx.font = '13px sans-serif';
+        ctx.fillText(origText, width-170, y+20);
+        var w = ctx.measureText(origText).width;
+        ctx.strokeStyle = '#94A3B8'; ctx.beginPath();
+        ctx.moveTo(width-170-w, y+16); ctx.lineTo(width-170, y+16); ctx.stroke();
+        ctx.fillStyle = '#DC2626'; ctx.font = 'bold 19px sans-serif';
+        ctx.fillText(Number(it.eventPrice).toLocaleString()+'원', width-30, y+31);
+      } else {
+        ctx.fillStyle = '#0F172A'; ctx.font = 'bold 18px sans-serif';
+        ctx.fillText(Number(it.supplyPrice).toLocaleString()+'원', width-30, y+29);
+      }
+      ctx.textAlign = 'left';
+      y += rowH;
+    });
+  }
+  drawSection('오늘의 특가', special, '#DC2626');
+  drawSection('오늘의 공급가', regular, '#0F172A');
+
+  ctx.fillStyle = '#64748B'; ctx.font = '13px sans-serif';
+  ctx.fillText('가격은 변동될 수 있습니다. BIV', 30, y+38);
+
+  return canvas;
+}
+
+function downloadCanvasImage(canvas, filename){
+  var link = document.createElement('a');
+  link.download = filename;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+/* 발행 시 곁들일 사진 검색 키워드 추천 (텍스트만, 실제 검색은 사용자가 수행) */
+function suggestImageKeywords(region, industry, items){
+  var kws = [];
+  kws.push(industry+' 식당 주방');
+  if(items && items.length){
+    var top = items[0].name.replace(/\(.+?\)/,'').trim();
+    kws.push(top);
+  }
+  kws.push(region+' '+industry+' 맛집');
+  kws.push('신선 식자재');
+  return kws;
+}
+
 async function writeFreshwayPost(){
   if(!fwParsedItems.length){
     document.getElementById('fwWriteStatus').textContent = '먼저 위에서 품목을 파싱해주세요.';
@@ -3625,6 +3712,25 @@ async function writeFreshwayPost(){
     if(d && (d.row || d.success)){
       statusEl.textContent = '✅ "'+title+'" 저장 완료! (내 글 관리에서 확인)';
       showToast('✅ 프레시웨이 판매가 글 작성 완료');
+
+      var imgCanvas = generateFreshwayPriceImage(special, regular, region, industry);
+      var kws = suggestImageKeywords(region, industry, picked);
+      var imgArea = document.getElementById('fwImageArea');
+      imgArea.innerHTML = '';
+      var previewImg = document.createElement('img');
+      previewImg.src = imgCanvas.toDataURL('image/png');
+      previewImg.style.cssText = 'width:100%;border:1.5px solid var(--bd);border-radius:8px;margin-bottom:10px';
+      imgArea.appendChild(previewImg);
+      var dlBtn = document.createElement('button');
+      dlBtn.className = 'btn btn-outline';
+      dlBtn.style.cssText = 'width:100%;margin-bottom:10px';
+      dlBtn.innerHTML = '<i class="ti ti-download"></i> 오늘의 판매가 이미지 다운로드';
+      dlBtn.onclick = function(){ downloadCanvasImage(imgCanvas, region+'_'+industry+'_오늘의판매가.png'); };
+      imgArea.appendChild(dlBtn);
+      var kwDiv = document.createElement('div');
+      kwDiv.style.cssText = 'font-size:12px;color:var(--tx2)';
+      kwDiv.textContent = '📷 추가로 넣을 사진 검색 키워드 추천: ' + kws.join(' · ');
+      imgArea.appendChild(kwDiv);
     } else {
       statusEl.textContent = '❌ 저장 실패';
     }
