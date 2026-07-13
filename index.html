@@ -2156,36 +2156,24 @@ function buildPostPrompt(kw, region, type, priceData, intent, priceStats){
   var today = new Date().getFullYear()+'년 '+mn[month];
   intent = intent || '업체찾기';
 
-  // 지역·업종·품목 분해
   var regionParts = (region||'서울').split(' ');
   var sido = regionParts[0]||'서울';
   var gugun = regionParts.slice(1).join(' ')||'';
-  var loc = gugun || sido; // 짧은 지역명
+  var loc = gugun || sido;
 
-  // 제목 패턴 8가지 — 랜덤 선택, 이모지 없음
   var titlePatterns = [
-    // 패턴1: 검색형 (지역+업종+키워드+기준)
     loc+' '+industry+' '+kw+', 공급업체 선택 기준',
-    // 패턴2: 창업형 (지역+업종+창업+키워드)
     loc+' '+industry+' 창업, '+kw+' 공급은 어떻게 준비할까',
-    // 패턴3: 문제해결형 (업종+키워드+확인사항)
     industry+' '+kw+', 창업 전에 꼭 확인해야 할 것',
-    // 패턴4: 비용형
     industry+' '+kw+' 공급가, 창업 전에 알아야 할 기준',
-    // 패턴5: 지역 뒤로 (업종+창업+지역+키워드)
     industry+' 창업, '+loc+'에서 '+kw+' 납품은 어떻게 준비할까',
-    // 패턴6: 실무형
     loc+' '+industry+', '+kw+' 실제 상담에서 가장 많이 받는 질문',
-    // 패턴7: 비교형 (키워드 앞으로)
     kw+' 공급업체, '+loc+' '+industry+'은 무엇을 확인할까',
-    // 패턴8: 체크리스트형
     industry+' 창업, '+kw+' 계약 전에 확인할 체크리스트'
   ];
-  // 키워드 해시로 패턴 고정 (같은 키워드면 항상 같은 패턴)
   var patternIdx = kw.split('').reduce(function(acc,c){return acc+c.charCodeAt(0);},0) % titlePatterns.length;
   var titleTemplate = titlePatterns[patternIdx];
 
-  // 글 타입별 형식
   var typeFormats = {
     '정보글':'정보 전달형 — 창업자가 몰랐던 실용 정보 중심',
     '가이드':'단계별 가이드 — 순서대로 이렇게 하세요',
@@ -2202,7 +2190,6 @@ function buildPostPrompt(kw, region, type, priceData, intent, priceStats){
   };
   var typeDesc = typeFormats[type]||typeFormats['정보글'];
 
-  // 검색의도별 핵심 방향
   var intentGuide = {
     '업체찾기':'식자재 납품업체를 찾고 있음. 어떻게 업체를 찾는지, 무엇을 비교해야 하는지가 핵심.',
     '창업비용':'창업 비용이 궁금함. 식자재 구매 비용이 전체 창업에서 어느 정도 비중인지가 핵심.',
@@ -2214,34 +2201,41 @@ function buildPostPrompt(kw, region, type, priceData, intent, priceStats){
   };
   var intentDesc = intentGuide[intent]||intentGuide['업체찾기'];
 
-  // 단가 통계 표 (단가 글 타입일 때)
+  // 검색의도별 "선택 기준 5가지" 섹션 주제
+  var criteriaMap = {
+    '업체찾기': {title:'납품업체 선택 기준 5가지', focus:'배송 경험, 냉장·보관 상태, 규격과 원산지 정확성, 최소 주문량, 교환·반품 처리'},
+    '창업비용': {title:'식자재 비용 절감 기준 5가지', focus:'최소 발주량, 배송비 구조, 정산 조건, 초기 재고 부담, 대체 품목 활용'},
+    '원가절감': {title:'원가 절감 체크포인트 5가지', focus:'정기거래 할인, 발주 단위 최적화, 대체 품목, 배송비 절감, 폐기율 관리'},
+    '납품':     {title:'납품 조건 확인 기준 5가지', focus:'배송 주기, 긴급 발주 가능 여부, 최소 주문량, 담당자 소통, 정산 방식'},
+    '식재료':   {title:'식재료 품질 확인 기준 5가지', focus:'원산지, 규격, 신선도 관리, 손질 여부, 보관 상태'},
+    '상권':     {title:'지역 상권 식자재 확인 기준 5가지', focus:'지역 유통 구조, 배송 접근성, 주변 매장 공급처, 지역 특화 품목, 신규 진입 조건'},
+    '운영':     {title:'식자재 운영 효율화 기준 5가지', focus:'발주 주기 최적화, 재고 관리, 폐기율 관리, 정기 거래처 확보, 긴급 발주 대응'}
+  };
+  var criteria = criteriaMap[intent] || criteriaMap['업체찾기'];
+
+  // 공급가 표 (마크다운 표 그대로 사용)
+  var priceTable = '';
+  var hasPrice = priceData && priceData.prices && priceData.prices.length>0;
+  if(hasPrice){
+    priceTable = '| 품목 | 도매가 |\n| --- | ---: |\n';
+    priceData.prices.forEach(function(p){
+      priceTable += '| '+p.name+' | '+p.wholesale+'원/'+p.unit+' |\n';
+    });
+  }
+
+  // 단가 통계 표 (단가 글 타입)
   var statsTable = '';
   var hasStats = priceStats && priceStats.success && priceStats.stats && priceStats.stats.length > 0;
   if(hasStats){
     var periodLabel = priceStats.periodLabel || '';
-    statsTable = periodLabel + ' 기준 업종별 단가 (KAMIS 실거래가)\n';
-    statsTable += '품목 | 평균가 | 최저 | 최고 | 단위\n--- | --- | --- | --- | ---\n';
+    statsTable = '| 품목 | 평균가 | 최저 | 최고 | 단위 |\n| --- | ---: | ---: | ---: | --- |\n';
     var indStats = (priceStats.grouped && priceStats.grouped[industry]) || priceStats.stats.slice(0,10);
     indStats.slice(0,8).forEach(function(p){
-      statsTable += p.item+'|'+p.avg+'원|'+p.min+'원|'+p.max+'원|'+p.unit+'\n';
+      statsTable += '| '+p.item+' | '+p.avg+'원 | '+p.min+'원 | '+p.max+'원 | '+p.unit+' |\n';
     });
   }
 
-  // 공급가 표
-  var priceTable = '';
-  var hasPrice = priceData && priceData.prices && priceData.prices.length>0;
-  if(hasPrice){
-    priceTable = '품목 | 도매가 | 전일비\n--- | --- | ---\n';
-    priceData.prices.forEach(function(p){
-      var diff = p.prevDay ? parseFloat(p.wholesale)-parseFloat(p.prevDay) : 0;
-      priceTable += p.name+' | '+p.wholesale+'원/'+p.unit+' | '+(diff>0?'▲':diff<0?'▼':'-')+'\n';
-    });
-  }
-
-  return '당신의 목적은 지역과 업종에 맞는 식자재 업체를 찾는 사람에게 도움을 주는 것입니다.\n'
-    +'글의 핵심은 "식자재 업체를 어떻게 찾는가"입니다.\n'
-    +'지역은 배송환경, 거래 가능한 업체, 물류 특성을 설명하기 위해 사용합니다.\n'
-    +'업종은 필요한 식재료를 설명하기 위해 사용합니다.\n'
+  return '당신의 목적은 지역과 업종에 맞는 식자재 업체를 찾는 사람에게 도움을 주는 것입니다. 네이버 블로그에 그대로 발행할 완성된 글을 마크다운으로 작성합니다.\n'
     +'마지막에는 BIV가 "찾는 것을 도와주는 서비스"라는 점을 자연스럽게 설명합니다.\n\n'
 
     +'[입력값]\n'
@@ -2251,64 +2245,70 @@ function buildPostPrompt(kw, region, type, priceData, intent, priceStats){
     +'핵심키워드: "'+kw+'"\n'
     +'검색의도: '+intent+' — '+intentDesc+'\n'
     +'글 타입: '+type+' — '+typeDesc+'\n'
-    +(hasPrice?'오늘 공급가(수정 금지):\n'+priceTable+'\n':'공급가: 오늘 데이터 없음 — 가격은 "업체별 상이, 직접 확인 필요"로만 표현\n')
+    +(hasPrice?'오늘 공급가(수정 금지, 표에 그대로 사용):\n'+priceTable+'\n':'')
+    +(hasStats?periodLabel+' 단가 통계(수정 금지, 표에 그대로 사용):\n'+statsTable+'\n':'')
     +'\n'
 
     +'[절대 규칙]\n'
     +'① 이모지 완전 금지 — 제목 포함 글 전체에 이모지 없음. BIV는 전문 브랜드.\n'
-    +'② 마크다운(#,**,-,*) 완전 금지. 순수 텍스트.\n'
-    +'③ 인사말 없이 바로 시작.\n'
-    +'④ 소제목도 이모지 없이 텍스트만. (예: "오늘의 공급가" "BIV Insight" "체크리스트" "마무리")\n'
-    +'⑤ 근거 없는 사례/통계 금지 → [실제 사례 입력]으로 남길 것.\n'
-    +'⑥ 핵심키워드 "'+kw+'"를 도입/본문/마무리에 각 1회 자연스럽게 포함.\n'
-    +'⑦ 문장 짧게, 한 문단 2~4줄.\n'
-    +'⑧ 과장/광고/1위/최고 금지.\n'
-    +(hasPrice ? '⑨ 핵심키워드 "'+kw+'"에 나오는 구체적 식재료명이 아래 공급가 표의 품목과 다르면, 표는 "이 지역/업종의 대표 식재료 시세 참고용"으로 명확히 설명하고, 키워드가 언급한 특정 식재료는 "공공 시세 데이터에 없어 업체별 견적 확인이 필요하다"고 별도로 짚어줄 것. 표에 없는 품목의 가격을 지어내지 말 것.\n' : '')
+    +'② 마크다운 적극 사용: #/## 제목, **볼드**, 표(|), 불릿(*) 전부 사용할 것. 네이버 블로그에서 실제로 서식 적용됨.\n'
+    +'③ 문장은 짧게 끊고, 한 줄에 2~4단어 정도로 자주 줄바꿈할 것 (모바일 가독성용 스크립트체). 한 문단은 2~3줄을 넘기지 않음.\n'
+    +'④ 인사말 없이 바로 시작.\n'
+    +'⑤ 절대 지어내지 말 것: "한 예비 창업자가 있었어요" 같은 특정 인물·날짜·구체적 스토리는 금지. 대신 "이런 상황이 흔해요"처럼 일반화된 패턴으로만 서술. 통계나 수치도 지어내지 말 것.\n'
+    +'⑥ 핵심키워드 "'+kw+'"를 도입/본문/마무리에 각 1회, **볼드**로 자연스럽게 포함.\n'
+    +'⑦ 과장/광고/1위/최고 금지.\n'
+    +(hasPrice ? '⑧ 핵심키워드 "'+kw+'"에 나오는 구체적 식재료명이 공급가 표의 품목과 다르면, "프리미엄/특수 품목은 별도 견적" 섹션에서 "공공 시세 데이터에 없어 업체별 견적 확인이 필요하다"고 짚어줄 것. 표에 없는 가격을 지어내지 말 것.\n' : '')
     +'\n'
 
-    +'[출력 형식 — 이 순서대로]\n\n'
-    +'해시태그: BIV 고정태그 10개 반드시 포함 후 SEO 태그 10개 추가, 총 20개\n'
+    +'[출력 형식 — 이 순서와 마크다운 헤더 그대로]\n\n'
+
+    +'# '+titleTemplate+' (30~35자 이내, 이 형식 유지)\n\n'
+
+    +'## AI검색요약\n'
+    +'(3문장. 팩트 위주. "'+kw+'" 포함. 규칙③의 짧은 줄바꿈 스타일.)\n\n'
+
+    +'---\n\n'
+    +'## (2줄로 나눈 도입 소제목, 예: "'+loc+' '+industry+' 창업," / "거래처부터 정해야 해요")\n'
+    +'(검색의도 "'+intent+'" — 이 사람이 지금 어떤 상황인지 공감하며 시작. 4~6문단, 각 2~3줄. 핵심키워드 **'+kw+'** 볼드로 1회 포함.)\n\n'
+
+    +(hasPrice ? ('---\n\n## 오늘의 식자재 공급가\n'+priceTable+'\n※ 위 가격은 참고용이며 시장 상황과 규격에 따라 실제 납품가는 달라질 수 있습니다.\n표에 없는 품목은 별도 견적이 필요하다고 짧게 언급.\n\n') : '')
+    +(hasStats ? ('---\n\n## '+periodLabel+' 단가 동향\n'+statsTable+'\n\n') : '')
+
+    +'---\n\n## BIV가 먼저 보는 3가지\n'
+    +'### 1. 지역 배송 환경\n(2~4문단, '+region+' 기준 배송 관련 실무 포인트)\n\n'
+    +'### 2. 메뉴별 식재료 규격\n(2~4문단, '+industry+' 업종에 맞는 규격 포인트)\n\n'
+    +'### 3. 물량과 납품 주기\n(2~4문단, 신규 매장 기준 물량/주기 포인트)\n\n'
+
+    +'---\n\n## '+criteria.title+'\n'
+    +'다음 5가지를 ### 소제목으로 각각 작성 (각 2~4문단): '+criteria.focus+'\n\n'
+
+    +'---\n\n## 식자재 공급 경로\n'
+    +'### 도매시장 직접 구매\n(장단점 2~3문단)\n\n'
+    +'### 전문 납품회사\n(장단점 2~3문단)\n\n'
+    +'### 품목별 전문 업체\n(장단점 2~3문단)\n\n'
+
+    +(hasPrice ? '---\n\n## 프리미엄·특수 품목은 별도 견적이 필요해요\n(표에 없는 고가/특수 품목은 공공 시세로 알기 어렵다는 내용. 2~3문단.)\n\n' : '')
+
+    +'---\n\n## 자주 겪는 상황\n'
+    +'(특정 인물·날짜를 지어내지 말고, "이런 경우가 흔해요" 식으로 일반화된 패턴 2~3개를 서술. 3~4문단.)\n\n'
+
+    +'---\n\n## 계약 전 확인표\n'
+    +'(불릿(*)으로 12~15개, 위 섹션들과 연결되는 체크 항목만. 지어내지 말고 위에서 다룬 내용 기반으로.)\n\n'
+
+    +'---\n\n## 자주 묻는 질문\n'
+    +'### Q1. ('+intent+' 관련 실제로 자주 나오는 질문)\n(2~3문단 답변)\n\n'
+    +'### Q2. (질문)\n(답변)\n\n'
+    +'### Q3. (질문)\n(답변)\n\n'
+
+    +'---\n\n## 마무리\n'
+    +'**'+kw+'** 포함해서 2~3문단. 마지막 문장은 반드시 "지금 아래에서 편하게 상담받아보세요" 또는 비슷한 표현으로 끝낼 것 (바로 다음에 카카오톡 링크가 이어짐). 연락처 직접 언급 금지.\n\n'
+
+    +'---\n\n## 핵심 요약\n'
+    +'(2~3문단, 전체 내용 요약. 규칙③ 스타일.)\n\n'
+
+    +'해시태그: BIV 고정태그 10개 필수 포함 후 SEO 태그 10개 추가, 총 20개, 마지막 줄에 한 줄로.\n'
     +'고정: #식자재납품 #식재료도매 #식당창업 #식자재원가 #납품업체 #식재료공급 #창업준비 #외식업창업 #식자재유통 #BIV\n'
-    +'추가: 지역+업종+검색의도에 맞는 SEO 키워드 10개 (이모지 없는 텍스트만)\n\n'
-
-    +'FAQ:\n'
-    +'Q1. ('+intent+' 관련 실제 상담 질문)\nA1. (2문장, 사실 기반)\n'
-    +'Q2. (질문)\nA2.\n'
-    +'Q3. (질문)\nA3.\n\n'
-
-    +'AI검색요약: (3문장. 팩트 위주. 이모지 없음. "'+kw+'" 포함.)\n\n'
-
-    +(['오늘단가','주간단가','월간단가'].indexOf(type)>-1
-      ? ('본문:\n'
-        +'도입\n(창업자가 이 단가 정보를 왜 알아야 하는지. 2~3줄.)\n\n'
-        +(hasStats ? '단가 현황 (KAMIS 실거래가 기반, 수정 금지)\n'+statsTable+'\n\n' : '')
-        +(hasPrice ? '오늘의 공급가\n(KAMIS 실거래가 표 그대로. 수정 금지.)\n\n' : '')
-        +'시세 해석\n(이 가격이 높은지 낮은지, 창업자 입장에서 어떻게 봐야 하는지. 2~4줄. 추측 금지.)\n\n'
-        +'BIV Insight\n'
-        +'(BIV에서 문의가 들어오면 가장 먼저 이 3가지를 확인합니다.\n'
-        +'① 지역 배송 환경과 거래 가능한 업체\n'
-        +'② 업종에 맞는 식재료와 규격\n'
-        +'③ 물량과 납품 주기 조건\n'
-        +'자연스럽게 설명.)\n\n'
-        +'[실제 사례 입력]\n\n'
-        +'마무리\n(1~2줄. 마지막 문장은 반드시 "지금 아래에서 편하게 상담받아보세요" 또는 이와 비슷한 표현으로 끝내서, 바로 다음에 오는 카카오톡 상담 링크로 자연스럽게 이어지게 할 것. 연락처는 직접 언급하지 않음.)')
-      : ('본문:\n'
-    +'도입\n'
-    +'(검색의도 "+intent+" — 이 사람이 지금 어떤 상황인지 공감하며 시작. 인사말 없이. 2~4줄.)\n\n'
-    +(hasPrice?'오늘의 공급가\n(위 공급가 표 그대로. 수정 금지.)\n\n':'')
-    +'BIV Insight\n'
-    +'(BIV에서 문의가 들어오면 가장 먼저 이 3가지를 확인합니다.\n'
-    +'① 지역 배송 환경과 거래 가능한 업체\n'
-    +'② 업종에 맞는 식재료와 규격\n'
-    +'③ 물량과 납품 주기 조건\n'
-    +'이 실제 프로세스를 자연스럽게 설명. 이모지 없이.)\n\n'
-    +'핵심 정보\n'
-    +'('+intent+' 관점에서 창업자가 바로 쓸 수 있는 정보. '+typeDesc+'. 이모지 없이.)\n\n'
-    +'[실제 사례 입력]\n\n'
-    +'마무리\n'
-    +'(1~2줄. 짧고 기억에 남는 문장. 이모지 없이. 마지막 문장은 반드시 "지금 아래에서 편하게 상담받아보세요" 또는 이와 비슷한 표현으로 끝내서, 바로 다음에 오는 카카오톡 상담 링크로 자연스럽게 이어지게 할 것. 연락처는 직접 언급하지 않음.)\n\n'))
-
-    +'제목: '+titleTemplate+' (30~35자 이내. 이모지 없음. 이 형식 그대로 사용.)'
+    +'추가: 지역+업종+검색의도에 맞는 SEO 키워드 10개'
     ;
 }
 /* ══════════════════════════════════════
@@ -2450,49 +2450,32 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
   var region = item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
   var type   = item.type||'정보성 SEO';
 
-  // 글 작성 (Haiku)
-  var text = await callClaude(buildPostPrompt(kw, region, type, priceData||null, currentIntent||'업체찾기', priceStats||null), 5500, true); // v2.0: 본문2000~2300자 제한+FAQ+요약+해시태그 전체 완주 보장
+  // 글 작성 (Haiku) — v3: 마크다운 유지, 훨씬 긴 12섹션 포맷이라 토큰 상향
+  var text = await callClaude(buildPostPrompt(kw, region, type, priceData||null, currentIntent||'업체찾기', priceStats||null), 8000, true);
 
-  // ── BIV 출력 순서: 해시태그 → FAQ → AI검색요약 → 본문 → 제목(마지막) ──
+  // ── v3 출력 순서: # 제목 → ## 본문 섹션들(마크다운 유지) → 해시태그(맨 끝) ──
 
-  // 해시태그 파싱
-  var tagsM = text.match(/해시태그\s*[:：]\s*([\s\S]*?)(?=FAQ\s*[:：]|AI검색요약\s*[:：]|본문\s*[:：]|제목\s*[:：]|$)/);
-  var rawTags = tagsM ? (tagsM[1].match(/#[\w가-힣]+/g)||[]) : (text.match(/#[\w가-힣]+/g)||[]);
-  // BIV 고정 태그 앞배치 + AI 생성 태그 중복 제거 후 뒤에 추가
-  var fixedTags = (typeof BIV_FIXED_TAGS!=='undefined'?BIV_FIXED_TAGS:'').match(/#[\w가-힣]+/g)||[];
-  var tags = fixedTags.concat(rawTags.filter(function(t){ return fixedTags.indexOf(t)===-1; }));
-
-  // FAQ 파싱
-  var faqM = text.match(/FAQ\s*[:：]\s*([\s\S]*?)(?=AI검색요약\s*[:：]|본문\s*[:：]|제목\s*[:：]|$)/);
-  var faq  = faqM ? faqM[1].trim() : '';
-
-  // AI검색요약 파싱
-  var summaryM = text.match(/AI검색요약\s*[:：]\s*([\s\S]*?)(?=본문\s*[:：]|제목\s*[:：]|$)/);
-  var summary  = summaryM ? summaryM[1].trim() : '';
-
-  // 본문 파싱 (본문: ~ 제목: 이전까지)
-  var bodyM = text.match(/본문\s*[:：]\s*([\s\S]*?)(?=제목\s*[:：]|$)/);
-
-  // 제목 파싱 (마지막)
-  var titleM = text.match(/제목\s*[:：]\s*(.+)/);
-  // 제목에서 이모지 및 마크다운 완전 제거
+  // 제목 파싱 (줄 맨 앞 '#' 단독, '##'은 제외)
+  var titleM = text.match(/^#(?!#)\s*(.+)$/m);
   var title  = titleM ? titleM[1].trim()
-    .replace(/[#*]/g,'')
+    .replace(/\*\*/g,'')
     .replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27FF}]/gu,'')
     .replace(/[\u00A9\u00AE\u203C\u2049\u20E3\u2122\u2139\u2194-\u2199\u21A9\u21AA\u231A\u231B\u23E9-\u23F3\u23F8-\u23FA\u24C2\u25AA\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u2604\u260E\u2611\u2614\u2615\u2618\u261D\u2620\u2622\u2623\u2626\u262A\u262E\u262F\u2638-\u263A\u2648-\u2653\u2660\u2663\u2665\u2666\u2668\u267B\u267F\u2692-\u2694\u2696\u2697\u2699\u269B\u269C\u26A0\u26A1\u26AA\u26AB\u26B0\u26B1\u26BD\u26BE\u26C4\u26C5\u26CE\u26CF\u26D1\u26D3\u26D4\u26E9\u26EA\u26F0-\u26F5\u26F7-\u26FA\u26FD\u2702\u2705\u2708-\u270D\u270F\u2712\u2714\u2716\u271D\u2721\u2728\u2733\u2734\u2744\u2747\u274C\u274E\u2753-\u2755\u2757\u2763\u2764\u2795-\u2797\u27A1\u27B0\u27BF\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B50\u2B55]/g,'')
     .trim() : kw;
-  var body  = (bodyM ? bodyM[1] : text)
-    .replace(/^#{1,6}\s*/gm, '')      // # 헤더 기호 제거
-    .replace(/\*\*/g, '')            // 굵게 기호 제거
-    .replace(/^[-*]\s+/gm, '')        // 목록 기호 제거
-    .replace(/안녕하세요[^\n]*\n+/, '') // 인사말 제거 (남아있을 경우)
-    .trim();
 
-  // 본문 끝에 FAQ + 요약을 자연스럽게 이어붙임 (시트/웹에는 전체가 하나의 본문으로 저장)
-  var fullBody = body;
-  if(faq)     fullBody += '\n\n자주 묻는 질문\n\n' + faq;
-  if(summary) fullBody += '\n\n핵심 요약\n\n' + summary;
-  body = fullBody.trim();
+  // 해시태그 파싱 (맨 끝 "해시태그:" 이후 전체에서 태그 추출)
+  var hashtagIdx = text.search(/해시태그\s*[:：]/);
+  var tagsBlock = hashtagIdx > -1 ? text.slice(hashtagIdx) : '';
+  var rawTags = tagsBlock.match(/#[\w가-힣]+/g) || [];
+  var fixedTags = (typeof BIV_FIXED_TAGS!=='undefined'?BIV_FIXED_TAGS:'').match(/#[\w가-힣]+/g)||[];
+  var tags = fixedTags.concat(rawTags.filter(function(t){ return fixedTags.indexOf(t)===-1; }));
+
+  // 본문 파싱: 제목 줄 다음부터 해시태그 블록 전까지, 마크다운은 그대로 유지 (네이버가 서식 렌더링함)
+  var bodyStart = titleM ? (titleM.index + titleM[0].length) : 0;
+  var bodyEnd   = hashtagIdx > -1 ? hashtagIdx : text.length;
+  var body = text.slice(bodyStart, bodyEnd)
+    .replace(/^안녕하세요[^\n]*\n+/, '') // 인사말이 남아있을 경우만 제거
+    .trim();
 
   // 빈 글 저장 방지 — API 응답 파싱 실패 등으로 title/body가 실질적으로 비어있으면 시트에 쓰지 않고 즉시 실패 처리
   if(!text || !body || body.trim().length < 30 || !title || !title.trim()){
