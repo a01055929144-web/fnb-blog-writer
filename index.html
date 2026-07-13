@@ -2327,47 +2327,120 @@ function wrapCanvasText(ctx, text, maxWidth){
   return lines;
 }
 
+var TYPE_TIPS = {
+  '정보글':      ['믿을 수 있는 공급처인지 먼저 확인하세요','배송 주기와 최소 발주량을 체크하세요','가격뿐 아니라 품질 규격도 비교하세요'],
+  '가이드':      ['필요한 품목 리스트를 먼저 정리하세요','공급처별 강점을 비교해보세요','계약 전 조건을 꼼꼼히 확인하세요'],
+  '체크리스트':  ['사업자 등록 여부를 확인하세요','샘플로 품질을 테스트해보세요','정산 조건을 사전에 협의하세요'],
+  '비교':        ['가격만 보지 말고 배송 안정성도 비교하세요','여러 업체 견적을 받아보세요','후기와 거래 실적을 확인하세요'],
+  'TOP5':        ['상위 업체도 지역·물량 조건이 다 달라요','직접 문의해서 견적을 비교하세요','장기 거래 조건도 함께 확인하세요'],
+  'FAQ':         ['궁금한 점은 미리 리스트업하세요','계약 조건은 문서로 남기세요','담당자 연락처를 미리 확보하세요'],
+  '실수':        ['가격만 보고 성급히 결정하지 마세요','배송 조건을 꼼꼼히 확인하세요','계약서 없이 진행하지 마세요'],
+  '비용':        ['초기 발주량을 너무 크게 잡지 마세요','숨은 배송비가 있는지 확인하세요','정기 거래 할인 여부를 물어보세요'],
+  '후기형':      ['실제 이용 후기를 참고하세요','품질 일관성을 확인하세요','장기 거래 조건은 재협상 가능해요'],
+  '오늘단가':    ['시세는 매일 변동될 수 있어요','필요한 물량을 미리 확인하세요','가격 변동 알림을 받아보는 것도 방법이에요'],
+  '주간단가':    ['주간 평균으로 흐름을 파악하세요','급등락 품목은 미리 대체재를 찾아두세요','정기 발주 시점을 시세에 맞춰보세요'],
+  '월간단가':    ['월간 추이로 예산을 미리 계획하세요','계절 변동이 큰 품목은 따로 체크하세요','장기 계약으로 단가를 고정하는 것도 방법이에요'],
+  '프레시웨이판매가': ['행사가 품목은 재고 소진 시 종료돼요','필요 수량을 미리 파악해두세요','정기 발주로 전환하면 더 안정적이에요']
+};
+
+function wrapCanvasTextByWord(ctx, text, maxWidth){
+  var words = text.split(' ');
+  var lines = [], cur = '';
+  for(var i=0;i<words.length;i++){
+    var test = cur ? cur+' '+words[i] : words[i];
+    if(ctx.measureText(test).width > maxWidth && cur){ lines.push(cur); cur = words[i]; }
+    else { cur = test; }
+  }
+  if(cur) lines.push(cur);
+  return lines;
+}
+
+function roundRectPath(ctx, x, y, w, h, r){
+  if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); return; }
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+/* 1번째 이미지: 카드뉴스 스타일 타이틀 카드 */
 function generateTitleCardImage(title, region, industry, type){
   var width = 800, height = 500;
   var canvas = document.createElement('canvas');
   canvas.width = width; canvas.height = height;
   var ctx = canvas.getContext('2d');
 
-  // 배경
-  ctx.fillStyle = '#0F172A'; ctx.fillRect(0,0,width,height);
-  // 좌측 악센트 바
-  ctx.fillStyle = '#22C55E'; ctx.fillRect(0,0,10,height);
+  // 따뜻한 배경
+  ctx.fillStyle = '#FFFBF5'; ctx.fillRect(0,0,width,height);
+  // 우상단 장식 원
+  ctx.fillStyle = '#DCFCE7';
+  ctx.beginPath(); ctx.arc(width-60, 60, 160, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#BBF7D0';
+  ctx.beginPath(); ctx.arc(width-20, 20, 90, 0, Math.PI*2); ctx.fill();
 
-  // BIV 워드마크
-  ctx.fillStyle = '#22C55E'; ctx.font = 'bold 22px sans-serif';
-  ctx.fillText('BIV', 50, 60);
+  // 상단 타입 뱃지
+  ctx.font = 'bold 15px sans-serif';
+  var badgeText = (type||'정보') + ' · ' + (industry||'');
+  var badgeW = ctx.measureText(badgeText).width + 28;
+  ctx.fillStyle = '#16A34A';
+  roundRectPath(ctx, 50, 50, badgeW, 34, 17); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(badgeText, 64, 73);
+
+  // 제목 (단어 단위 줄바꿈, 진한 남색)
+  ctx.fillStyle = '#0F172A'; ctx.font = 'bold 40px sans-serif';
+  var lines = wrapCanvasTextByWord(ctx, title, width-100);
+  if(lines.length > 4) lines = lines.slice(0,4);
+  var lineH = 54;
+  var startY = 230;
+  lines.forEach(function(line, i){ ctx.fillText(line, 50, startY + i*lineH); });
+
+  // 하단 얇은 구분선 + 로고/지역
+  var footY = height - 55;
+  ctx.strokeStyle = '#E2E8F0'; ctx.beginPath();
+  ctx.moveTo(50, footY); ctx.lineTo(width-50, footY); ctx.stroke();
+  ctx.fillStyle = '#16A34A'; ctx.font = 'bold 18px sans-serif';
+  ctx.fillText('BIV', 50, footY+34);
   ctx.fillStyle = '#94A3B8'; ctx.font = '14px sans-serif';
-  ctx.fillText('식자재 유통 · 창업 정보', 110, 60);
+  ctx.fillText('식자재 유통 · ' + (region||''), 95, footY+33);
 
-  // 제목 (줄바꿈)
-  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 38px sans-serif';
-  var lines = wrapCanvasText(ctx, title, width-100);
-  var lineH = 52;
-  var startY = height/2 - (lines.length*lineH)/2 + 15;
-  lines.forEach(function(line, i){
-    ctx.fillText(line, 50, startY + i*lineH);
+  return canvas;
+}
+
+/* 2번째 이미지: 핵심 포인트 카드 (타입별 팁 3가지) */
+function generatePointCardImage(type, region, industry){
+  var width = 800, height = 500;
+  var canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  var ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#16A34A'; ctx.fillRect(0,0,width,height);
+  // 은은한 원 장식
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath(); ctx.arc(width-40, height-40, 180, 0, Math.PI*2); ctx.fill();
+
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 26px sans-serif';
+  ctx.fillText('이것만은 꼭 체크하세요', 50, 65);
+  ctx.font = '15px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText((region||'')+' '+(industry||'')+' 식자재 준비 포인트', 50, 92);
+
+  var tips = TYPE_TIPS[type] || TYPE_TIPS['정보글'];
+  var y = 150;
+  tips.forEach(function(tip, i){
+    // 번호 원
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(70, y, 20, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#16A34A'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(String(i+1), 70, y+6);
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = '#ffffff'; ctx.font = '20px sans-serif';
+    var lines = wrapCanvasTextByWord(ctx, tip, width-160);
+    lines.forEach(function(line, li){ ctx.fillText(line, 110, y-6+li*26); });
+    y += Math.max(70, lines.length*26 + 34);
   });
 
-  // 하단 태그 칩
-  var chipY = height - 60;
-  var chips = [region, industry, type].filter(Boolean);
-  var cx = 50;
-  ctx.font = '15px sans-serif';
-  chips.forEach(function(c){
-    var w = ctx.measureText(c).width + 24;
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(cx, chipY, w, 32, 16) : ctx.rect(cx, chipY, w, 32);
-    ctx.fill();
-    ctx.fillStyle = '#E2E8F0';
-    ctx.fillText(c, cx+12, chipY+21);
-    cx += w + 10;
-  });
+  ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '13px sans-serif';
+  ctx.fillText('BIV 식자재 유통', 50, height-30);
 
   return canvas;
 }
@@ -2472,16 +2545,18 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
     console.warn('⚠️ 시트 저장 실패 (웹에는 저장됨):', e.message);
   }
 
-  // ③ 썸네일 이미지 자동 생성
-  var imgDataUrl = null;
+  // ③ 썸네일 이미지 자동 생성 (1: 타이틀 카드, 2: 핵심 포인트 카드)
+  var imgDataUrl = null, imgDataUrl2 = null;
   try{
     var imgCanvas = generateTitleCardImage(title, region, industry, type);
     imgDataUrl = imgCanvas.toDataURL('image/png');
+    var imgCanvas2 = generatePointCardImage(type, region, industry);
+    imgDataUrl2 = imgCanvas2.toDataURL('image/png');
     if(typeof window._batchImages === 'undefined') window._batchImages = [];
-    window._batchImages.push({title:title, region:region, industry:industry, type:type, dataUrl:imgDataUrl});
+    window._batchImages.push({title:title, region:region, industry:industry, type:type, dataUrl:imgDataUrl, dataUrl2:imgDataUrl2});
   }catch(e){ console.warn('이미지 생성 실패:', e.message); }
 
-  return {success:true, title:title, kw:kw, imgDataUrl:imgDataUrl};
+  return {success:true, title:title, kw:kw, imgDataUrl:imgDataUrl, imgDataUrl2:imgDataUrl2};
 }
 let autoRunning = false;
 var _priceCache = {};
@@ -2620,9 +2695,11 @@ async function startAutoMode(){
       imgWrap.style.display = 'block';
       imgWrap.innerHTML = window._batchImages.map(function(im, i){
         return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F1F5F9">'
-          +'<img src="'+im.dataUrl+'" style="width:60px;height:38px;object-fit:cover;border-radius:4px;border:1px solid #E2E8F0">'
+          +'<img src="'+im.dataUrl+'" style="width:44px;height:28px;object-fit:cover;border-radius:4px;border:1px solid #E2E8F0">'
+          +'<img src="'+im.dataUrl2+'" style="width:44px;height:28px;object-fit:cover;border-radius:4px;border:1px solid #E2E8F0">'
           +'<span style="flex:1;font-size:11px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+im.title+'</span>'
-          +'<button onclick="downloadCanvasImage2(window._batchImages['+i+'])" style="font-size:10px;padding:4px 8px;border:1px solid #E2E8F0;border-radius:5px;background:#fff;cursor:pointer;white-space:nowrap">다운로드</button>'
+          +'<button onclick="downloadCanvasImage2(window._batchImages['+i+'],1)" style="font-size:10px;padding:4px 6px;border:1px solid #E2E8F0;border-radius:5px;background:#fff;cursor:pointer;white-space:nowrap">①</button>'
+          +'<button onclick="downloadCanvasImage2(window._batchImages['+i+'],2)" style="font-size:10px;padding:4px 6px;border:1px solid #E2E8F0;border-radius:5px;background:#fff;cursor:pointer;white-space:nowrap">②</button>'
           +'</div>';
       }).join('');
     }
@@ -3710,10 +3787,11 @@ function downloadCanvasImage(canvas, filename){
   link.click();
 }
 
-function downloadCanvasImage2(imgObj){
+function downloadCanvasImage2(imgObj, which){
   var link = document.createElement('a');
-  link.download = (imgObj.title||'BIV_썸네일').replace(/[\\/:*?"<>|]/g,'') + '.png';
-  link.href = imgObj.dataUrl;
+  var url = (which===2) ? imgObj.dataUrl2 : imgObj.dataUrl;
+  link.download = (imgObj.title||'BIV_썸네일').replace(/[\\/:*?"<>|]/g,'') + '_' + (which||1) + '.png';
+  link.href = url;
   link.click();
 }
 
@@ -3806,6 +3884,7 @@ async function writeFreshwayPost(){
       showToast('✅ 프레시웨이 판매가 글 작성 완료');
 
       var imgCanvas = generateFreshwayPriceImage(special, regular, region, industry);
+      var imgCanvas2 = generatePointCardImage('프레시웨이판매가', region, industry);
       var kws = suggestImageKeywords(region, industry, picked);
       var imgArea = document.getElementById('fwImageArea');
       imgArea.innerHTML = '';
@@ -3813,12 +3892,22 @@ async function writeFreshwayPost(){
       previewImg.src = imgCanvas.toDataURL('image/png');
       previewImg.style.cssText = 'width:100%;border:1.5px solid var(--bd);border-radius:8px;margin-bottom:10px';
       imgArea.appendChild(previewImg);
+      var previewImg2 = document.createElement('img');
+      previewImg2.src = imgCanvas2.toDataURL('image/png');
+      previewImg2.style.cssText = 'width:100%;border:1.5px solid var(--bd);border-radius:8px;margin-bottom:10px';
+      imgArea.appendChild(previewImg2);
       var dlBtn = document.createElement('button');
       dlBtn.className = 'btn btn-outline';
-      dlBtn.style.cssText = 'width:100%;margin-bottom:10px';
-      dlBtn.innerHTML = '<i class="ti ti-download"></i> 오늘의 판매가 이미지 다운로드';
-      dlBtn.onclick = function(){ downloadCanvasImage(imgCanvas, region+'_'+industry+'_오늘의판매가.png'); };
+      dlBtn.style.cssText = 'width:100%;margin-bottom:8px';
+      dlBtn.innerHTML = '<i class="ti ti-download"></i> ① 오늘의 판매가 이미지 다운로드';
+      dlBtn.onclick = function(){ downloadCanvasImage(imgCanvas, region+'_'+industry+'_오늘의판매가1.png'); };
       imgArea.appendChild(dlBtn);
+      var dlBtn2 = document.createElement('button');
+      dlBtn2.className = 'btn btn-outline';
+      dlBtn2.style.cssText = 'width:100%;margin-bottom:10px';
+      dlBtn2.innerHTML = '<i class="ti ti-download"></i> ② 핵심 포인트 카드 다운로드';
+      dlBtn2.onclick = function(){ downloadCanvasImage(imgCanvas2, region+'_'+industry+'_오늘의판매가2.png'); };
+      imgArea.appendChild(dlBtn2);
       var kwDiv = document.createElement('div');
       kwDiv.style.cssText = 'font-size:12px;color:var(--tx2)';
       kwDiv.textContent = '📷 추가로 넣을 사진 검색 키워드 추천: ' + kws.join(' · ');
