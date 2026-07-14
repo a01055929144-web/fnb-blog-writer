@@ -618,6 +618,19 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     <span id="anCount" style="font-size:11px;color:var(--gray);margin-left:auto">0개</span>
   </div>
 
+  <!-- 선택 삭제 툴바 -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray);cursor:pointer">
+      <input type="checkbox" id="selectAllChk" onchange="toggleSelectAllPosts(this)" style="cursor:pointer">
+      전체 선택
+    </label>
+    <span id="selCount" style="font-size:11px;color:var(--gray)"></span>
+    <button id="bulkDeleteBtn" onclick="deleteSelectedPosts()" disabled
+      style="margin-left:auto;padding:5px 12px;border:1px solid #FCA5A5;border-radius:6px;background:#FEF2F2;font-size:11px;cursor:pointer;font-weight:700;color:#DC2626;opacity:.4;pointer-events:none">
+      <i class="ti ti-trash"></i> 선택 삭제
+    </button>
+  </div>
+
   <!-- 지역/업종 드롭다운 필터 -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <select id="anRegionFilter" onchange="filterHistory(currentFilter, this.value)" style="padding:6px 10px;border:1px solid var(--bd);border-radius:6px;font-size:11px;background:#fff;cursor:pointer">
@@ -2902,10 +2915,13 @@ function filterHistory(filter, region, industry, search){
   el.innerHTML = list.map(function(h, i){
     var isDone = h.uploadStatus === 'done';
     var rowId  = h.rowId || '';
+    var pKey   = rowId || h.title || '';
+    var isChecked = window._selectedPostIds && window._selectedPostIds.has(pKey);
     return '<div style="background:#fff;border:1.5px solid '+(isDone?'#86EFAC':'var(--bd)')+';border-radius:10px;padding:14px 16px;transition:.2s" id="postCard'+i+'">'
 
-      // ── 상단: 제목 + 발행 토글 ──
+      // ── 상단: 체크박스 + 제목 + 발행 토글 ──
       +'<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">'
+      +'<input type="checkbox" class="post-select-chk" data-ai="'+i+'" onchange="onPostCheckChange()" '+(isChecked?'checked':'')+' style="margin-top:3px;cursor:pointer;flex-shrink:0;width:15px;height:15px">'
       +'<div style="flex:1;min-width:0">'
       +'<div style="font-size:13px;font-weight:800;line-height:1.4;margin-bottom:2px">'+esc(h.title||h.kw||'제목없음')+'</div>'
       +'<div style="font-size:10px;color:var(--gray)">'+esc(h.date||'')+' · '+esc(h.region||'')+' · '+esc(h.industry||'')+'<span style="margin-left:6px;background:#F1F5F9;padding:1px 6px;border-radius:4px">'+(h.chars||0)+'자</span>'
@@ -2942,6 +2958,7 @@ function filterHistory(filter, region, industry, search){
       +'</div>'
       +'</div>';
   }).join('');
+  updateBulkDeleteUI();
 }
 
 /* 원클릭 발행용 복사 — 제목+본문+해시태그 클립보드 (서식 포함) */
@@ -3016,6 +3033,66 @@ function sheetUpdateStatus(h){
 }
 
 /* 글 삭제 — 웹+시트 동시 삭제 */
+/* ══ 선택 삭제 ══ */
+function getPostKey(h){ return (h && (h.rowId || h.title)) || ''; }
+
+function onPostCheckChange(){
+  if(!window._selectedPostIds) window._selectedPostIds = new Set();
+  window._selectedPostIds.clear();
+  document.querySelectorAll('.post-select-chk').forEach(function(b){
+    if(b.checked){
+      var i = parseInt(b.getAttribute('data-ai'));
+      var h = window._anaList && window._anaList[i];
+      if(h) window._selectedPostIds.add(getPostKey(h));
+    }
+  });
+  updateBulkDeleteUI();
+}
+
+function updateBulkDeleteUI(){
+  var n = window._selectedPostIds ? window._selectedPostIds.size : 0;
+  var btn = document.getElementById('bulkDeleteBtn');
+  var cnt = document.getElementById('selCount');
+  if(cnt) cnt.textContent = n>0 ? n+'개 선택됨' : '';
+  if(btn){
+    btn.disabled = n===0;
+    btn.style.opacity = n===0 ? '.4' : '1';
+    btn.style.pointerEvents = n===0 ? 'none' : 'auto';
+  }
+}
+
+function toggleSelectAllPosts(chk){
+  document.querySelectorAll('.post-select-chk').forEach(function(b){ b.checked = chk.checked; });
+  onPostCheckChange();
+}
+
+async function deleteSelectedPosts(){
+  var ids = window._selectedPostIds ? Array.from(window._selectedPostIds) : [];
+  if(!ids.length) return;
+  if(!confirm(ids.length+'개 글을 삭제할까요? 되돌릴 수 없어요.')) return;
+
+  var targets = (window._anaList||[]).filter(function(h){ return ids.indexOf(getPostKey(h)) > -1; });
+  showToast('⏳ '+targets.length+'개 삭제 중...');
+
+  for(var idx=0; idx<targets.length; idx++){
+    var t = targets[idx];
+    history = (history||[]).filter(function(item){ return item !== t; });
+    try{
+      await fetch(SHEET_ENDPOINT,{
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({ action:'deletePost', sheetId: SHEET_ID, rowId: t.rowId, title: t.title })
+      });
+    }catch(e){}
+  }
+  saveApp();
+  window._selectedPostIds = new Set();
+  var selectAll = document.getElementById('selectAllChk'); if(selectAll) selectAll.checked = false;
+  filterHistory();
+  updateDashboard();
+  updateAnalytics();
+  showToast('✅ '+targets.length+'개 삭제 완료');
+}
+
 async function deletePost(el){
   var i = parseInt(el.getAttribute('data-ai'));
   var h = window._anaList && window._anaList[i];
