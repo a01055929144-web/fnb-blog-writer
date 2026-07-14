@@ -2720,10 +2720,22 @@ async function syncHistoryFromSheet(){
    오늘 시세 속보 — AI 비용 없이 템플릿으로 대량 생성
    단일 품목 검색어("배추 도매가 오늘" 등) 직접 타겟팅
 ══════════════════════════════════════ */
+function _hasBatchim(word){
+  var ch = (word||'').trim().slice(-1);
+  var code = ch.charCodeAt(0);
+  if(code < 0xAC00 || code > 0xD7A3) return false;
+  return (code - 0xAC00) % 28 !== 0;
+}
+function _josa(word, withBatchim, withoutBatchim){
+  return _hasBatchim(word) ? withBatchim : withoutBatchim;
+}
+
 function generateFlashPricePost(item, kw, region, industry){
-  var trendText = item.trend==='▲' ? kw+'은 전일 대비 상승세를 보이고 있습니다.'
-    : item.trend==='▼' ? kw+'은 전일 대비 하락세를 보이고 있습니다.'
-    : kw+'은 전일과 비슷한 수준을 유지하고 있습니다.';
+  var eunNeun = _josa(kw, '은', '는');
+  var eulReul = _josa(kw, '을', '를');
+  var trendText = item.trend==='▲' ? kw+eunNeun+' 전일 대비 상승세를 보이고 있습니다.'
+    : item.trend==='▼' ? kw+eunNeun+' 전일 대비 하락세를 보이고 있습니다.'
+    : kw+eunNeun+' 전일과 비슷한 수준을 유지하고 있습니다.';
   var today = new Date();
   var dateStr = (today.getMonth()+1)+'월 '+today.getDate()+'일';
   var title = kw+' 도매가 오늘 ('+dateStr+' 기준)';
@@ -2743,7 +2755,7 @@ function generateFlashPricePost(item, kw, region, industry){
     + '특히 '+industry+' 업종은 '+kw+' 같은 신선 식재료 비중이 커서, 시세 변동에 더 민감하게 반응하는 것이 좋습니다.\n\n'
 
     + '---\n\n## 마무리\n'
-    + kw+'을 비롯한 신선 식재료가 필요하시면, 지금 아래에서 편하게 상담받아보세요.\n\n';
+    + kw+eulReul+' 비롯한 신선 식재료가 필요하시면, 지금 아래에서 편하게 상담받아보세요.\n\n';
 
   var tags = ['#'+kw+'가격','#'+kw+'시세','#'+kw+'도매가','#오늘시세','#식자재도매',
     '#식자재납품','#식재료도매','#식당창업','#식자재원가','#납품업체','#식재료공급','#창업준비','#외식업창업','#식자재유통','#BIV'].join(' ');
