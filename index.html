@@ -447,9 +447,14 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <div style="font-size:14px;font-weight:800">📈 오늘 시세 속보</div>
       <span style="background:#DCFCE7;color:#166534;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">AI 비용 없음</span>
     </div>
-    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">"배추 도매가 오늘" 같은 단일 품목 검색어를 정면으로 겨냥한 짧은 속보형 글이에요. KAMIS 데이터로 코드가 직접 조립해서 AI 비용이 거의 안 들어요.</div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">"배추 도매가 오늘" 같은 단일 품목 검색어를 정면으로 겨냥한 짧은 속보형 글이에요. KAMIS 데이터로 코드가 직접 조립해서 AI 비용이 거의 안 들어요. 스팸성 패턴을 피하려고 하루 생성 개수를 제한하고, 인기 품목을 우선으로 골라요.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <label style="font-size:11px;color:var(--gray)">하루 생성 개수</label>
+      <input id="flashPriceLimit" type="number" min="1" max="20" value="8" style="width:60px;padding:5px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px;text-align:center">
+      <span style="font-size:10px;color:#94A3B8">(5~10 권장, 인기 품목 우선 선택)</span>
+    </div>
     <button onclick="startFlashPriceBatch()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0F172A,#1E293B);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">
-      📈 현재 선택된 업종 품목 전체로 시세 속보 일괄 생성
+      📈 인기 품목 우선으로 시세 속보 생성
     </button>
     <div id="flashPriceStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
   </div>
@@ -2763,9 +2768,27 @@ function generateFlashPricePost(item, kw, region, industry){
   return {title:title, body:body, tags:tags};
 }
 
+/* 인기 품목 우선순위 — 검색량이 많을 것으로 예상되는 대표 식재료 키워드 */
+var POPULAR_ITEM_KEYWORDS = [
+  '삼겹살','목살','갈비','등심','안심','차돌박이','앞다리','대패삼겹살',
+  '계란','달걀','배추','무','대파','양파','마늘','상추','오이','감자','당근',
+  '애호박','시금치','콩나물','두부','쌀','닭고기','닭가슴살','닭다리',
+  '고등어','갈치','오징어','새우','명태','조기','참치','연어',
+  '양배추','깻잎','부추','청양고추','토마토','바나나','사과','배','귤'
+];
+function popularityScore(kw){
+  var idx = POPULAR_ITEM_KEYWORDS.indexOf(kw);
+  if(idx > -1) return 1000 - idx; // 목록에 있으면 순서대로 높은 점수
+  // 목록에 없어도 짧고 흔한 이름(가공/세부규격 표기 없는 것)이면 약간의 가점
+  return kw.length <= 4 ? 10 : 0;
+}
+
 async function startFlashPriceBatch(){
   var statusEl = document.getElementById('flashPriceStatus');
   if(!industry){ statusEl.textContent = '❌ 업종을 먼저 선택해주세요.'; return; }
+  var limitInput = document.getElementById('flashPriceLimit');
+  var dailyLimit = limitInput ? Math.max(1, Math.min(20, parseInt(limitInput.value)||8)) : 8;
+
   statusEl.textContent = '⏳ 오늘 시세 조회 중...';
   var priceData = await fetchRealtimePrice(industry);
   if(!priceData || !priceData.prices || !priceData.prices.length){
@@ -2775,7 +2798,14 @@ async function startFlashPriceBatch(){
   var region = selDistricts.length ? (selDistricts[0].region+' '+selDistricts[0].district) : '전국';
   await syncHistoryFromSheet();
 
-  var items = priceData.prices;
+  // 인기 품목 우선 정렬 후 상위 N개만 선택
+  var allItems = priceData.prices.map(function(it){
+    var kw = (it.name||'').split('/')[0].trim();
+    return {it:it, kw:kw, score:popularityScore(kw)};
+  }).filter(function(x){ return x.kw; });
+  allItems.sort(function(a,b){ return b.score - a.score; });
+  var items = allItems.slice(0, dailyLimit).map(function(x){ return x.it; });
+
   var ok = 0, dup = 0, fail = 0;
   window._batchImages = [];
   await ensureFontLoaded();
@@ -2787,6 +2817,7 @@ async function startFlashPriceBatch(){
     statusEl.textContent = '⏳ '+(i+1)+'/'+items.length+' 처리 중 (저장 '+ok+' · 중복제외 '+dup+' · 실패 '+fail+')...';
 
     if(isDuplicatePost(region, industry, kw+' 오늘 도매가')){ dup++; continue; }
+
 
     var post = generateFlashPricePost(it, kw, region, industry);
     try{
