@@ -2646,6 +2646,49 @@ var BIV_FIXED_TAGS = '#식자재납품 #식재료도매 #식당창업 #식자재
 var restoHistory = [];    // 맛집홍보 글 목록
 var selChannels = ['blog','insta','tiktok','kakao']; // 기본 전채널 선택
 var currentFilter = 'all';
+/* ══ 중복 생성 방지: 지역+업종+키워드 기준 유사도 검사 ══ */
+function _normDup(s){
+  return (s||'').toLowerCase().replace(/[\s,.!?·\-()\[\]~]/g,'');
+}
+function _isSimilarKw(a, b){
+  var na = _normDup(a), nb = _normDup(b);
+  if(!na || !nb) return false;
+  if(na === nb) return true;
+  var shorter = na.length <= nb.length ? na : nb;
+  var longer  = na.length <= nb.length ? nb : na;
+  return shorter.length >= 6 && longer.indexOf(shorter) > -1;
+}
+function isDuplicatePost(region, industry, kw){
+  var list = (typeof history!=='undefined'?history:[])||[];
+  return list.some(function(h){
+    var sameIndustry = (h.industry||'') === (industry||'');
+    var sameRegion = !region || !h.region || h.region === region;
+    if(!sameIndustry || !sameRegion) return false;
+    return _isSimilarKw(h.kw||h.title||'', kw) || _isSimilarKw(h.title||'', kw);
+  });
+}
+
+/* 시트에서 최신 글 목록을 직접 읽어와 history를 동기화 (중복 감지 정확도 확보용) */
+async function syncHistoryFromSheet(){
+  try{
+    var res = await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent('작성글'));
+    var text = await res.text();
+    var json = JSON.parse(text.replace(/^[^{]*/, '').replace(/\);?\s*$/, ''));
+    var rows = json.table.rows||[];
+    var fresh = rows.map(function(r){
+      var v = r.c.map(function(c){ return c?c.v:null; });
+      return {
+        rowId: v[0], date: v[1], region: (v[2]||'')+((v[3]?' '+v[3]:'')), industry: v[4], type: v[5],
+        kw: v[6], title: v[7], body: v[8], tags: (v[9]||'').split(/\s+/).filter(Boolean),
+        chars: v[10]||0, uploadStatus: (v[11]==='발행완료')?'done':'pending'
+      };
+    }).filter(function(h){ return h.title; });
+    history = fresh;
+    saveApp();
+    return true;
+  }catch(e){ console.warn('시트 동기화 실패, 로컬 캐시 사용:', e.message); return false; }
+}
+
 async function startAutoMode(){
   // 선택 검사 — 탭 이동 없이 모달 안내
   if(!selDistricts.length || !selItems.length){
@@ -2660,6 +2703,10 @@ async function startAutoMode(){
   showAutoModal();
 
   try{
+    // ── Step -1: 중복 감지 정확도를 위해 시트에서 최신 글 목록 동기화 ──
+    setStep(0,'⏳','기존 글 목록 동기화 중...');
+    await syncHistoryFromSheet();
+
     // ── Step 0: 단가 조회 (백그라운드, 멈추지 않음) ──
     setStep(0,'✅','기본 데이터 사용 (단가 백그라운드 조회)');
     var priceData = null;
@@ -2697,15 +2744,19 @@ async function startAutoMode(){
     kwData = (kwParsed.keywords||[]).map(function(k,i){ return Object.assign({},k,{index:i}); });
     if(!kwData.length) throw new Error('키워드 추출 실패');
 
-    // 우선순위 자동 선택
-    var usedKws = new Set((typeof history!=='undefined'?history:[]).map(function(h){ return (h.kw||'').toLowerCase(); }));
+    // 우선순위 자동 선택 (지역+업종+키워드 유사도 기반 중복 제외)
     selKws = [];
+    var _dupSkipped1 = 0;
     ['low','mid','high'].forEach(function(diff){
-      kwData.filter(function(k){ return k.difficulty===diff && !usedKws.has((k.keyword||'').toLowerCase()); })
+      kwData.filter(function(k){
+        if(k.difficulty!==diff) return false;
+        if(isDuplicatePost(k.region||'', industry, k.keyword||'')){ _dupSkipped1++; return false; }
+        return true;
+      })
         .slice(0, 10-selKws.length)
         .forEach(function(k){ if(selKws.length<10) selKws.push({kw:k.keyword,keyword:k.keyword,region:k.region||''}); });
     });
-    setStep(1,'✅','키워드 '+kwData.length+'개 추출 → '+selKws.length+'개 자동 선택');
+    setStep(1,'✅','키워드 '+kwData.length+'개 추출 → '+selKws.length+'개 자동 선택'+(_dupSkipped1?' (중복 '+_dupSkipped1+'개 제외)':''));
 
     // ── Step 2: 글기획 생성 ──
     setStep(2,'⏳','글기획 자동 생성 중...');
@@ -2733,16 +2784,21 @@ async function startAutoMode(){
     clusterData = clParsed.cluster||[];
     if(!clusterData.length) throw new Error('글기획 생성 실패');
 
-    // 중복 제목 제외 + 우선순위 정렬
-    var usedTitles = new Set((typeof history!=='undefined'?history:[]).map(function(h){ return (h.title||'').toLowerCase(); }));
+    // 중복 글기획 제외 (지역+업종+키워드/제목 유사도 기반) + 우선순위 정렬
+    var _dupSkipped2 = 0;
     var sorted = clusterData.slice()
       .sort(function(a,b){ var p={high:0,mid:1,low:2}; return (p[a.priority]||1)-(p[b.priority]||1); })
-      .filter(function(c){ return !usedTitles.has((c.title||'').toLowerCase()); });
+      .filter(function(c){
+        var dup = isDuplicatePost(c.region||'', industry, c.keyword||c.title||'');
+        if(dup) _dupSkipped2++;
+        return !dup;
+      });
     if(!sorted.length) throw new Error('작성할 글 없음 (모두 중복)');
-    setStep(2,'✅','글기획 '+sorted.length+'개 생성 완료');
+    setStep(2,'✅','글기획 '+sorted.length+'개 생성 완료'+(_dupSkipped2?' (중복 '+_dupSkipped2+'개 제외)':''));
 
     // ── Step 3: 팩트 기반 글 전체 작성 ──
     var total=sorted.length, ok=0;
+    var failedItems = []; // {item, idx} — 자동 재시도 대상
     setStep(3,'⏳','SEO 글 작성 중... (0/'+total+')');
     for(var i=0; i<sorted.length; i++){
       if(!autoRunning) break;
@@ -2753,13 +2809,34 @@ async function startAutoMode(){
         var _statsKey = _typeMap[sorted[i].type];
         var _stats = _statsKey ? priceStatsCache[_statsKey] : null;
         var res = await writeOnePost(sorted[i], i, total, priceData, _stats);
-        if(res&&res.success) ok++;
-      }catch(e){ console.warn('글'+i+' 실패:',e); }
+        if(res&&res.success) ok++; else failedItems.push({item:sorted[i], idx:i});
+      }catch(e){ console.warn('글'+i+' 실패:',e); failedItems.push({item:sorted[i], idx:i}); }
       var pr=document.getElementById('asPr');
       if(pr) pr.style.width=Math.round((i+1)/total*100)+'%';
       setStep(3,'⏳','작성 중 ('+(i+1)+'/'+total+') — 완료 '+ok+'개');
     }
-    setStep(3,'✅','글 작성 완료 ('+ok+'/'+total+'개)');
+
+    // 실패한 글 자동 재시도 (최대 2회, 각 시도 사이 2초 대기)
+    var retryRound = 0;
+    while(failedItems.length && autoRunning && retryRound < 2){
+      retryRound++;
+      var toRetry = failedItems; failedItems = [];
+      for(var r=0; r<toRetry.length; r++){
+        if(!autoRunning) break;
+        var fi = toRetry[r];
+        var det2=document.getElementById('as3d');
+        if(det2) det2.innerHTML='🔄 재시도 '+retryRound+'회차 ('+(r+1)+'/'+toRetry.length+') <strong>'+esc(fi.item.title||'')+'</strong>';
+        await new Promise(function(res){ setTimeout(res, 2000); });
+        try{
+          var _typeMap2 = {'오늘단가':'daily','주간단가':'weekly','월간단가':'monthly'};
+          var _statsKey2 = _typeMap2[fi.item.type];
+          var _stats2 = _statsKey2 ? priceStatsCache[_statsKey2] : null;
+          var res2 = await writeOnePost(fi.item, fi.idx, total, priceData, _stats2);
+          if(res2&&res2.success) ok++; else failedItems.push(fi);
+        }catch(e){ console.warn('재시도 실패:',e); failedItems.push(fi); }
+      }
+    }
+    setStep(3,'✅','글 작성 완료 ('+ok+'/'+total+'개)'+(failedItems.length?' — '+failedItems.length+'개 재시도 후에도 실패':''));
 
     // ── Step 4: 저장 완료 ──
     setStep(4,'✅','구글 시트 [작성글] 저장 완료');
@@ -2767,6 +2844,7 @@ async function startAutoMode(){
     var dn=document.getElementById('asDone'); if(dn) dn.style.display='block';
     var sm=document.getElementById('asSumm');
     if(sm) sm.innerHTML = '<strong>'+ok+'개 포스팅 완료!</strong><br>'
+      +(failedItems.length ? ('<span style="color:#DC2626">'+failedItems.length+'개는 재시도 후에도 실패했어요.</span><br>') : '')
       +'내 글 관리 탭에서 복사 → 네이버 블로그 발행하세요.';
 
     // 생성된 썸네일 이미지 갤러리
