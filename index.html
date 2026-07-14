@@ -440,6 +440,19 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       </div>
     </div>
   </div>
+
+  <!-- 오늘 시세 속보 (AI 비용 없이 템플릿으로 대량 생성) -->
+  <div class="card" style="margin-top:14px;padding:18px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+      <div style="font-size:14px;font-weight:800">📈 오늘 시세 속보</div>
+      <span style="background:#DCFCE7;color:#166534;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">AI 비용 없음</span>
+    </div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">"배추 도매가 오늘" 같은 단일 품목 검색어를 정면으로 겨냥한 짧은 속보형 글이에요. KAMIS 데이터로 코드가 직접 조립해서 AI 비용이 거의 안 들어요.</div>
+    <button onclick="startFlashPriceBatch()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0F172A,#1E293B);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">
+      📈 현재 선택된 업종 품목 전체로 시세 속보 일괄 생성
+    </button>
+    <div id="flashPriceStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
+  </div>
 </div>
 
 <!-- ═══ KEYWORD ENGINE ═══ -->
@@ -2701,6 +2714,96 @@ async function syncHistoryFromSheet(){
     saveApp();
     return true;
   }catch(e){ console.warn('시트 동기화 실패, 로컬 캐시 사용:', e.message); return false; }
+}
+
+/* ══════════════════════════════════════
+   오늘 시세 속보 — AI 비용 없이 템플릿으로 대량 생성
+   단일 품목 검색어("배추 도매가 오늘" 등) 직접 타겟팅
+══════════════════════════════════════ */
+function generateFlashPricePost(item, kw, region, industry){
+  var trendText = item.trend==='▲' ? kw+'은 전일 대비 상승세를 보이고 있습니다.'
+    : item.trend==='▼' ? kw+'은 전일 대비 하락세를 보이고 있습니다.'
+    : kw+'은 전일과 비슷한 수준을 유지하고 있습니다.';
+  var today = new Date();
+  var dateStr = (today.getMonth()+1)+'월 '+today.getDate()+'일';
+  var title = kw+' 도매가 오늘 ('+dateStr+' 기준)';
+
+  var body = '## '+kw+' 오늘 도매가\n\n'
+    + kw+' 오늘 도매가는 '+item.wholesale+'원('+item.unit+' 기준)입니다.\n'
+    + trendText+'\n\n'
+    + '식당을 운영하거나 창업을 준비 중이라면, '+kw+' 시세를 매일 확인하는 것이 원가 관리의 시작입니다.\n\n'
+
+    + '---\n\n## 참고 시세\n'
+    + item.name+' — 도매가 '+item.wholesale+'원 / 소매가 '+item.retail+'원 ('+item.unit+')\n\n'
+    + '※ 위 가격은 KAMIS 공공 시세 기준이며, 실제 납품가는 업체와 물량, 규격에 따라 달라질 수 있습니다.\n\n'
+
+    + '---\n\n## 시세는 왜 매일 확인해야 할까\n'
+    + '식자재 가격은 계절과 수급 상황에 따라 하루에도 변동될 수 있습니다.\n'
+    + '오늘 시세를 기준으로 발주 시점을 정하면, 불필요한 원가 부담을 줄일 수 있습니다.\n'
+    + '특히 '+industry+' 업종은 '+kw+' 같은 신선 식재료 비중이 커서, 시세 변동에 더 민감하게 반응하는 것이 좋습니다.\n\n'
+
+    + '---\n\n## 마무리\n'
+    + kw+'을 비롯한 신선 식재료가 필요하시면, 지금 아래에서 편하게 상담받아보세요.\n\n';
+
+  var tags = ['#'+kw+'가격','#'+kw+'시세','#'+kw+'도매가','#오늘시세','#식자재도매',
+    '#식자재납품','#식재료도매','#식당창업','#식자재원가','#납품업체','#식재료공급','#창업준비','#외식업창업','#식자재유통','#BIV'].join(' ');
+
+  return {title:title, body:body, tags:tags};
+}
+
+async function startFlashPriceBatch(){
+  var statusEl = document.getElementById('flashPriceStatus');
+  if(!industry){ statusEl.textContent = '❌ 업종을 먼저 선택해주세요.'; return; }
+  statusEl.textContent = '⏳ 오늘 시세 조회 중...';
+  var priceData = await fetchRealtimePrice(industry);
+  if(!priceData || !priceData.prices || !priceData.prices.length){
+    statusEl.textContent = '❌ 오늘 시세 데이터를 가져오지 못했어요. 잠시 후 다시 시도해주세요.';
+    return;
+  }
+  var region = selDistricts.length ? (selDistricts[0].region+' '+selDistricts[0].district) : '전국';
+  await syncHistoryFromSheet();
+
+  var items = priceData.prices;
+  var ok = 0, dup = 0, fail = 0;
+  window._batchImages = [];
+  await ensureFontLoaded();
+
+  for(var i=0;i<items.length;i++){
+    var it = items[i];
+    var kw = (it.name||'').split('/')[0].trim();
+    if(!kw) continue;
+    statusEl.textContent = '⏳ '+(i+1)+'/'+items.length+' 처리 중 (저장 '+ok+' · 중복제외 '+dup+' · 실패 '+fail+')...';
+
+    if(isDuplicatePost(region, industry, kw+' 오늘 도매가')){ dup++; continue; }
+
+    var post = generateFlashPricePost(it, kw, region, industry);
+    try{
+      var res = await fetch(SHEET_ENDPOINT, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({
+          sheetId: SHEET_ID, date: new Date().toLocaleDateString('ko-KR'),
+          region: region, sido: region.split(' ')[0]||'', gugun: region.split(' ').slice(1).join(' ')||'',
+          industry: industry, type: '오늘시세속보', keyword: kw+' 오늘 도매가',
+          title: post.title, body: post.body, hashtags: post.tags, chars: post.body.length, status:'미발행'
+        })
+      });
+      var d = await res.json();
+      if(d && (d.row || d.success)){
+        ok++;
+        history.push({title:post.title, kw:kw+' 오늘 도매가', region:region, industry:industry, type:'오늘시세속보', body:post.body});
+        try{
+          var imgCanvas = generateTitleCardImage(post.title, region, industry, '시세속보');
+          window._batchImages.push({title:post.title, dataUrl: imgCanvas.toDataURL('image/png'), dataUrl2: imgCanvas.toDataURL('image/png')});
+        }catch(e){}
+      } else { fail++; }
+    }catch(e){ fail++; }
+    await new Promise(function(r){ setTimeout(r,120); });
+  }
+
+  saveApp();
+  statusEl.innerHTML = '✅ <strong>'+ok+'개 저장 완료!</strong> (중복 제외 '+dup+'개'+(fail?', 실패 '+fail+'개':'')+')'
+    + (ok ? '<br><button onclick="downloadBatchImagesZip()" style="margin-top:8px;width:100%;padding:8px;border:1.5px solid var(--g3);border-radius:8px;background:var(--g2);color:var(--g4);font-size:12px;font-weight:700;cursor:pointer">이미지 전체 다운로드 (ZIP, '+ok+'장)</button>' : '');
+  showToast('✅ 오늘 시세 속보 '+ok+'개 생성 완료');
+  try{ updateDashboard(); }catch(e){}
 }
 
 async function startAutoMode(){
