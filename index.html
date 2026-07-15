@@ -2249,6 +2249,8 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
     +'⑤-1 퍼센트·수치 규칙: 위에 제공된 목록의 실제 가격 두 개를 직접 비교해서 계산한 퍼센트는 사용 가능하고 오히려 권장함. 하지만 "배송비는 발주액의 5~10%", "여유분 20~30%를 더해서 발주", "월 O% 절감 가능"처럼 목록에 없는 일반적인 업계 통계·경험칙·효과 예측 수치는 절대 지어내지 말 것. 이런 경우 숫자 없이 "메뉴와 발주 방식에 따라 달라진다"처럼 서술할 것.\n'
     +'⑥ 아래 사용자 메시지에 주어지는 핵심키워드를 도입/본문/마무리에 각 1회, **볼드**로 자연스럽게 포함.\n'
     +'⑦ 과장/광고/1위/최고 금지.\n'
+    +'⑦-1 제목은 사용자 메시지의 "제목형식"을 그대로 사용하되, 자연스러운 문장이 아니라 키워드를 공백으로 나열한 형태를 유지할 것. 제목에 대괄호[ ], 소괄호( ), 쉼표(,) 같은 특수기호는 절대 사용하지 말 것 — 네이버 검색 누락(색인 제외) 원인이 됨.\n'
+    +'⑦-2 같은 단어를 본문에서 바로 옆이나 가까운 거리에 두 번 연속 쓰지 말 것 (예: "스위스 스위스"). 문장이 끝나면 마침표를 찍을 것.\n'
     +(hasPrice ? '⑧ 사용자 메시지의 핵심키워드에 나오는 구체적 식재료명이 위 공급가 목록의 품목과 다르면, "프리미엄/특수 품목은 별도 견적" 섹션에서 "공공 시세 데이터에 없어 업체별 견적 확인이 필요하다"고 짚어줄 것. 목록에 없는 가격을 지어내지 말 것.\n' : '')
     +'\n'
 
@@ -2310,18 +2312,23 @@ function buildPostUserPrompt(kw, region, type, industry){
   var gugun = regionParts.slice(1).join(' ')||'';
   var loc = gugun || sido;
 
+  // 문장형(X) 대신 키워드를 공백으로 나열하는 조합형(O) — 네이버 24년 검색로직 기준
+  // 예: "강남역맛집 알부자 웨이팅 예약 주차" 처럼 연결어미 없이 키워드만 나열
   var titlePatterns = [
-    loc+' '+industry+' '+kw+', 공급업체 선택 기준',
-    loc+' '+industry+' 창업, '+kw+' 공급은 어떻게 준비할까',
-    industry+' '+kw+', 창업 전에 꼭 확인해야 할 것',
-    industry+' '+kw+' 공급가, 창업 전에 알아야 할 기준',
-    industry+' 창업, '+loc+'에서 '+kw+' 납품은 어떻게 준비할까',
-    loc+' '+industry+', '+kw+' 실제 상담에서 가장 많이 받는 질문',
-    kw+' 공급업체, '+loc+' '+industry+'은 무엇을 확인할까',
-    industry+' 창업, '+kw+' 계약 전에 확인할 체크리스트'
+    loc+industry+' '+kw+' 도매가 공급업체',
+    loc+industry+' 창업 '+kw+' 원가절감',
+    industry+' '+kw+' 납품업체 선택기준',
+    loc+' '+industry+' '+kw+' 계약전 확인사항',
+    kw+' 공급업체 비교 '+loc+industry,
+    industry+' 창업준비 '+kw+' 배송조건',
+    loc+industry+' '+kw+' 원가절감 방법',
+    industry+' '+kw+' 도매가 비교 창업비용'
   ];
   var patternIdx = kw.split('').reduce(function(acc,c){return acc+c.charCodeAt(0);},0) % titlePatterns.length;
-  var titleTemplate = titlePatterns[patternIdx];
+  var titleTemplate = titlePatterns[patternIdx]
+    .replace(/[\[\]()（）,，]/g, '') // 특수기호 제거 — 네이버 누락(색인제외) 원인
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 
   var typeFormats = {
     '정보글':'정보 전달형 — 창업자가 몰랐던 실용 정보 중심',
@@ -2575,7 +2582,16 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
     .replace(/\*\*/g,'')
     .replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27FF}]/gu,'')
     .replace(/[\u00A9\u00AE\u203C\u2049\u20E3\u2122\u2139\u2194-\u2199\u21A9\u21AA\u231A\u231B\u23E9-\u23F3\u23F8-\u23FA\u24C2\u25AA\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u2604\u260E\u2611\u2614\u2615\u2618\u261D\u2620\u2622\u2623\u2626\u262A\u262E\u262F\u2638-\u263A\u2648-\u2653\u2660\u2663\u2665\u2666\u2668\u267B\u267F\u2692-\u2694\u2696\u2697\u2699\u269B\u269C\u26A0\u26A1\u26AA\u26AB\u26B0\u26B1\u26BD\u26BE\u26C4\u26C5\u26CE\u26CF\u26D1\u26D3\u26D4\u26E9\u26EA\u26F0-\u26F5\u26F7-\u26FA\u26FD\u2702\u2705\u2708-\u270D\u270F\u2712\u2714\u2716\u271D\u2721\u2728\u2733\u2734\u2744\u2747\u274C\u274E\u2753-\u2755\u2757\u2763\u2764\u2795-\u2797\u27A1\u27B0\u27BF\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B50\u2B55]/g,'')
+    .replace(/[\[\]()（）,，]/g,'') // 특수기호 제거 — 네이버 누락 방지 (전자책 팁 반영)
+    .replace(/\s{2,}/g,' ')
     .trim() : kw;
+
+  // 반복어 체크 — 같은 단어가 제목 내에서 반복되면 네이버 누락 위험 (경고만, 자동수정은 안함)
+  var _titleWords = title.split(/\s+/);
+  var _wordCount = {};
+  _titleWords.forEach(function(w){ _wordCount[w] = (_wordCount[w]||0)+1; });
+  var _dupWords = Object.keys(_wordCount).filter(function(w){ return _wordCount[w]>1 && w.length>=2; });
+  if(_dupWords.length){ console.warn('⚠️ 제목에 반복 단어 감지 (누락 위험):', _dupWords, title); }
 
   // 해시태그 파싱 (맨 끝 "해시태그:" 이후 전체에서 태그 추출)
   var hashtagIdx = text.search(/해시태그\s*[:：]/);
