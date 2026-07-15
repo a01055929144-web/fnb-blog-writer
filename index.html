@@ -2759,7 +2759,7 @@ function generateFlashPricePost(item, kw, region, industry){
     : kw+eunNeun+' 전일과 비슷한 수준을 유지하고 있습니다.';
   var today = new Date();
   var dateStr = (today.getMonth()+1)+'월 '+today.getDate()+'일';
-  var title = kw+' 도매가 오늘 ('+dateStr+' 기준)';
+  var title = kw+' 도매가 오늘 '+dateStr+' 시세';
 
   var body = '## '+kw+' 오늘 도매가\n\n'
     + kw+' 오늘 도매가는 '+item.wholesale+'원('+item.unit+' 기준)입니다.\n'
