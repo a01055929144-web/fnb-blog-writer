@@ -642,6 +642,21 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     <span id="anCount" style="font-size:11px;color:var(--gray);margin-left:auto">0개</span>
   </div>
 
+  <!-- 날짜 필터 + 정렬 -->
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;background:var(--bg);padding:8px 10px;border-radius:8px">
+    <span style="font-size:11px;color:var(--gray);font-weight:600">기간</span>
+    <input id="anDateFrom" type="date" onchange="applyDateFilter()" style="padding:5px 6px;border:1.5px solid var(--bd);border-radius:6px;font-size:11px">
+    <span style="font-size:11px;color:var(--gray)">~</span>
+    <input id="anDateTo" type="date" onchange="applyDateFilter()" style="padding:5px 6px;border:1.5px solid var(--bd);border-radius:6px;font-size:11px">
+    <button onclick="clearDateFilter()" class="btn btn-outline" style="font-size:10px;padding:4px 8px">초기화</button>
+    <span style="width:1px;height:16px;background:var(--bd);margin:0 4px"></span>
+    <span style="font-size:11px;color:var(--gray);font-weight:600">정렬</span>
+    <select id="anSortOrder" onchange="applyDateFilter()" style="padding:5px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:11px">
+      <option value="desc">최신순 (내림차순)</option>
+      <option value="asc">오래된순 (오름차순)</option>
+    </select>
+  </div>
+
   <!-- 선택 삭제 툴바 -->
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
     <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray);cursor:pointer">
@@ -3296,6 +3311,26 @@ function resetAnFilters(){
   filterHistory('all', '', '', '');
 }
 
+/* 시트에 저장된 다양한 날짜 형식을 타임스탬프로 파싱 */
+function parseHistDate(str){
+  if(!str) return null;
+  str = String(str).trim();
+  var gvizM = str.match(/^Date\((\d+),(\d+),(\d+)/);
+  if(gvizM) return new Date(parseInt(gvizM[1]), parseInt(gvizM[2]), parseInt(gvizM[3])).getTime();
+  var korM = str.match(/(\d{4})[.\s]+(\d{1,2})[.\s]+(\d{1,2})/);
+  if(korM) return new Date(parseInt(korM[1]), parseInt(korM[2])-1, parseInt(korM[3])).getTime();
+  var d = new Date(str);
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+
+function applyDateFilter(){ filterHistory(); }
+
+function clearDateFilter(){
+  var f = document.getElementById('anDateFrom'); if(f) f.value = '';
+  var t = document.getElementById('anDateTo'); if(t) t.value = '';
+  filterHistory();
+}
+
 function filterHistory(filter, region, industry, search){
   if(filter !== undefined) currentFilter = filter;
   if(region !== undefined) anFilterRegion = region;
@@ -3322,6 +3357,30 @@ function filterHistory(filter, region, industry, search){
     var mr = !anFilterRegion || h.region === anFilterRegion;
     var mi = !anFilterIndustry || h.industry === anFilterIndustry;
     return mf && mq && mr && mi;
+  });
+
+  // 날짜 범위 필터
+  var dFromEl = document.getElementById('anDateFrom');
+  var dToEl   = document.getElementById('anDateTo');
+  var dFrom = dFromEl && dFromEl.value ? new Date(dFromEl.value+'T00:00:00').getTime() : null;
+  var dTo   = dToEl && dToEl.value ? new Date(dToEl.value+'T23:59:59').getTime() : null;
+  if(dFrom || dTo){
+    list = list.filter(function(h){
+      var t = parseHistDate(h.date);
+      if(t === null) return false;
+      if(dFrom && t < dFrom) return false;
+      if(dTo && t > dTo) return false;
+      return true;
+    });
+  }
+
+  // 날짜 정렬
+  var sortEl = document.getElementById('anSortOrder');
+  var sortOrder = sortEl ? sortEl.value : 'desc';
+  list = list.slice().sort(function(a,b){
+    var ta = parseHistDate(a.date) || 0;
+    var tb = parseHistDate(b.date) || 0;
+    return sortOrder === 'asc' ? ta - tb : tb - ta;
   });
 
   window._anaList = list;
