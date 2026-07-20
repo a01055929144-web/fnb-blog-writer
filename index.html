@@ -701,8 +701,11 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
           <input id="editTags" style="width:100%;padding:8px 12px;border:1.5px solid var(--bd);border-radius:6px;font-size:11px">
         </div>
         <div style="display:flex;gap:8px">
-          <button onclick="copyEdit()" style="flex:1;padding:9px;border:1.5px solid var(--bd);border-radius:6px;background:#fff;font-size:12px;cursor:pointer;font-weight:600"><i class="ti ti-copy"></i> 전체 복사</button>
-          <button onclick="copyTitleBody()" style="flex:1;padding:9px;border:1.5px solid var(--g3);border-radius:6px;background:var(--g2);font-size:12px;cursor:pointer;font-weight:600;color:var(--g3)"><i class="ti ti-clipboard-text"></i> 제목+본문 복사</button>
+          <button onclick="copyEdit()" style="flex:1;padding:9px;border:1.5px solid var(--bd);border-radius:6px;background:#fff;font-size:12px;cursor:pointer;font-weight:600"><i class="ti ti-copy"></i> 전체 복사(PC)</button>
+          <button onclick="copyTitleBody()" style="flex:1;padding:9px;border:1.5px solid var(--g3);border-radius:6px;background:var(--g2);font-size:12px;cursor:pointer;font-weight:600;color:var(--g3)"><i class="ti ti-clipboard-text"></i> 제목+본문(PC)</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="copyEditMobile()" style="flex:1;padding:9px;border:1.5px solid #E9D5A0;border-radius:6px;background:#FEF9EC;font-size:12px;cursor:pointer;font-weight:600;color:#92700A"><i class="ti ti-device-mobile"></i> 📱 모바일용 복사 (순수 텍스트)</button>
         </div>
       </div>
     </div>
@@ -2217,7 +2220,9 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
   var priceTable = '';
   var hasPrice = priceData && priceData.prices && priceData.prices.length>0;
   if(hasPrice){
-    priceTable = priceData.prices.map(function(p){ return p.name+' — '+p.wholesale+'원/'+p.unit; }).join('\n');
+    priceTable = '| 품목 | 가격 |\n| --- | ---: |\n' + priceData.prices.map(function(p){
+      return '| '+p.name+' | '+p.wholesale+'원/'+p.unit+' |';
+    }).join('\n');
   }
 
   var statsTable = '', periodLabel = '';
@@ -2225,8 +2230,8 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
   if(hasStats){
     periodLabel = priceStats.periodLabel || '';
     var indStats = (priceStats.grouped && priceStats.grouped[industry]) || priceStats.stats.slice(0,10);
-    statsTable = indStats.slice(0,8).map(function(p){
-      return p.item+' — 평균 '+p.avg+'원 (최저 '+p.min+'원 · 최고 '+p.max+'원, '+p.unit+')';
+    statsTable = '| 품목 | 평균가 | 최저 | 최고 | 단위 |\n| --- | ---: | ---: | ---: | --- |\n' + indStats.slice(0,8).map(function(p){
+      return '| '+p.item+' | '+p.avg+'원 | '+p.min+'원 | '+p.max+'원 | '+p.unit+' |';
     }).join('\n');
   }
 
@@ -2242,7 +2247,7 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
 
     +'[절대 규칙]\n'
     +'① 이모지 완전 금지 — 제목 포함 글 전체에 이모지 없음. BIV는 전문 브랜드.\n'
-    +'② 마크다운 사용: #/## 제목, **볼드**는 사용. 단 표(|)는 네이버 블로그에 붙여넣으면 깨지므로 절대 사용하지 말 것 — 가격 정보는 목록 형식 그대로 줄바꿈으로만 나열할 것. 체크리스트도 별표(*)나 대시(-) 대신 "· " 로 시작하는 줄로 나열할 것.\n'
+    +'② 마크다운 사용: #/## 제목, **볼드**, 표(|)까지 적극 사용. 가격 정보는 반드시 표로 작성할 것(가독성이 목록보다 좋음). 체크리스트는 별표(*)나 대시(-) 대신 "· " 로 시작하는 줄로 나열할 것.\n'
     +'③ 문장은 짧게 끊고, 한 줄에 2~4단어 정도로 자주 줄바꿈할 것 (모바일 가독성용 스크립트체). 한 문단은 2~3줄을 넘기지 않음.\n'
     +'④ 인사말 없이 바로 시작.\n'
     +'⑤ 절대 지어내지 말 것: "한 예비 창업자가 있었어요" 같은 특정 인물·날짜·구체적 스토리는 금지. 대신 "이런 상황이 흔해요"처럼 일반화된 패턴으로만 서술.\n'
@@ -2265,8 +2270,8 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
     +'## (2줄로 나눈 도입 소제목, 예: "{지역} {업종} 창업," / "거래처부터 정해야 해요")\n'
     +'(검색의도 기준 — 이 사람이 지금 어떤 상황인지 공감하며 시작. 4~6문단, 각 2~3줄. 핵심키워드 볼드로 1회 포함.)\n\n'
 
-    +(hasPrice ? ('---\n\n## 오늘의 식자재 공급가\n(위 [공통 배경 정보]의 공급가 목록 그대로)\n※ 위 가격은 참고용이며 시장 상황과 규격에 따라 실제 납품가는 달라질 수 있습니다.\n목록에 없는 품목은 별도 견적이 필요하다고 짧게 언급.\n\n') : '')
-    +(hasStats ? ('---\n\n## '+periodLabel+' 단가 동향\n(위 [공통 배경 정보]의 단가 통계 목록 그대로)\n\n') : '')
+    +(hasPrice ? ('---\n\n## 오늘의 식자재 공급가\n(위 [공통 배경 정보]의 공급가 표 그대로, 마크다운 표 형식 유지)\n※ 위 가격은 참고용이며 시장 상황과 규격에 따라 실제 납품가는 달라질 수 있습니다.\n표에 없는 품목은 별도 견적이 필요하다고 짧게 언급.\n\n') : '')
+    +(hasStats ? ('---\n\n## '+periodLabel+' 단가 동향\n(위 [공통 배경 정보]의 단가 통계 표 그대로, 마크다운 표 형식 유지)\n\n') : '')
 
     +'---\n\n## BIV가 먼저 보는 3가지\n'
     +'### 1. 지역 배송 환경\n(2~4문단, 사용자 메시지의 지역 기준 배송 관련 실무 포인트)\n\n'
@@ -3297,10 +3302,14 @@ function filterHistory(filter, region, industry, search){
 
       // ── 액션 버튼 ──
       +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      // ① 발행용 복사 (원클릭 발행)
+      // ① 발행용 복사 (원클릭 발행, PC)
       +'<button data-ai="'+i+'" onclick="publishCopy(this)" '
       +'style="padding:6px 14px;background:linear-gradient(135deg,#166534,#15803D);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">'
-      +'<i class="ti ti-send"></i> 발행용 복사</button>'
+      +'<i class="ti ti-send"></i> 발행용 복사(PC)</button>'
+      // ①-모바일 발행용 복사 (순수 텍스트)
+      +'<button data-ai="'+i+'" onclick="publishCopyMobile(this)" '
+      +'style="padding:6px 14px;background:#FEF9EC;color:#92700A;border:1px solid #E9D5A0;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">'
+      +'<i class="ti ti-device-mobile"></i> 📱 모바일용</button>'
       // ② 편집
       +'<button data-ai="'+i+'" onclick="openEdit(this)" '
       +'style="padding:6px 12px;border:1px solid var(--bd);border-radius:6px;background:#fff;font-size:11px;cursor:pointer;font-weight:600">'
@@ -3358,6 +3367,28 @@ async function publishCopy(el){
     updateAnalytics();
     showToast('✅ 발행완료 처리됐어요. (클립보드 복사는 직접 해주세요)');
   }
+}
+
+/* 모바일 앱 붙여넣기용 원클릭 발행 복사 — 순수 텍스트, 표도 읽기 좋게 변환 */
+async function publishCopyMobile(el){
+  var i = parseInt(el.getAttribute('data-ai'));
+  var h = window._anaList && window._anaList[i];
+  if(!h) return;
+  var tags = Array.isArray(h.tags) ? h.tags.join(' ') : (h.tags||'');
+  var markdownText = '# '+(h.title||'') + '\n\n' + (h.body||'') + CTA_TEXT + '\n\n' + tags;
+  var orig = (history||[]).find(function(x){ return x.title === h.title && x.date === h.date; });
+  try{
+    await navigator.clipboard.writeText(markdownToMobileText(markdownText));
+    showToast('📱 모바일용 복사 완료! 서식기호 없는 순수 텍스트예요.');
+  }catch(e){
+    showToast('복사 실패: '+e.message);
+  }
+  if(orig){ orig.uploadStatus = 'done'; h.uploadStatus = 'done'; } else { h.uploadStatus = 'done'; }
+  saveApp();
+  sheetUpdateStatus(orig || h);
+  filterHistory();
+  updateDashboard();
+  updateAnalytics();
 }
 
 /* 발행 토글 — 웹+시트 동시 반영 */
@@ -3571,11 +3602,69 @@ async function copyRichText(markdownText, toastMsg){
   }
 }
 
+/* 마크다운 표 한 블록을 사람이 읽기 좋은 순수 텍스트로 변환 */
+function convertMdTableToText(tableBlock){
+  var rows = tableBlock.trim().split('\n').map(function(r){
+    return r.trim().replace(/^\||\|$/g,'').split('|').map(function(c){ return c.trim(); });
+  });
+  // 구분줄(--- 만 있는 행) 제거
+  rows = rows.filter(function(r){ return !r.every(function(c){ return /^:?-+:?$/.test(c); }); });
+  if(rows.length < 2) return tableBlock;
+  var headers = rows[0];
+  var dataRows = rows.slice(1);
+  return dataRows.map(function(r){
+    if(r.length <= 2){ return '· '+r[0]+' — '+(r[1]||''); }
+    var parts = [];
+    for(var i=1;i<r.length;i++){ parts.push((headers[i]||'')+' '+r[i]); }
+    return '· '+r[0]+' — '+parts.join(' / ');
+  }).join('\n');
+}
+
+/* 마크다운 전체를 모바일 앱 붙여넣기용 순수 텍스트로 변환 (#, **, |, --- 등 전부 제거) */
+function markdownToMobileText(md){
+  var text = md;
+  // 표 블록을 먼저 텍스트로 변환
+  text = text.replace(/(^\|.*\|\s*$\n?)+/gm, function(block){
+    return convertMdTableToText(block) + '\n';
+  });
+  // 헤더 기호 제거 (## 앞엔 빈 줄 하나 추가해서 구획 느낌 유지)
+  text = text.replace(/^###\s+(.+)$/gm, '$1');
+  text = text.replace(/^##\s+(.+)$/gm, '\n$1');
+  text = text.replace(/^#\s+(.+)$/gm, '$1');
+  // 볼드 제거
+  text = text.replace(/\*\*(.+?)\*\*/g, '$1');
+  // 구분선 제거
+  text = text.replace(/^-{3,}\s*$/gm, '');
+  // 불릿 통일
+  text = text.replace(/^\*\s+/gm, '· ');
+  // 과도한 빈 줄 정리
+  text = text.replace(/\n{3,}/g, '\n\n');
+  return text.trim();
+}
+
+/* 모바일 앱(네이버 블로그 앱 등)용 복사 — 서식 없는 순수 텍스트, 표도 읽기 좋게 변환 */
+async function copyMobileText(markdownText, toastMsg){
+  var plain = markdownToMobileText(markdownText);
+  try{
+    await navigator.clipboard.writeText(plain);
+    showToast(toastMsg || '📱 모바일용 복사 완료! (순수 텍스트)');
+  }catch(e){
+    showToast('복사 실패: '+e.message);
+  }
+}
+
 function copyEdit(){
   var title = document.getElementById('editTitle').value;
   var body  = document.getElementById('editBody').value;
   var tags  = document.getElementById('editTags').value;
   copyRichText('# '+title+'\n\n'+body+CTA_TEXT+'\n\n'+tags, '전체 복사 완료! (서식+CTA 포함)');
+}
+
+function copyEditMobile(){
+  var title = document.getElementById('editTitle').value;
+  var body  = document.getElementById('editBody').value;
+  var tags  = document.getElementById('editTags').value;
+  copyMobileText('# '+title+'\n\n'+body+CTA_TEXT+'\n\n'+tags, '📱 모바일용 전체 복사 완료!');
 }
 
 function copyTitleBody(){
@@ -3620,6 +3709,14 @@ function copyPost(el){
   if(!h) return;
   var tags = (h.tags||[]).join ? (h.tags||[]).join(' ') : (h.tags||'');
   copyRichText('# '+(h.title||'')+'\n\n'+(h.body||'')+CTA_TEXT+'\n\n'+tags, '복사됐어요! (서식+CTA 포함)');
+}
+
+function copyPostMobile(el){
+  var i = parseInt(el.getAttribute('data-ai'));
+  var h = window._anaList && window._anaList[i];
+  if(!h) return;
+  var tags = (h.tags||[]).join ? (h.tags||[]).join(' ') : (h.tags||'');
+  copyMobileText('# '+(h.title||'')+'\n\n'+(h.body||'')+CTA_TEXT+'\n\n'+tags, '📱 모바일용 복사 완료!');
 }
 
 
