@@ -2727,6 +2727,149 @@ function generateClosingCardImage(title, region, industry){
   return canvas;
 }
 
+/* 4번째 이미지: 가격 하이라이트 카드 */
+function generatePriceHighlightImage(priceData, region, industry){
+  var scale = 2;
+  var width = 800, height = 500;
+  var canvas = document.createElement('canvas');
+  canvas.width = width*scale; canvas.height = height*scale;
+  canvas.style.width = width+'px'; canvas.style.height = height+'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  var bg = ctx.createLinearGradient(0,0,width,height);
+  bg.addColorStop(0,BIV_CREAM); bg.addColorStop(1,'#F3EEE4');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,width,height);
+  drawDotGrid(ctx, 0, 0, width, height, 30, 'rgba(28,25,23,0.05)');
+
+  ctx.font = '700 13px '+FONT;
+  var label = 'BIV 오늘의 시세';
+  var labelW = ctx.measureText(label).width + 24;
+  ctx.fillStyle = BIV_INK;
+  roundRectPath(ctx, 50, 44, labelW, 28, 14); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(label, 62, 63);
+
+  var today = new Date();
+  ctx.font = '800 27px '+FONT; ctx.fillStyle = BIV_INK;
+  ctx.fillText((region||'')+' '+(industry||'') + ' 참고 공급가', 50, 108);
+  ctx.font = '400 15px '+FONT; ctx.fillStyle = 'rgba(28,25,23,0.55)';
+  ctx.fillText((today.getMonth()+1)+'월 '+today.getDate()+'일 · KAMIS 공공데이터 기준', 50, 133);
+
+  var items = (priceData && priceData.prices) ? priceData.prices.slice(0,4) : [];
+  var y = 185;
+  if(items.length){
+    items.forEach(function(it){
+      ctx.strokeStyle = 'rgba(28,25,23,0.1)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(50,y+28); ctx.lineTo(width-50,y+28); ctx.stroke();
+      ctx.font = '600 18px '+FONT; ctx.fillStyle = BIV_INK;
+      var name = (it.name||'').length>18 ? it.name.slice(0,18)+'…' : (it.name||'');
+      ctx.fillText(name, 50, y);
+      ctx.textAlign='right'; ctx.font='800 19px '+FONT; ctx.fillStyle = '#B8901E';
+      ctx.fillText((it.wholesale||'')+'원/'+(it.unit||''), width-50, y);
+      ctx.textAlign='left';
+      y += 68;
+    });
+  } else {
+    ctx.font = '500 18px '+FONT; ctx.fillStyle = 'rgba(28,25,23,0.6)';
+    ctx.fillText('실시간 시세는 카카오톡으로 문의해주세요.', 50, 220);
+  }
+
+  ctx.font = '700 15px '+FONT; ctx.fillStyle = 'rgba(28,25,23,0.55)';
+  ctx.fillText('BIV 식자재 유통 · 실제 납품가는 업체별 상이', 50, height-30);
+
+  return canvas;
+}
+
+/* 5번째 이미지: 체크리스트 카드 */
+function generateChecklistCardImage(type, region, industry){
+  var scale = 2;
+  var width = 800, height = 500;
+  var canvas = document.createElement('canvas');
+  canvas.width = width*scale; canvas.height = height*scale;
+  canvas.style.width = width+'px'; canvas.style.height = height+'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = BIV_CREAM; ctx.fillRect(0,0,width,height);
+  drawDotGrid(ctx, 0, 0, width, height, 30, 'rgba(201,162,39,0.10)');
+
+  ctx.font = '800 27px '+FONT; ctx.fillStyle = BIV_INK;
+  ctx.fillText('계약 전 체크리스트', 50, 68);
+  ctx.font = '400 15px '+FONT; ctx.fillStyle = 'rgba(28,25,23,0.55)';
+  ctx.fillText((region||'')+' '+(industry||'')+' 납품업체 계약 전 필수 확인', 50, 93);
+
+  var checklist = [
+    '배송 가능 구역 확인',
+    '냉장·보관 상태 확인',
+    '원산지·규격 정확성 확인',
+    '최소 주문량 조건 확인',
+    '교환·반품 처리 기준 확인'
+  ];
+  var y = 145;
+  checklist.forEach(function(c){
+    roundRectPath(ctx, 50, y-20, 26, 26, 6);
+    ctx.strokeStyle = BIV_GOLD; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = BIV_GOLD; ctx.lineWidth = 2.5; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    ctx.moveTo(56, y-7); ctx.lineTo(61, y-2); ctx.lineTo(70, y-15);
+    ctx.stroke();
+
+    ctx.fillStyle = BIV_INK; ctx.font = '600 19px '+FONT;
+    ctx.fillText(c, 92, y);
+    y += 58;
+  });
+
+  ctx.font = '700 15px '+FONT; ctx.fillStyle = 'rgba(28,25,23,0.55)';
+  ctx.fillText('BIV 식자재 유통', 50, height-30);
+
+  return canvas;
+}
+
+/* 6번째 이미지: BIV 소개/신뢰 카드 */
+function generateBrandIntroImage(region, industry){
+  var scale = 2;
+  var width = 800, height = 500;
+  var canvas = document.createElement('canvas');
+  canvas.width = width*scale; canvas.height = height*scale;
+  canvas.style.width = width+'px'; canvas.style.height = height+'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+  ctx.textAlign = 'center';
+
+  var bg = ctx.createLinearGradient(0,0,width,height);
+  bg.addColorStop(0,BIV_INK); bg.addColorStop(1,'#2A2521');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,width,height);
+  drawDotGrid(ctx, 0, 0, width, height, 30, 'rgba(201,162,39,0.10)');
+
+  drawForkKnifeIcon(ctx, width/2, 110, 80, BIV_GOLD2);
+
+  ctx.font = '800 30px '+FONT; ctx.fillStyle = '#ffffff';
+  ctx.fillText('BIV는 이렇게 찾아드려요', width/2, 190);
+
+  var steps = ['매장 위치 확인','필요 품목 정리','물량·배송 조건 비교'];
+  var stepW = width/steps.length;
+  steps.forEach(function(s, i){
+    var cx = stepW*i + stepW/2;
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    roundRectPath(ctx, cx-stepW/2+16, 230, stepW-32, 90, 12); ctx.fill();
+    ctx.fillStyle = BIV_GOLD2; ctx.font = '800 18px '+FONT;
+    ctx.fillText(String(i+1), cx, 265);
+    ctx.fillStyle = '#ffffff'; ctx.font = '600 15px '+FONT;
+    var lines = wrapCanvasTextByWord(ctx, s, stepW-46);
+    lines.forEach(function(l, li){ ctx.fillText(l, cx, 292+li*20); });
+  });
+
+  ctx.font = '500 16px '+FONT; ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText((region||'')+' '+(industry||'')+' 식자재, 믿을 수 있는 업체로 연결해드려요', width/2, 375);
+
+  ctx.font = '800 20px '+FONT; ctx.fillStyle = BIV_GOLD2;
+  ctx.fillText('BIV', width/2, 440);
+  ctx.textAlign = 'left';
+
+  return canvas;
+}
+
 async function writeOnePost(item, idx, total, priceData, priceStats){
   var kw     = item.keyword||item.title||'';
   var region = item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
@@ -2834,8 +2977,8 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
     console.warn('⚠️ 시트 저장 실패 (웹에는 저장됨):', e.message);
   }
 
-  // ③ 썸네일 이미지 자동 생성 (1: 타이틀 카드, 2: 핵심 포인트 카드, 3: 상담유도 클로징 카드)
-  var imgDataUrl = null, imgDataUrl2 = null, imgDataUrl3 = null;
+  // ③ 썸네일 이미지 자동 생성 (총 6장: 타이틀/포인트/클로징/가격/체크리스트/브랜드소개)
+  var imgDataUrl = null, imgDataUrl2 = null, imgDataUrl3 = null, imgDataUrl4 = null, imgDataUrl5 = null, imgDataUrl6 = null;
   try{
     await ensureFontLoaded();
     var imgCanvas = generateTitleCardImage(title, region, industry, type);
@@ -2844,11 +2987,18 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
     imgDataUrl2 = imgCanvas2.toDataURL('image/png');
     var imgCanvas3 = generateClosingCardImage(title, region, industry);
     imgDataUrl3 = imgCanvas3.toDataURL('image/png');
+    var imgCanvas4 = generatePriceHighlightImage(priceData, region, industry);
+    imgDataUrl4 = imgCanvas4.toDataURL('image/png');
+    var imgCanvas5 = generateChecklistCardImage(type, region, industry);
+    imgDataUrl5 = imgCanvas5.toDataURL('image/png');
+    var imgCanvas6 = generateBrandIntroImage(region, industry);
+    imgDataUrl6 = imgCanvas6.toDataURL('image/png');
     if(typeof window._batchImages === 'undefined') window._batchImages = [];
-    window._batchImages.push({title:title, region:region, industry:industry, type:type, dataUrl:imgDataUrl, dataUrl2:imgDataUrl2, dataUrl3:imgDataUrl3});
+    window._batchImages.push({title:title, region:region, industry:industry, type:type,
+      dataUrl:imgDataUrl, dataUrl2:imgDataUrl2, dataUrl3:imgDataUrl3, dataUrl4:imgDataUrl4, dataUrl5:imgDataUrl5, dataUrl6:imgDataUrl6});
   }catch(e){ console.warn('이미지 생성 실패:', e.message); }
 
-  return {success:true, title:title, kw:kw, imgDataUrl:imgDataUrl, imgDataUrl2:imgDataUrl2, imgDataUrl3:imgDataUrl3};
+  return {success:true, title:title, kw:kw, imgDataUrl:imgDataUrl, imgDataUrl2:imgDataUrl2, imgDataUrl3:imgDataUrl3, imgDataUrl4:imgDataUrl4, imgDataUrl5:imgDataUrl5, imgDataUrl6:imgDataUrl6};
 }
 let autoRunning = false;
 var _priceCache = {};
@@ -3210,17 +3360,17 @@ async function startAutoMode(){
     if(imgWrap && window._batchImages && window._batchImages.length){
       imgWrap.style.display = 'block';
       var listHtml = window._batchImages.map(function(im, i){
-        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F1F5F9">'
-          +'<img src="'+im.dataUrl+'" style="width:44px;height:28px;object-fit:cover;border-radius:4px;border:1px solid #E2E8F0">'
-          +'<img src="'+im.dataUrl2+'" style="width:44px;height:28px;object-fit:cover;border-radius:4px;border:1px solid #E2E8F0">'
-          +'<img src="'+im.dataUrl3+'" style="width:44px;height:28px;object-fit:cover;border-radius:4px;border:1px solid #E2E8F0">'
-          +'<span style="flex:1;font-size:11px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+im.title+'</span>'
-          +'<button onclick="downloadCanvasImage2(window._batchImages['+i+'],1)" style="font-size:10px;padding:4px 6px;border:1px solid #E2E8F0;border-radius:5px;background:#fff;cursor:pointer;white-space:nowrap">①</button>'
-          +'<button onclick="downloadCanvasImage2(window._batchImages['+i+'],2)" style="font-size:10px;padding:4px 6px;border:1px solid #E2E8F0;border-radius:5px;background:#fff;cursor:pointer;white-space:nowrap">②</button>'
-          +'<button onclick="downloadCanvasImage2(window._batchImages['+i+'],3)" style="font-size:10px;padding:4px 6px;border:1px solid #E2E8F0;border-radius:5px;background:#fff;cursor:pointer;white-space:nowrap">③</button>'
+        return '<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #F1F5F9;flex-wrap:wrap">'
+          +'<img src="'+im.dataUrl+'" style="width:40px;height:25px;object-fit:cover;border-radius:4px;border:1px solid #E2E8F0">'
+          +'<img src="'+im.dataUrl3+'" style="width:40px;height:25px;object-fit:cover;border-radius:4px;border:1px solid #E2E8F0">'
+          +'<span style="flex:1;font-size:11px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:60px">'+im.title+'</span>'
+          +[1,2,3,4,5,6].map(function(n){
+            var circ = ['①','②','③','④','⑤','⑥'][n-1];
+            return '<button onclick="downloadCanvasImage2(window._batchImages['+i+'],'+n+')" style="font-size:9px;padding:3px 5px;border:1px solid #E2E8F0;border-radius:5px;background:#fff;cursor:pointer;white-space:nowrap">'+circ+'</button>';
+          }).join('')
           +'</div>';
       }).join('');
-      var zipBtnHtml = '<button onclick="downloadBatchImagesZip()" style="width:100%;margin-bottom:8px;padding:8px;border:1.5px solid var(--g3);border-radius:8px;background:var(--g2);color:var(--g4);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-download"></i> 이미지 전체 다운로드 (ZIP, '+(window._batchImages.length*3)+'장)</button>';
+      var zipBtnHtml = '<button onclick="downloadBatchImagesZip()" style="width:100%;margin-bottom:8px;padding:8px;border:1.5px solid var(--g3);border-radius:8px;background:var(--g2);color:var(--g4);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-download"></i> 이미지 전체 다운로드 (ZIP, '+(window._batchImages.length*6)+'장)</button>';
       imgWrap.innerHTML = zipBtnHtml + listHtml;
     }
 
@@ -4548,7 +4698,8 @@ function downloadCanvasImage(canvas, filename){
 
 function downloadCanvasImage2(imgObj, which){
   var link = document.createElement('a');
-  var url = (which===3) ? imgObj.dataUrl3 : (which===2) ? imgObj.dataUrl2 : imgObj.dataUrl;
+  var map = {1:imgObj.dataUrl, 2:imgObj.dataUrl2, 3:imgObj.dataUrl3, 4:imgObj.dataUrl4, 5:imgObj.dataUrl5, 6:imgObj.dataUrl6};
+  var url = map[which] || imgObj.dataUrl;
   link.download = (imgObj.title||'BIV_썸네일').replace(/[\\/:*?"<>|]/g,'') + '_' + (which||1) + '.png';
   link.href = url;
   link.click();
@@ -4584,9 +4735,10 @@ function downloadBatchImagesZip(){
   var files = [];
   imgs.forEach(function(im, i){
     var safeTitle = (im.title||'글'+(i+1)).replace(/[\\/:*?"<>|]/g,'').slice(0,30);
-    files.push({name:(i+1)+'_'+safeTitle+'_1.png', dataUrl:im.dataUrl});
-    files.push({name:(i+1)+'_'+safeTitle+'_2.png', dataUrl:im.dataUrl2});
-    files.push({name:(i+1)+'_'+safeTitle+'_3.png', dataUrl:im.dataUrl3});
+    [1,2,3,4,5,6].forEach(function(n){
+      var map = {1:im.dataUrl, 2:im.dataUrl2, 3:im.dataUrl3, 4:im.dataUrl4, 5:im.dataUrl5, 6:im.dataUrl6};
+      if(map[n]) files.push({name:(i+1)+'_'+safeTitle+'_'+n+'.png', dataUrl:map[n]});
+    });
   });
   downloadAllAsZip(files, 'BIV_썸네일이미지_'+files.length+'장.zip');
 }
@@ -4683,51 +4835,45 @@ async function writeFreshwayPost(){
       var imgCanvas = generateFreshwayPriceImage(special, regular, region, industry);
       var imgCanvas2 = generatePointCardImage('프레시웨이판매가', region, industry);
       var imgCanvas3 = generateClosingCardImage(title, region, industry);
+      var priceDataLike = {prices: special.concat(regular).slice(0,4).map(function(it){
+        return {name:it.name, wholesale: it.eventPrice||it.supplyPrice, unit: it.unit};
+      })};
+      var imgCanvas4 = generatePriceHighlightImage(priceDataLike, region, industry);
+      var imgCanvas5 = generateChecklistCardImage('프레시웨이판매가', region, industry);
+      var imgCanvas6 = generateBrandIntroImage(region, industry);
       var kws = suggestImageKeywords(region, industry, picked);
       var imgArea = document.getElementById('fwImageArea');
       imgArea.innerHTML = '';
-      var previewImg = document.createElement('img');
-      previewImg.src = imgCanvas.toDataURL('image/png');
-      previewImg.style.cssText = 'width:100%;border:1.5px solid var(--bd);border-radius:8px;margin-bottom:10px';
-      imgArea.appendChild(previewImg);
-      var previewImg2 = document.createElement('img');
-      previewImg2.src = imgCanvas2.toDataURL('image/png');
-      previewImg2.style.cssText = 'width:100%;border:1.5px solid var(--bd);border-radius:8px;margin-bottom:10px';
-      imgArea.appendChild(previewImg2);
-      var previewImg3 = document.createElement('img');
-      previewImg3.src = imgCanvas3.toDataURL('image/png');
-      previewImg3.style.cssText = 'width:100%;border:1.5px solid var(--bd);border-radius:8px;margin-bottom:10px';
-      imgArea.appendChild(previewImg3);
+      [imgCanvas, imgCanvas2, imgCanvas3, imgCanvas4, imgCanvas5, imgCanvas6].forEach(function(c){
+        var pv = document.createElement('img');
+        pv.src = c.toDataURL('image/png');
+        pv.style.cssText = 'width:100%;border:1.5px solid var(--bd);border-radius:8px;margin-bottom:10px';
+        imgArea.appendChild(pv);
+      });
       var zipBtn = document.createElement('button');
       zipBtn.className = 'btn';
       zipBtn.style.cssText = 'width:100%;margin-bottom:8px';
-      zipBtn.innerHTML = '<i class="ti ti-download"></i> 이미지 전체 다운로드 (ZIP, 3장)';
+      zipBtn.innerHTML = '<i class="ti ti-download"></i> 이미지 전체 다운로드 (ZIP, 6장)';
       zipBtn.onclick = function(){
         downloadAllAsZip([
           {name:region+'_'+industry+'_오늘의판매가1.png', dataUrl: imgCanvas.toDataURL('image/png')},
           {name:region+'_'+industry+'_오늘의판매가2.png', dataUrl: imgCanvas2.toDataURL('image/png')},
-          {name:region+'_'+industry+'_오늘의판매가3.png', dataUrl: imgCanvas3.toDataURL('image/png')}
+          {name:region+'_'+industry+'_오늘의판매가3.png', dataUrl: imgCanvas3.toDataURL('image/png')},
+          {name:region+'_'+industry+'_오늘의판매가4.png', dataUrl: imgCanvas4.toDataURL('image/png')},
+          {name:region+'_'+industry+'_오늘의판매가5.png', dataUrl: imgCanvas5.toDataURL('image/png')},
+          {name:region+'_'+industry+'_오늘의판매가6.png', dataUrl: imgCanvas6.toDataURL('image/png')}
         ], region+'_'+industry+'_오늘의판매가.zip');
       };
       imgArea.appendChild(zipBtn);
-      var dlBtn = document.createElement('button');
-      dlBtn.className = 'btn btn-outline';
-      dlBtn.style.cssText = 'width:100%;margin-bottom:8px';
-      dlBtn.innerHTML = '<i class="ti ti-download"></i> ① 오늘의 판매가 이미지만 다운로드';
-      dlBtn.onclick = function(){ downloadCanvasImage(imgCanvas, region+'_'+industry+'_오늘의판매가1.png'); };
-      imgArea.appendChild(dlBtn);
-      var dlBtn2 = document.createElement('button');
-      dlBtn2.className = 'btn btn-outline';
-      dlBtn2.style.cssText = 'width:100%;margin-bottom:8px';
-      dlBtn2.innerHTML = '<i class="ti ti-download"></i> ② 핵심 포인트 카드만 다운로드';
-      dlBtn2.onclick = function(){ downloadCanvasImage(imgCanvas2, region+'_'+industry+'_오늘의판매가2.png'); };
-      imgArea.appendChild(dlBtn2);
-      var dlBtn3 = document.createElement('button');
-      dlBtn3.className = 'btn btn-outline';
-      dlBtn3.style.cssText = 'width:100%;margin-bottom:10px';
-      dlBtn3.innerHTML = '<i class="ti ti-download"></i> ③ 상담유도 클로징 카드만 다운로드';
-      dlBtn3.onclick = function(){ downloadCanvasImage(imgCanvas3, region+'_'+industry+'_오늘의판매가3.png'); };
-      imgArea.appendChild(dlBtn3);
+      var btnLabels = ['① 오늘의 판매가','② 핵심 포인트','③ 상담유도 클로징','④ 가격 하이라이트','⑤ 체크리스트','⑥ BIV 소개'];
+      [imgCanvas, imgCanvas2, imgCanvas3, imgCanvas4, imgCanvas5, imgCanvas6].forEach(function(c, ci){
+        var b = document.createElement('button');
+        b.className = 'btn btn-outline';
+        b.style.cssText = 'width:100%;margin-bottom:8px';
+        b.innerHTML = '<i class="ti ti-download"></i> '+btnLabels[ci]+'만 다운로드';
+        b.onclick = function(){ downloadCanvasImage(c, region+'_'+industry+'_오늘의판매가'+(ci+1)+'.png'); };
+        imgArea.appendChild(b);
+      });
       var kwDiv = document.createElement('div');
       kwDiv.style.cssText = 'font-size:12px;color:var(--tx2)';
       kwDiv.textContent = '📷 추가로 넣을 사진 검색 키워드 추천: ' + kws.join(' · ');
