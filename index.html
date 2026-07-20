@@ -2273,6 +2273,7 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
     +'⑥ 핵심키워드 전체 문구는 도입/본문 중간/마무리에 각 1회씩만, **볼드**로 자연스럽게 포함. 그 외 부분에서는 핵심키워드를 그대로 반복하지 말고, 키워드를 쪼갠 관련 하위 표현들(예: 핵심키워드가 "강동구 양파 대량구매 식당 창업"이면 → "강동구 양파 납품", "양파 대량구매", "강동구 식당 창업", "양파 도매업체" 등)을 상황에 맞게 나누어 쓸 것. 기계적 반복 금지.\n'
     +'⑦ 과장/광고/1위/최고 금지.\n'
     +'⑦-1 제목은 사용자 메시지의 "제목형식"을 기반으로 하되, 단어 사이 띄어쓰기가 어색하게 붙어있으면 자연스럽게 띄어써서 다듬을 것(의미와 핵심키워드는 그대로 유지). 쉼표(,)는 자연스러운 구절 구분이면 유지해도 되지만, 대괄호[ ], 소괄호( ) 는 절대 사용하지 말 것 — 네이버 검색 누락(색인 제외) 원인이 됨.\n'
+    +'⑦-1-1 제목형식 안에 지역명이나 업종명이 이미 두 번 이상 들어가 있으면(예: "강동구 한식당 ... 강동구 한식당 ..."), 자연스럽게 한 번만 남기고 정리할 것.\n'
     +'⑦-2 같은 단어를 본문에서 바로 옆이나 가까운 거리에 두 번 연속 쓰지 말 것 (예: "스위스 스위스"). 문장이 끝나면 마침표를 찍을 것.\n'
     +(hasPrice ? '⑧ 사용자 메시지의 핵심키워드에 나오는 구체적 식재료명이 위 공급가 목록의 품목과 다르면, "프리미엄/특수 품목은 별도 견적" 섹션에서 "공공 시세 데이터에 없어 업체별 견적 확인이 필요하다"고 짚어줄 것. 목록에 없는 가격을 지어내지 말 것.\n' : '')
     +'⑨ 마무리(상담 유도) 표현은 "## 마무리" 섹션에서 딱 1번만 쓸 것. 다른 섹션(도입, 본문 등)에서 "상담받아보세요", "문의해주세요" 같은 유도 문구를 반복하지 말 것.\n'
@@ -2348,18 +2349,37 @@ function buildPostUserPrompt(kw, region, type, industry){
   var cuisineTypes = ['한식','양식','일식','중식'];
   var indLabel = cuisineTypes.indexOf(industry) > -1 ? industry+'당' : industry;
 
-  // 자연스러운 콤마 구절형 — 키워드를 문장처럼 자연스럽게 조합하되 검색 키워드는 유지
-  // 예: "강동구 양식당 창업, 양파 대량구매 전 확인할 5가지"
-  var titlePatterns = [
-    loc+' '+indLabel+' 창업, '+kw+' 전 확인할 5가지',
-    kw+' 도매업체, '+loc+' '+indLabel+' 창업 전 비교할 것',
-    loc+' '+indLabel+' 창업 준비, '+kw+' 정리',
-    kw+' 공급업체 선택 기준, '+loc+' '+indLabel+' 기준',
-    loc+' '+indLabel+', '+kw+' 계약 전 체크리스트',
-    kw+' 원가절감, '+loc+' '+indLabel+' 창업 가이드',
-    loc+' '+indLabel+' 창업자를 위한 '+kw+' 안내',
-    kw+' 비교, '+loc+' '+indLabel+' 도매가 확인하기'
-  ];
+  // 키워드 안에 지역/업종이 이미 들어있으면 제목에서 또 붙이지 않도록 분기
+  var kwHasLoc = loc && kw.indexOf(loc) > -1;
+  var kwHasInd = industry && kw.indexOf(industry) > -1;
+
+  var titlePatterns;
+  if(kwHasLoc && kwHasInd){
+    // 키워드 자체에 지역+업종이 이미 포함된 경우 — 중복 방지, 키워드만 활용
+    titlePatterns = [
+      kw+' 전 확인할 5가지',
+      kw+' 시 비교할 것',
+      kw+' 정리',
+      kw+' 선택 기준',
+      kw+' 계약 전 체크리스트',
+      kw+' 절감 가이드',
+      kw+' 안내',
+      kw+' 확인하기'
+    ];
+  } else {
+    // 자연스러운 콤마 구절형 — 키워드를 문장처럼 자연스럽게 조합하되 검색 키워드는 유지
+    // 예: "강동구 양식당 창업, 양파 대량구매 전 확인할 5가지"
+    titlePatterns = [
+      loc+' '+indLabel+' 창업, '+kw+' 전 확인할 5가지',
+      kw+' 도매업체, '+loc+' '+indLabel+' 창업 전 비교할 것',
+      loc+' '+indLabel+' 창업 준비, '+kw+' 정리',
+      kw+' 공급업체 선택 기준, '+loc+' '+indLabel+' 기준',
+      loc+' '+indLabel+', '+kw+' 계약 전 체크리스트',
+      kw+' 원가절감, '+loc+' '+indLabel+' 창업 가이드',
+      loc+' '+indLabel+' 창업자를 위한 '+kw+' 안내',
+      kw+' 비교, '+loc+' '+indLabel+' 도매가 확인하기'
+    ];
+  }
   var patternIdx = kw.split('').reduce(function(acc,c){return acc+c.charCodeAt(0);},0) % titlePatterns.length;
   var titleTemplate = titlePatterns[patternIdx]
     .replace(/[\[\]()（）]/g, '') // 대괄호/소괄호 제거 — 네이버 누락(색인제외) 원인. 쉼표는 자연스러운 구절 구분용으로 허용.
