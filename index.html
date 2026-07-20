@@ -745,7 +745,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 const KAKAO = 'https://open.kakao.com/o/shEOWEth';
 const BLOG  = 'https://blog.naver.com/yeong44';
 const SHEET_ID = '1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU';
-const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxtA2N--WyELUynttyaQ_A29sPhDGZjFMR_94JqTsxiGFdW2_ALlzfeoJPOMwI2yFwZ/exec';
+const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzrlKdJXUeySp-EnDAEoVUMwJFDLQIRiyQszs9OlFkF2W_5YJhiCvWSIbrLDrnR5cny/exec';
 
 /* ══════════════════════════════════════
    데이터
@@ -2932,7 +2932,19 @@ async function startAutoMode(){
         .slice(0, 10-selKws.length)
         .forEach(function(k){ if(selKws.length<10) selKws.push({kw:k.keyword,keyword:k.keyword,region:k.region||''}); });
     });
-    setStep(1,'✅','키워드 '+kwData.length+'개 추출 → '+selKws.length+'개 자동 선택'+(_dupSkipped1?' (중복 '+_dupSkipped1+'개 제외)':''));
+
+    // 네이버 공식 API로 키워드 경쟁도(기존 블로그 글 수) 체크 — 과포화 키워드 제외
+    setStep(1,'⏳','키워드 경쟁도 확인 중...');
+    var _tooSaturated1 = 0;
+    for(var _ki=0; _ki<selKws.length; _ki++){
+      selKws[_ki].competition = await fetchKeywordCompetition(selKws[_ki].kw);
+    }
+    selKws = selKws.filter(function(s){
+      if(s.competition !== null && s.competition > 80000){ _tooSaturated1++; return false; }
+      return true;
+    });
+
+    setStep(1,'✅','키워드 '+kwData.length+'개 추출 → '+selKws.length+'개 자동 선택'+(_dupSkipped1?' (중복 '+_dupSkipped1+'개 제외)':'')+(_tooSaturated1?' (과포화 '+_tooSaturated1+'개 제외)':''));
 
     // ── Step 2: 글기획 생성 ──
     setStep(2,'⏳','글기획 자동 생성 중...');
@@ -3601,6 +3613,18 @@ function dashTogItem(name){
 }
 
 /* ═══ 실시간 단가 조회 ═══ */
+/* 네이버 공식 블로그검색 API로 키워드 경쟁도(기존 글 수) 조회 */
+async function fetchKeywordCompetition(keyword){
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'fetchKeywordVolume', keyword:keyword})
+    });
+    var d = await res.json();
+    return d.success ? d.total : null;
+  }catch(e){ return null; }
+}
+
 async function fetchRealtimePrice(ind){
   try{
     // 5초 타임아웃 — 응답 없으면 건너뜀
