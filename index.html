@@ -2368,7 +2368,9 @@ function buildPostUserPrompt(kw, region, type, industry){
   var indLabel = cuisineTypes.indexOf(industry) > -1 ? industry+'당' : industry;
 
   // 키워드 안에 지역/업종이 이미 들어있으면 제목에서 또 붙이지 않도록 분기
-  var kwHasLoc = loc && kw.indexOf(loc) > -1;
+  // "강남구"의 "구" 접미사 유무 차이로 놓치지 않도록 stem(핵심 지명)으로 비교
+  var locStem = loc.replace(/(특별시|광역시|자치시|자치도|[시도군구])$/,'') || loc;
+  var kwHasLoc = locStem && kw.indexOf(locStem) > -1;
   var kwHasInd = industry && kw.indexOf(industry) > -1;
 
   var titlePatterns;
