@@ -412,8 +412,18 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <label style="font-size:11px;color:var(--gray);font-weight:600">글 개수</label>
-        <input id="autoPostCount" type="number" min="1" max="15" value="8" style="width:60px;padding:6px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px;text-align:center">
-        <span style="font-size:10px;color:#94A3B8">(1~15개, 기본 8개)</span>
+        <select id="autoPostCount" style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
+          <option value="1">1개</option>
+          <option value="2">2개</option>
+          <option value="3">3개</option>
+          <option value="4">4개</option>
+          <option value="5">5개</option>
+          <option value="6">6개</option>
+          <option value="8" selected>8개 (기본)</option>
+          <option value="10">10개</option>
+          <option value="12">12개</option>
+          <option value="15">15개</option>
+        </select>
       </div>
 
       <button onclick="startAutoMode()"
@@ -463,6 +473,29 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       📈 인기 품목 우선으로 시세 속보 생성
     </button>
     <div id="flashPriceStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
+  </div>
+
+  <!-- 오늘의 이슈 자동 발행 (계절이슈 + 가격급등락 기반, 정식 SEO 글) -->
+  <div class="card" style="margin-top:14px;padding:18px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+      <div style="font-size:14px;font-weight:800">🔥 오늘의 이슈 글 자동 발행</div>
+      <span style="background:#FEF3C7;color:#92400E;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">시의성 반영</span>
+    </div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">오늘 KAMIS 시세가 평균 대비 크게 튄 품목, 이달의 계절 이슈(복날·명절·장마 등)를 자동으로 감지해서 그것만 다루는 정식 SEO 글을 만들어요. 일반 배치와 같은 품질(Sonnet, 6장 이미지)로 나가요.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <label style="font-size:11px;color:var(--gray);font-weight:600">글 개수</label>
+      <select id="issuePostCount" style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
+        <option value="1" selected>1개</option>
+        <option value="2">2개</option>
+        <option value="3">3개</option>
+        <option value="4">4개</option>
+        <option value="5">5개</option>
+      </select>
+    </div>
+    <button onclick="startIssueBatch()" style="width:100%;padding:12px;background:linear-gradient(135deg,#B45309,#D97706);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">
+      🔥 오늘의 이슈 자동 감지 후 발행
+    </button>
+    <div id="issueStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
   </div>
 </div>
 
@@ -3223,6 +3256,76 @@ async function startFlashPriceBatch(){
     + (ok ? '<br><button onclick="downloadBatchImagesZip()" style="margin-top:8px;width:100%;padding:8px;border:1.5px solid var(--g3);border-radius:8px;background:var(--g2);color:var(--g4);font-size:12px;font-weight:700;cursor:pointer">이미지 전체 다운로드 (ZIP, '+ok+'장)</button>' : '');
   showToast('✅ 오늘 시세 속보 '+ok+'개 생성 완료');
   try{ updateDashboard(); }catch(e){}
+}
+
+/* 오늘의 이슈(가격 급등락 + 계절 이슈) 자동 감지 후 정식 SEO 글 자동 발행 */
+async function startIssueBatch(){
+  var statusEl = document.getElementById('issueStatus');
+  if(!industry){ statusEl.textContent = '❌ 업종을 먼저 선택해주세요.'; return; }
+  if(!selDistricts.length){ statusEl.textContent = '❌ 지역을 먼저 선택해주세요.'; return; }
+
+  var countInput = document.getElementById('issuePostCount');
+  var targetCount = countInput ? Math.max(1, Math.min(5, parseInt(countInput.value)||1)) : 1;
+  var region = selDistricts[0].region+' '+selDistricts[0].district;
+
+  statusEl.textContent = '⏳ 오늘 이슈 감지 중...';
+  await syncHistoryFromSheet();
+  var priceData = await fetchRealtimePrice(industry);
+  var priceStats = null;
+  try{ priceStats = await fetchPriceStats(industry, 'week'); }catch(e){}
+
+  var gKey = industryToGeneralKey(industry);
+  var gData = (typeof GENERAL_DATA !== 'undefined' && GENERAL_DATA[gKey]) ? GENERAL_DATA[gKey] : {};
+  var thisMonth = String(new Date().getMonth()+1);
+  var seasonNote = gData.season ? (gData.season[thisMonth]||'') : '';
+
+  // 이슈 후보 수집: ① 가격 급등락(우선) ② 계절 이슈(부족하면 보충)
+  var issues = [];
+  if(priceData && priceData.prices && priceStats && priceStats.success && priceStats.stats){
+    var statsByItem = {};
+    priceStats.stats.forEach(function(s){ statsByItem[s.item] = s; });
+    priceData.prices.forEach(function(p){
+      var baseName = (p.name||'').split('/')[0].trim();
+      var matched = statsByItem[p.name] || statsByItem[baseName];
+      if(matched && matched.avg && baseName){
+        var cur = parseFloat(String(p.wholesale).replace(/,/g,''));
+        var avg = parseFloat(String(matched.avg).replace(/,/g,''));
+        if(!isNaN(cur) && !isNaN(avg) && avg>0){
+          var diffPct = Math.round((cur-avg)/avg*100);
+          if(Math.abs(diffPct) >= 8){
+            issues.push({kw: baseName+' 가격 '+(diffPct>0?'급등':'급락')+' 이유', type:'오늘단가', score: Math.abs(diffPct)});
+          }
+        }
+      }
+    });
+    issues.sort(function(a,b){ return b.score-a.score; });
+  }
+  if(seasonNote){
+    issues.push({kw: industry+' 창업 '+thisMonth+'월 시즌 준비', type:'정보글', score: 0});
+  }
+  if(!issues.length){
+    statusEl.textContent = '❌ 오늘은 특별한 이슈가 감지되지 않았어요 (평균 대비 8% 이상 변동 품목 없음, 계절 이슈도 없음). 일반 자동화를 이용해주세요.';
+    return;
+  }
+
+  var selected = issues.slice(0, targetCount);
+  var ok=0, dup=0, fail=0;
+  window._batchImages = [];
+  for(var i=0;i<selected.length;i++){
+    var iss = selected[i];
+    statusEl.textContent = '⏳ '+(i+1)+'/'+selected.length+' 작성 중 (저장 '+ok+' · 중복 '+dup+' · 실패 '+fail+')... — '+iss.kw;
+    if(isDuplicatePost(region, industry, iss.kw)){ dup++; continue; }
+    try{
+      var res = await writeOnePost({region:region, type:iss.type, keyword:iss.kw}, i, selected.length, priceData, priceStats);
+      if(res && res.success) ok++; else fail++;
+    }catch(e){ fail++; }
+  }
+
+  statusEl.innerHTML = '✅ <strong>이슈 글 '+ok+'개 완료!</strong>'+(dup?' (중복 '+dup+'개 제외)':'')+(fail?' (실패 '+fail+'개)':'')
+    + '<br><span style="color:var(--gray)">감지된 이슈: '+selected.map(function(s){return s.kw;}).join(', ')+'</span>'
+    + (ok ? '<br><button onclick="downloadBatchImagesZip()" style="margin-top:8px;width:100%;padding:8px;border:1.5px solid var(--g3);border-radius:8px;background:var(--g2);color:var(--g4);font-size:12px;font-weight:700;cursor:pointer">이미지 전체 다운로드 (ZIP)</button>' : '');
+  showToast('✅ 오늘의 이슈 글 '+ok+'개 생성 완료');
+  try{ filterHistory(); updateDashboard(); updateAnalytics(); }catch(e){}
 }
 
 async function startAutoMode(){
