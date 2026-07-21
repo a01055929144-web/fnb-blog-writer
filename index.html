@@ -1211,7 +1211,7 @@ function saveApiKey(){
   showToast('API 키가 연결되어 있어요!');
 }
 
-async function callClaude(prompt, maxTokens=2000, useHaiku=false, systemPrompt=null){
+async function callClaude(prompt, maxTokens=2000, useHaiku=false, systemPrompt=null, _isRetry=false){
   var _k = ["sk-ant-api03-AZfMCcz71","AK5r5E8rTjUUP4b1gcj5K1wwkTKImd","bcnqrKIL35eVmitvmOzGbI-76leaJ4ALgqFhlCxM__S3gPA-hUuNCAAA"].join("");
   // 키워드/클러스터(JSON 추출) → Haiku (빠름/저렴)
   // 글 작성(장문) → Sonnet (품질)
@@ -1239,6 +1239,10 @@ async function callClaude(prompt, maxTokens=2000, useHaiku=false, systemPrompt=n
   var textBlock = d.content && d.content.find(function(b){ return b.type==='text'; });
   if(!textBlock || !textBlock.text){
     throw new Error('Claude 응답에 텍스트가 없음 (stop_reason: '+(d.stop_reason||'?')+')');
+  }
+  if(d.stop_reason === 'max_tokens' && !_isRetry){
+    console.warn('⚠️ 응답이 max_tokens('+maxTokens+') 도달로 잘렸어요. 토큰 한도를 늘려서 1회 재시도합니다...');
+    return callClaude(prompt, Math.min(maxTokens*2, 16000), useHaiku, systemPrompt, true);
   }
   return textBlock.text;
 }
@@ -2995,7 +2999,7 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
   // 글 작성 (Haiku) — v3: 마크다운 유지, 훨씬 긴 12섹션 포맷이라 토큰 상향
   var _sysPrompt = buildPostSystemPrompt(industry, currentIntent||'업체찾기', priceData||null, priceStats||null);
   var _userPrompt = buildPostUserPrompt(kw, region, type, industry);
-  var text = await callClaude(_userPrompt, 8000, false, _sysPrompt); // v3: Sonnet + 프롬프트 캐싱(system) — 지시 준수율 개선 + 배치 내 토큰 비용 절감
+  var text = await callClaude(_userPrompt, 10000, false, _sysPrompt); // v3: Sonnet + 프롬프트 캐싱(system) — 지시 준수율 개선 + 배치 내 토큰 비용 절감. 섹션 늘어난 만큼 여유 확보(잘리면 callClaude가 자동 재시도)
 
   // ── v3 출력 순서: # 제목 → ## 본문 섹션들(마크다운 유지) → 해시태그(맨 끝) ──
 
