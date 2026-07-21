@@ -2218,8 +2218,29 @@ function showAutoModal(){
 function updateAutoModal(step, icon, text){
   setStep(step.replace('step',''), icon, text);
 }
+/* UI의 단순 업종명("한식")을 GENERAL_DATA 복합 키("한식/축산")로 매핑 */
+function industryToGeneralKey(industry){
+  var map = {
+    '한식':'한식/축산', '축산':'한식/축산',
+    '양식':'양식/샐러드', '샐러드':'양식/샐러드',
+    '일식':'일식/수산', '수산':'일식/수산',
+    '중식':'중식',
+    '주류':'주류',
+    '카페베이커리':'카페/베이커리',
+    '공산품':'소스/가공'
+  };
+  return map[industry] || industry;
+}
+
 function buildPostSystemPrompt(industry, intent, priceData, priceStats){
   intent = intent || '업체찾기';
+
+  // 계절/트렌드 컨텍스트 — "핫픽" 반영용 (그날그날 이슈에 맞게 쓰도록)
+  var gKey = industryToGeneralKey(industry);
+  var gData = (typeof GENERAL_DATA !== 'undefined' && GENERAL_DATA[gKey]) ? GENERAL_DATA[gKey] : {};
+  var thisMonth = String(new Date().getMonth()+1);
+  var seasonNote = gData.season ? (gData.season[thisMonth]||'') : '';
+  var trendNote = gData.trend || '';
 
   var intentGuide = {
     '업체찾기':'식자재 납품업체를 찾고 있음. 어떻게 업체를 찾는지, 무엇을 비교해야 하는지가 핵심.',
@@ -2261,6 +2282,29 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
     }).join('\n');
   }
 
+  // 가격 급등락 감지 — 오늘 시세가 평균 대비 얼마나 튀는지 (핫픽 반영용)
+  var priceAlerts = '';
+  if(hasPrice && hasStats){
+    var statsByItem = {};
+    (priceStats.stats||[]).forEach(function(s){ statsByItem[s.item] = s; });
+    var alerts = [];
+    priceData.prices.forEach(function(p){
+      var baseName = (p.name||'').split('/')[0];
+      var matched = statsByItem[p.name] || statsByItem[baseName];
+      if(matched && matched.avg){
+        var cur = parseFloat(String(p.wholesale).replace(/,/g,''));
+        var avg = parseFloat(String(matched.avg).replace(/,/g,''));
+        if(!isNaN(cur) && !isNaN(avg) && avg > 0){
+          var diffPct = Math.round((cur-avg)/avg*100);
+          if(Math.abs(diffPct) >= 8){
+            alerts.push(p.name+' 평균 대비 '+(diffPct>0?'+':'')+diffPct+'% '+(diffPct>0?'상승':'하락'));
+          }
+        }
+      }
+    });
+    if(alerts.length) priceAlerts = alerts.slice(0,5).join(' / ');
+  }
+
   var month = new Date().getMonth()+1;
   var mn = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   var todayLabel = new Date().getFullYear()+'년 '+mn[month];
@@ -2284,6 +2328,9 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
     +'기준일: '+todayLabel+'\n'
     +'업종: '+industry+'\n'
     +'검색의도: '+intent+' — '+intentDesc+'\n'
+    +(seasonNote ? '이달의 시즌 이슈: '+seasonNote+'\n' : '')
+    +(trendNote ? '업계 트렌드: '+trendNote+'\n' : '')
+    +(priceAlerts ? '오늘 시세 특이사항(평균 대비 8% 이상 변동): '+priceAlerts+'\n' : '')
     +(hasPrice?'오늘 공급가(수정 금지, 목록 그대로 사용, 출처: KAMIS 공공데이터):\n'+priceTable+'\n':'')
     +(hasStats?periodLabel+' 단가 통계(수정 금지, 목록 그대로 사용, 출처: KAMIS 공공데이터):\n'+statsTable+'\n':'')
     +'\n'
@@ -2303,6 +2350,7 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
     +'⑦-2 같은 단어를 본문에서 바로 옆이나 가까운 거리에 두 번 연속 쓰지 말 것 (예: "스위스 스위스"). 문장이 끝나면 마침표를 찍을 것.\n'
     +(hasPrice ? '⑧ 사용자 메시지의 핵심키워드에 나오는 구체적 식재료명이 위 공급가 목록의 품목과 다르면, "프리미엄/특수 품목은 별도 견적" 섹션에서 "공공 시세 데이터에 없어 업체별 견적 확인이 필요하다"고 짚어줄 것. 목록에 없는 가격을 지어내지 말 것.\n' : '')
     +'⑨ 마무리(상담 유도) 표현은 "## 마무리" 섹션에서 딱 1번만 쓸 것. 다른 섹션(도입, 본문 등)에서 "상담받아보세요", "문의해주세요" 같은 유도 문구를 반복하지 말 것.\n'
+    +(seasonNote||trendNote||priceAlerts ? '⑩ 위 [공통 배경 정보]에 "이달의 시즌 이슈"/"업계 트렌드"/"오늘 시세 특이사항"이 있다면, 이 글의 키워드·타입과 자연스럽게 맞아떨어지는 곳(도입부나 관련 섹션)에 1~2곳 정도 자연스럽게 녹여 쓸 것 — 매 섹션에 억지로 넣지 말고, 이 글에서 진짜 관련 있는 부분에서만. 그날그날 다른 시의성 있는 글이 되도록 하는 목적.\n' : '')
     +'\n'
 
     +'[출력 형식 — 이 순서와 마크다운 헤더 그대로. 아래 사용자 메시지의 지역/업종/키워드/제목형식을 실제 값으로 채워 넣을 것]\n\n'
