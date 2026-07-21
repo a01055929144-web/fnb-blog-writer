@@ -2778,7 +2778,7 @@ function generatePointCardImage(type, region, industry, customTips){
 }
 
 /* 3번째 이미지: 상담 유도 클로징 카드 — 골드 그라디언트 + CTA */
-function generateClosingCardImage(title, region, industry){
+function generateClosingCardImage(title, region, industry, kw){
   var scale = 2;
   var width = 800, height = 500;
   var canvas = document.createElement('canvas');
@@ -2799,7 +2799,8 @@ function generateClosingCardImage(title, region, industry){
   ctx.fillText('지금 편하게 상담받아보세요', width/2, 250);
 
   ctx.font = '500 17px '+FONT; ctx.fillStyle = 'rgba(28,25,23,0.75)';
-  var sub = (region||'')+' '+(industry||'')+' 식자재, BIV가 도와드립니다';
+  var sub = kw ? (region||'')+' '+kw+', BIV가 도와드립니다' : (region||'')+' '+(industry||'')+' 식자재, BIV가 도와드립니다';
+  if(ctx.measureText(sub).width > width-100) sub = (region||'')+' '+(industry||'')+' 식자재, BIV가 도와드립니다';
   ctx.fillText(sub, width/2, 285);
 
   // 카카오톡 상담 버튼 느낌
@@ -2918,7 +2919,7 @@ function generateChecklistCardImage(type, region, industry, customItems){
 }
 
 /* 6번째 이미지: BIV 소개/신뢰 카드 */
-function generateBrandIntroImage(region, industry){
+function generateBrandIntroImage(region, industry, kw){
   var scale = 2;
   var width = 800, height = 500;
   var canvas = document.createElement('canvas');
@@ -2952,7 +2953,9 @@ function generateBrandIntroImage(region, industry){
   });
 
   ctx.font = '500 16px '+FONT; ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillText((region||'')+' '+(industry||'')+' 식자재, 믿을 수 있는 업체로 연결해드려요', width/2, 375);
+  var subText = kw ? (region||'')+' '+kw+', 믿을 수 있는 업체로 연결해드려요' : (region||'')+' '+(industry||'')+' 식자재, 믿을 수 있는 업체로 연결해드려요';
+  if(ctx.measureText(subText).width > width-100) subText = (region||'')+' '+(industry||'')+' 식자재, 믿을 수 있는 업체로 연결해드려요';
+  ctx.fillText(subText, width/2, 375);
 
   ctx.font = '800 20px '+FONT; ctx.fillStyle = BIV_GOLD2;
   ctx.fillText('BIV', width/2, 440);
@@ -3103,7 +3106,7 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
     var imgCanvas2 = generatePointCardImage(type, region, industry, customPointTips);
     imgDataUrl2 = imgCanvas2.toDataURL('image/png');
 
-    var imgCanvas3 = generateClosingCardImage(title, region, industry);
+    var imgCanvas3 = generateClosingCardImage(title, region, industry, kw);
     imgDataUrl3 = imgCanvas3.toDataURL('image/png');
 
     // 가격 하이라이트 — 이 글의 키워드와 관련된 품목을 우선 배치
@@ -3122,7 +3125,7 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
     var imgCanvas5 = generateChecklistCardImage(type, region, industry, customChecklist);
     imgDataUrl5 = imgCanvas5.toDataURL('image/png');
 
-    var imgCanvas6 = generateBrandIntroImage(region, industry);
+    var imgCanvas6 = generateBrandIntroImage(region, industry, kw);
     imgDataUrl6 = imgCanvas6.toDataURL('image/png');
     if(typeof window._batchImages === 'undefined') window._batchImages = [];
     window._batchImages.push({title:title, region:region, industry:industry, type:type,
