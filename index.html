@@ -481,9 +481,17 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <div style="font-size:14px;font-weight:800">🔥 오늘의 이슈 글 자동 발행</div>
       <span style="background:#FEF3C7;color:#92400E;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">시의성 반영</span>
     </div>
-    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">오늘 KAMIS 시세가 평균 대비 크게 튄 품목, 이달의 계절 이슈(복날·명절·장마 등)를 자동으로 감지해서 그것만 다루는 정식 SEO 글을 만들어요. 일반 배치와 같은 품질(Sonnet, 6장 이미지)로 나가요.</div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <label style="font-size:11px;color:var(--gray);font-weight:600">글 개수</label>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">KAMIS 시세가 평균 대비 크게 튄 품목, 이 시즌의 이슈(복날·명절·장마 등)를 자동으로 감지해서 그것만 다루는 정식 SEO 글을 만들어요. 일반 배치와 같은 품질(Sonnet, 6장 이미지)로 나가요.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <label style="font-size:11px;color:var(--gray);font-weight:600">기간</label>
+      <select id="issuePeriod" style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
+        <option value="daily" selected>오늘 (일간)</option>
+        <option value="weekly">이번 주 (주간)</option>
+        <option value="monthly">이번 달 (월간)</option>
+        <option value="quarterly">이번 분기</option>
+        <option value="yearly">올해 (연간)</option>
+      </select>
+      <label style="font-size:11px;color:var(--gray);font-weight:600;margin-left:6px">글 개수</label>
       <select id="issuePostCount" style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
         <option value="1" selected>1개</option>
         <option value="2">2개</option>
@@ -2499,7 +2507,9 @@ function buildPostUserPrompt(kw, region, type, industry){
     '후기형':'후기형 — 실제 경험담처럼 자연스럽게',
     '오늘단가':'오늘 단가 분석 — KAMIS 실거래가 기반 당일 시세 정보글',
     '주간단가':'주간 단가 동향 — 최근 7일 평균 시세 분석글',
-    '월간단가':'월간 단가 리포트 — 최근 1개월 평균·최고·최저가 분석글'
+    '월간단가':'월간 단가 리포트 — 최근 1개월 평균·최고·최저가 분석글',
+    '분기단가':'분기 단가 리포트 — 최근 3개월 평균·최고·최저가 분석 및 분기 트렌드글',
+    '연간단가':'연간 단가 리포트 — 최근 1년 평균·최고·최저가 분석 및 연간 트렌드글'
   };
   var typeDesc = typeFormats[type]||typeFormats['정보글'];
 
@@ -2550,6 +2560,8 @@ var TYPE_TIPS = {
   '오늘단가':    ['시세는 매일 변동될 수 있어요','필요한 물량을 미리 확인하세요','가격 변동 알림을 받아보는 것도 방법이에요'],
   '주간단가':    ['주간 평균으로 흐름을 파악하세요','급등락 품목은 미리 대체재를 찾아두세요','정기 발주 시점을 시세에 맞춰보세요'],
   '월간단가':    ['월간 추이로 예산을 미리 계획하세요','계절 변동이 큰 품목은 따로 체크하세요','장기 계약으로 단가를 고정하는 것도 방법이에요'],
+  '분기단가':    ['분기별 추이로 시즌 패턴을 파악하세요','다음 분기 발주 물량을 미리 계획하세요','분기 단위 계약이 유리한 품목을 확인하세요'],
+  '연간단가':    ['연간 추이로 내년도 예산을 계획하세요','연중 최적 매입 시기를 파악하세요','연간 계약으로 가격 변동 리스크를 줄이세요'],
   '프레시웨이판매가': ['행사가 품목은 재고 소진 시 종료돼요','필요 수량을 미리 파악해두세요','정기 발주로 전환하면 더 안정적이에요']
 };
 
@@ -3264,22 +3276,40 @@ async function startIssueBatch(){
   if(!industry){ statusEl.textContent = '❌ 업종을 먼저 선택해주세요.'; return; }
   if(!selDistricts.length){ statusEl.textContent = '❌ 지역을 먼저 선택해주세요.'; return; }
 
+  var periodSel = document.getElementById('issuePeriod');
+  var period = periodSel ? periodSel.value : 'daily'; // daily/weekly/monthly/quarterly/yearly
+  var periodLabelMap = {daily:'오늘', weekly:'이번 주', monthly:'이번 달', quarterly:'이번 분기', yearly:'올해'};
+  var periodTypeMap  = {daily:'오늘단가', weekly:'주간단가', monthly:'월간단가', quarterly:'분기단가', yearly:'연간단가'};
+
   var countInput = document.getElementById('issuePostCount');
   var targetCount = countInput ? Math.max(1, Math.min(5, parseInt(countInput.value)||1)) : 1;
   var region = selDistricts[0].region+' '+selDistricts[0].district;
 
-  statusEl.textContent = '⏳ 오늘 이슈 감지 중...';
+  statusEl.textContent = '⏳ '+periodLabelMap[period]+' 이슈 감지 중...';
   await syncHistoryFromSheet();
   var priceData = await fetchRealtimePrice(industry);
   var priceStats = null;
-  try{ priceStats = await fetchPriceStats(industry, 'week'); }catch(e){}
+  try{ priceStats = await fetchPriceStats(industry, period); }catch(e){}
 
   var gKey = industryToGeneralKey(industry);
   var gData = (typeof GENERAL_DATA !== 'undefined' && GENERAL_DATA[gKey]) ? GENERAL_DATA[gKey] : {};
-  var thisMonth = String(new Date().getMonth()+1);
-  var seasonNote = gData.season ? (gData.season[thisMonth]||'') : '';
+  var now = new Date();
+  var thisMonth = now.getMonth()+1;
 
-  // 이슈 후보 수집: ① 가격 급등락(우선) ② 계절 이슈(부족하면 보충)
+  // 기간별 시즌/트렌드 컨텍스트 구성
+  var seasonNote = '';
+  if(period === 'yearly'){
+    seasonNote = gData.trend || ''; // 연간은 연중 트렌드로
+  } else if(period === 'quarterly'){
+    var qStart = Math.floor((thisMonth-1)/3)*3 + 1; // 분기 시작월(1,4,7,10)
+    var qMonths = [qStart, qStart+1, qStart+2];
+    var qNotes = qMonths.map(function(m){ return gData.season ? (gData.season[String(m)]||'') : ''; }).filter(Boolean);
+    seasonNote = qNotes.join(' ');
+  } else {
+    seasonNote = gData.season ? (gData.season[String(thisMonth)]||'') : ''; // 일/주/월은 이번 달 이슈
+  }
+
+  // 이슈 후보 수집: ① 가격 급등락(우선, 선택한 기간 평균 대비) ② 시즌/트렌드 이슈(부족하면 보충)
   var issues = [];
   if(priceData && priceData.prices && priceStats && priceStats.success && priceStats.stats){
     var statsByItem = {};
@@ -3293,7 +3323,7 @@ async function startIssueBatch(){
         if(!isNaN(cur) && !isNaN(avg) && avg>0){
           var diffPct = Math.round((cur-avg)/avg*100);
           if(Math.abs(diffPct) >= 8){
-            issues.push({kw: baseName+' 가격 '+(diffPct>0?'급등':'급락')+' 이유', type:'오늘단가', score: Math.abs(diffPct)});
+            issues.push({kw: baseName+' 가격 '+(diffPct>0?'급등':'급락')+' 이유 '+periodLabelMap[period]+' 기준', type:periodTypeMap[period], score: Math.abs(diffPct)});
           }
         }
       }
@@ -3301,10 +3331,10 @@ async function startIssueBatch(){
     issues.sort(function(a,b){ return b.score-a.score; });
   }
   if(seasonNote){
-    issues.push({kw: industry+' 창업 '+thisMonth+'월 시즌 준비', type:'정보글', score: 0});
+    issues.push({kw: industry+' 창업 '+periodLabelMap[period]+' 시즌 이슈', type:'정보글', score: 0});
   }
   if(!issues.length){
-    statusEl.textContent = '❌ 오늘은 특별한 이슈가 감지되지 않았어요 (평균 대비 8% 이상 변동 품목 없음, 계절 이슈도 없음). 일반 자동화를 이용해주세요.';
+    statusEl.textContent = '❌ '+periodLabelMap[period]+' 기준 특별한 이슈가 감지되지 않았어요 (평균 대비 8% 이상 변동 품목 없음, 시즌 이슈도 없음). 다른 기간을 선택하거나 일반 자동화를 이용해주세요.';
     return;
   }
 
