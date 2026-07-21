@@ -813,6 +813,18 @@ if(typeof marked !== 'undefined' && marked.setOptions){
    고정값
 ══════════════════════════════════════ */
 const KAKAO = 'https://open.kakao.com/o/sEH7A9Ci';
+
+/* 이미지 6장을 본문 어디에 넣을지 안내하는 가이드 (배치 완료 화면·프레시웨이 화면 공통) */
+const IMAGE_PLACEMENT_GUIDE_HTML =
+  '<div style="background:#FEF9EC;border:1px solid #E9D5A0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#78350F;line-height:1.7">'
+  +'<div style="font-weight:700;margin-bottom:4px">📍 이미지 삽입 위치 가이드</div>'
+  +'① 타이틀 카드 — 제목 바로 아래 (표지)<br>'
+  +'② 포인트 카드 — "BIV가 먼저 보는 3가지" 섹션 아래<br>'
+  +'③ 클로징 카드 — "마무리" 섹션 직전<br>'
+  +'④ 가격 하이라이트 — "오늘의 식자재 참고 공급가" 섹션 아래<br>'
+  +'⑤ 체크리스트 카드 — "계약 전 확인표" 섹션 아래<br>'
+  +'⑥ BIV 소개 카드 — 글 맨 아래, 카카오톡 링크 바로 위'
+  +'</div>';
 const BLOG  = 'https://blog.naver.com/yeong44';
 const SHEET_ID = '1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU';
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzrlKdJXUeySp-EnDAEoVUMwJFDLQIRiyQszs9OlFkF2W_5YJhiCvWSIbrLDrnR5cny/exec';
@@ -3416,7 +3428,7 @@ async function startIssueBatch(){
 
   statusEl.innerHTML = '✅ <strong>이슈 글 '+ok+'개 완료!</strong>'+(dup?' (중복 '+dup+'개 제외)':'')+(fail?' (실패 '+fail+'개)':'')
     + '<br><span style="color:var(--gray)">감지된 이슈: '+selected.map(function(s){return s.kw;}).join(', ')+'</span>'
-    + (ok ? '<br><button onclick="downloadBatchImagesZip()" style="margin-top:8px;width:100%;padding:8px;border:1.5px solid var(--g3);border-radius:8px;background:var(--g2);color:var(--g4);font-size:12px;font-weight:700;cursor:pointer">이미지 전체 다운로드 (ZIP)</button>' : '');
+    + (ok ? '<br><button onclick="downloadBatchImagesZip()" style="margin-top:8px;width:100%;padding:8px;border:1.5px solid var(--g3);border-radius:8px;background:var(--g2);color:var(--g4);font-size:12px;font-weight:700;cursor:pointer">이미지 전체 다운로드 (ZIP)</button>' + IMAGE_PLACEMENT_GUIDE_HTML : '');
   showToast('✅ 오늘의 이슈 글 '+ok+'개 생성 완료');
   try{ filterHistory(); updateDashboard(); updateAnalytics(); }catch(e){}
 }
@@ -3613,7 +3625,8 @@ async function startAutoMode(){
           +'</div>';
       }).join('');
       var zipBtnHtml = '<button onclick="downloadBatchImagesZip()" style="width:100%;margin-bottom:8px;padding:8px;border:1.5px solid var(--g3);border-radius:8px;background:var(--g2);color:var(--g4);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-download"></i> 이미지 전체 다운로드 (ZIP, '+(window._batchImages.length*6)+'장)</button>';
-      imgWrap.innerHTML = zipBtnHtml + listHtml;
+      var placementGuide = IMAGE_PLACEMENT_GUIDE_HTML;
+      imgWrap.innerHTML = zipBtnHtml + placementGuide + listHtml;
     }
 
     try{ updateDashboard(); }catch(e){}
@@ -5101,6 +5114,17 @@ async function writeFreshwayPost(){
         pv.style.cssText = 'width:100%;border:1.5px solid var(--bd);border-radius:8px;margin-bottom:10px';
         imgArea.appendChild(pv);
       });
+      var fwGuide = document.createElement('div');
+      fwGuide.innerHTML = '<div style="background:#FEF9EC;border:1px solid #E9D5A0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#78350F;line-height:1.7">'
+        +'<div style="font-weight:700;margin-bottom:4px">📍 이미지 삽입 위치 가이드</div>'
+        +'① 오늘의 판매가 — 도입 문단 바로 아래<br>'
+        +'② 핵심 포인트 카드 — 가격 목록 아래<br>'
+        +'③ 클로징 카드 — 마무리 문단 직전<br>'
+        +'④ 가격 하이라이트 — 가격 목록 근처 (선택 삽입)<br>'
+        +'⑤ 체크리스트 카드 — 마무리 문단 근처<br>'
+        +'⑥ BIV 소개 카드 — 글 맨 아래, 카카오톡 링크 바로 위'
+        +'</div>';
+      imgArea.appendChild(fwGuide);
       var zipBtn = document.createElement('button');
       zipBtn.className = 'btn';
       zipBtn.style.cssText = 'width:100%;margin-bottom:8px';
