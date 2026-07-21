@@ -505,6 +505,28 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     </button>
     <div id="issueStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
   </div>
+
+  <!-- 매일 오전 8시 자동 발행 설정 -->
+  <div class="card" style="margin-top:14px;padding:18px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+      <div style="font-size:14px;font-weight:800">⏰ 매일 오전 8시 자동 발행</div>
+      <span style="background:#DBEAFE;color:#1E40AF;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">서버 자동화</span>
+    </div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">등록해둔 지역/업종을 매일 하나씩 돌려가며, 오늘의 이슈 글 1개 + 일반 키워드 글 1개, 총 2개를 서버가 자동으로 써서 시트에 저장해요. 이미지는 저장 안 되니, 사이트를 열면 자동으로 만들어져요.</div>
+
+    <div id="autoConfigList" style="margin-bottom:10px;display:flex;flex-direction:column;gap:6px"></div>
+
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <input id="autoConfigRegionInput" placeholder="예: 서울 강동구" style="flex:1;padding:6px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
+      <select id="autoConfigIndSel" style="flex:1;padding:6px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px"></select>
+      <button onclick="addAutoConfigEntry()" class="btn btn-outline" style="padding:6px 12px;font-size:12px">+ 추가</button>
+    </div>
+
+    <button onclick="saveAutoConfigToSheet()" style="width:100%;padding:12px;background:linear-gradient(135deg,#1E40AF,#2563EB);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">
+      ⏰ 이 목록으로 매일 8시 자동 발행 설정하기
+    </button>
+    <div id="autoConfigStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
+  </div>
 </div>
 
 <!-- ═══ KEYWORD ENGINE ═══ -->
@@ -2213,6 +2235,7 @@ async function initApp(){
   try{ renderItems(); }catch(e){ console.warn('renderItems 실패:', e); }
   try{ renderProjects(); }catch(e){}
   try{ renderKeywords(); }catch(e){}
+  try{ initAutoConfigDropdowns(); loadAutoConfigFromSheet(); }catch(e){ console.warn('autoConfig 초기화 실패:', e); }
   try{
     var kb = document.getElementById('kwTotalBadge');
     if(kb) kb.textContent = kwData.length+'개';
@@ -3341,6 +3364,84 @@ async function startFlashPriceBatch(){
 }
 
 /* 오늘의 이슈(가격 급등락 + 계절 이슈) 자동 감지 후 정식 SEO 글 자동 발행 */
+/* ══════════════════════════════════════
+   매일 오전 8시 자동 발행 설정
+══════════════════════════════════════ */
+window._autoConfigList = [];
+
+function initAutoConfigDropdowns(){
+  var sel = document.getElementById('autoConfigIndSel');
+  if(!sel) return;
+  sel.innerHTML = INDUSTRIES.map(function(it){ return '<option value="'+it.name+'">'+it.name+'</option>'; }).join('');
+}
+
+function renderAutoConfigList(){
+  var el = document.getElementById('autoConfigList');
+  if(!el) return;
+  if(!window._autoConfigList.length){
+    el.innerHTML = '<div style="font-size:11px;color:#94A3B8;padding:8px 0">아직 등록된 지역/업종이 없어요. 아래에서 추가해주세요.</div>';
+    return;
+  }
+  el.innerHTML = window._autoConfigList.map(function(c, i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border-radius:6px;font-size:12px">'
+      +'<span style="color:#94A3B8;font-weight:700">'+(i+1)+'</span>'
+      +'<span style="flex:1">'+c.region+' · '+c.industry+'</span>'
+      +'<button onclick="removeAutoConfigEntry('+i+')" style="border:none;background:none;color:#DC2626;cursor:pointer;font-size:14px">×</button>'
+      +'</div>';
+  }).join('');
+}
+
+function addAutoConfigEntry(){
+  var regionInput = document.getElementById('autoConfigRegionInput');
+  var indSel = document.getElementById('autoConfigIndSel');
+  var region = regionInput.value.trim();
+  var industry = indSel.value;
+  if(!region){ showToast('지역을 입력해주세요 (예: 서울 강동구)'); return; }
+  window._autoConfigList.push({region:region, industry:industry});
+  regionInput.value = '';
+  renderAutoConfigList();
+}
+
+function removeAutoConfigEntry(i){
+  window._autoConfigList.splice(i,1);
+  renderAutoConfigList();
+}
+
+async function saveAutoConfigToSheet(){
+  var statusEl = document.getElementById('autoConfigStatus');
+  if(!window._autoConfigList.length){ statusEl.textContent = '❌ 등록된 항목이 없어요.'; return; }
+  statusEl.textContent = '⏳ 저장 중...';
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'saveAutoConfig', list: window._autoConfigList, hour: 8})
+    });
+    var d = await res.json();
+    if(d.success){
+      statusEl.textContent = '✅ 저장 완료! 매일 오전 8시에 '+window._autoConfigList.length+'개 지역/업종을 돌아가며 이슈글 1개 + 일반글 1개(총 2개)가 자동으로 시트에 저장돼요.';
+      showToast('⏰ 매일 자동 발행 설정 완료');
+    } else {
+      statusEl.textContent = '❌ 저장 실패: '+(d.message||'');
+    }
+  }catch(e){
+    statusEl.textContent = '❌ 오류: '+e.message;
+  }
+}
+
+async function loadAutoConfigFromSheet(){
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'getAutoConfig'})
+    });
+    var d = await res.json();
+    if(d.success && d.list){
+      window._autoConfigList = d.list;
+      renderAutoConfigList();
+    }
+  }catch(e){ console.warn('자동화 설정 불러오기 실패:', e.message); }
+}
+
 async function startIssueBatch(){
   var statusEl = document.getElementById('issueStatus');
   if(!industry){ statusEl.textContent = '❌ 업종을 먼저 선택해주세요.'; return; }
