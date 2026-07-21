@@ -4771,10 +4771,19 @@ async function saveFreshwayItems(){
 ══════════════════════════════════════ */
 function buildFreshwayIntroPrompt(items, region, industry, specialCount){
   var itemNames = items.map(function(it){ return it.name.replace(/\(.+?\)/,''); }).join(', ');
+
+  // 오늘의 이슈 반영 — 메인 파이프라인과 동일한 계절/트렌드 데이터 사용
+  var gKey = industryToGeneralKey(industry);
+  var gData = (typeof GENERAL_DATA !== 'undefined' && GENERAL_DATA[gKey]) ? GENERAL_DATA[gKey] : {};
+  var thisMonth = String(new Date().getMonth()+1);
+  var seasonNote = gData.season ? (gData.season[thisMonth]||'') : '';
+
   return 'BIV 식자재 유통 블로그 글의 "도입"과 "마무리" 2개만 작성 (네이버 SEO, 순수 텍스트, 이모지·마크다운 금지).\n'
     +'업종: '+industry+' / 지역: '+region+'\n'
     +'BIV는 이 지역·업종 식당에 직접 식자재를 공급하는 유통 사업자다.\n'
-    +'오늘 소개할 품목: '+itemNames+(specialCount>0 ? ' (이 중 '+specialCount+'개는 행사가/신제품)' : '')+'\n\n'
+    +'오늘 소개할 품목: '+itemNames+(specialCount>0 ? ' (이 중 '+specialCount+'개는 행사가/신제품)' : '')+'\n'
+    +(seasonNote ? '이달의 시즌 이슈(관련 있으면 도입부에 자연스럽게 1번만 녹여 쓸 것, 억지로 넣지 말 것): '+seasonNote+'\n' : '')
+    +'\n'
     +'[규칙]\n'
     +'① 도입은 2줄. "'+region+' '+industry+' 식당" 원가 관리 관련 내용으로 짧고 담백하게. 뻔한 일반론 금지, 군더더기 금지.\n'
     +'② 마무리는 2줄. 오늘 준비된 물량/가격은 계속 유지되지 않는다는 자연스러운 긴박감(예: 오늘 수량 한정, 시세 변동 등)을 담아 지금 확인해볼 것을 권함. 과장 금지, 거짓 정보 금지. 마지막 문장은 반드시 "지금 아래에서 편하게 상담받아보세요" 또는 이와 비슷한 표현으로 끝내서, 바로 다음에 오는 카카오톡 상담 링크로 자연스럽게 이어지게 할 것. 연락처는 직접 언급하지 않음.\n'
