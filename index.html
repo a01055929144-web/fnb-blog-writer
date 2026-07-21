@@ -3323,7 +3323,7 @@ async function startIssueBatch(){
         if(!isNaN(cur) && !isNaN(avg) && avg>0){
           var diffPct = Math.round((cur-avg)/avg*100);
           if(Math.abs(diffPct) >= 8){
-            issues.push({kw: baseName+' 가격 '+(diffPct>0?'급등':'급락')+' 이유 '+periodLabelMap[period]+' 기준', type:periodTypeMap[period], score: Math.abs(diffPct)});
+            issues.push({kw: baseName+' 가격 '+(diffPct>0?'급등':'급락')+' '+periodLabelMap[period]+' 원인', type:periodTypeMap[period], score: Math.abs(diffPct)});
           }
         }
       }
@@ -3331,7 +3331,12 @@ async function startIssueBatch(){
     issues.sort(function(a,b){ return b.score-a.score; });
   }
   if(seasonNote){
-    issues.push({kw: industry+' 창업 '+periodLabelMap[period]+' 시즌 이슈', type:'정보글', score: 0});
+    // 계절 이슈 문장에서 자연스러운 핵심 구절만 추출 (예: "복날 삼계탕 피크. 초복·중복..." → "복날 삼계탕 피크")
+    var issueCore = seasonNote.split(/[.。]/)[0].trim();
+    if(issueCore.length > 16) issueCore = issueCore.slice(0,16);
+    var locWord = region.split(' ').pop();
+    var seasonKw = issueCore ? (locWord+' '+industry+' '+issueCore) : (industry+' 창업 '+periodLabelMap[period]+' 시즌 준비');
+    issues.push({kw: seasonKw, type:'정보글', score: 0});
   }
   if(!issues.length){
     statusEl.textContent = '❌ '+periodLabelMap[period]+' 기준 특별한 이슈가 감지되지 않았어요 (평균 대비 8% 이상 변동 품목 없음, 시즌 이슈도 없음). 다른 기간을 선택하거나 일반 자동화를 이용해주세요.';
