@@ -2723,7 +2723,7 @@ function generateTitleCardImage(title, region, industry, type){
 }
 
 /* 2번째 이미지: 핵심 포인트 카드 — 웜 차콜 다크 + 골드 넘버 */
-function generatePointCardImage(type, region, industry){
+function generatePointCardImage(type, region, industry, customTips){
   var scale = 2;
   var width = 800, height = 500;
   var canvas = document.createElement('canvas');
@@ -2754,7 +2754,7 @@ function generatePointCardImage(type, region, industry){
   ctx.font = '400 15px '+FONT; ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.fillText((region||'')+' '+(industry||'')+' 식자재 준비 포인트', 50, 133);
 
-  var tips = TYPE_TIPS[type] || TYPE_TIPS['정보글'];
+  var tips = (customTips && customTips.length) ? customTips : (TYPE_TIPS[type] || TYPE_TIPS['정보글']);
   var y = 188;
   tips.forEach(function(tip, i){
     ctx.strokeStyle = BIV_GOLD; ctx.lineWidth = 1.5;
@@ -2873,7 +2873,7 @@ function generatePriceHighlightImage(priceData, region, industry){
 }
 
 /* 5번째 이미지: 체크리스트 카드 */
-function generateChecklistCardImage(type, region, industry){
+function generateChecklistCardImage(type, region, industry, customItems){
   var scale = 2;
   var width = 800, height = 500;
   var canvas = document.createElement('canvas');
@@ -2890,7 +2890,7 @@ function generateChecklistCardImage(type, region, industry){
   ctx.font = '400 15px '+FONT; ctx.fillStyle = 'rgba(28,25,23,0.55)';
   ctx.fillText((region||'')+' '+(industry||'')+' 납품업체 계약 전 필수 확인', 50, 93);
 
-  var checklist = [
+  var checklist = (customItems && customItems.length) ? customItems.slice(0,5) : [
     '배송 가능 구역 확인',
     '냉장·보관 상태 확인',
     '원산지·규격 정확성 확인',
@@ -2959,6 +2959,29 @@ function generateBrandIntroImage(region, industry){
   ctx.textAlign = 'left';
 
   return canvas;
+}
+
+/* 본문의 "계약 전 확인표" 섹션에서 체크리스트 항목 추출 (이미지⑤용) */
+function extractChecklistFromBody(body, n){
+  if(!body) return null;
+  var idx = body.indexOf('계약 전 확인표');
+  if(idx === -1) return null;
+  var section = body.slice(idx, idx+1500);
+  var lines = (section.match(/^·\s*.+$/gm) || []).map(function(l){ return l.replace(/^·\s*/,'').trim(); }).filter(Boolean);
+  return lines.length ? lines.slice(0, n||5) : null;
+}
+
+/* 본문의 "BIV가 먼저 보는 3가지" 섹션에서 실제 소제목 추출 (이미지②용) */
+function extractPointSubtitlesFromBody(body){
+  if(!body) return null;
+  var idx = body.indexOf('BIV가 먼저 보는 3가지');
+  if(idx === -1) return null;
+  var nextSecIdx = body.indexOf('\n## ', idx+10);
+  var section = body.slice(idx, nextSecIdx>-1 ? nextSecIdx : idx+1200);
+  var subs = (section.match(/^###\s*.+$/gm) || []).map(function(l){
+    return l.replace(/^###\s*/,'').replace(/^\d+\.\s*/,'').trim();
+  }).filter(Boolean);
+  return subs.length ? subs.slice(0,3) : null;
 }
 
 async function writeOnePost(item, idx, total, priceData, priceStats){
@@ -3074,14 +3097,31 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
     await ensureFontLoaded();
     var imgCanvas = generateTitleCardImage(title, region, industry, type);
     imgDataUrl = imgCanvas.toDataURL('image/png');
-    var imgCanvas2 = generatePointCardImage(type, region, industry);
+
+    // 이 글의 실제 본문에서 콘텐츠 추출 — 타입별 고정 문구 대신 글에 맞는 내용 사용
+    var customPointTips = extractPointSubtitlesFromBody(body);
+    var imgCanvas2 = generatePointCardImage(type, region, industry, customPointTips);
     imgDataUrl2 = imgCanvas2.toDataURL('image/png');
+
     var imgCanvas3 = generateClosingCardImage(title, region, industry);
     imgDataUrl3 = imgCanvas3.toDataURL('image/png');
-    var imgCanvas4 = generatePriceHighlightImage(priceData, region, industry);
+
+    // 가격 하이라이트 — 이 글의 키워드와 관련된 품목을 우선 배치
+    var priceDataForImg = priceData;
+    if(priceData && priceData.prices && priceData.prices.length){
+      var kwKeywordItems = priceData.prices.filter(function(p){ return kw.indexOf((p.name||'').split('/')[0]) > -1; });
+      if(kwKeywordItems.length){
+        var rest = priceData.prices.filter(function(p){ return kwKeywordItems.indexOf(p)===-1; });
+        priceDataForImg = {prices: kwKeywordItems.concat(rest)};
+      }
+    }
+    var imgCanvas4 = generatePriceHighlightImage(priceDataForImg, region, industry);
     imgDataUrl4 = imgCanvas4.toDataURL('image/png');
-    var imgCanvas5 = generateChecklistCardImage(type, region, industry);
+
+    var customChecklist = extractChecklistFromBody(body, 5);
+    var imgCanvas5 = generateChecklistCardImage(type, region, industry, customChecklist);
     imgDataUrl5 = imgCanvas5.toDataURL('image/png');
+
     var imgCanvas6 = generateBrandIntroImage(region, industry);
     imgDataUrl6 = imgCanvas6.toDataURL('image/png');
     if(typeof window._batchImages === 'undefined') window._batchImages = [];
