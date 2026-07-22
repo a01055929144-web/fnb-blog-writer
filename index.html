@@ -355,6 +355,9 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page on" id="page-dashboard">
 
+  <!-- 오늘 서버가 자동으로 쓴 글 감지 배너 -->
+  <div id="autoWrittenBanner" style="display:none;margin-bottom:14px"></div>
+
   <div class="responsive-split" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
 
     <!-- 좌: 원클릭 자동화 -->
@@ -2220,6 +2223,93 @@ function hydrateControls(){
   try{ updateLayerStatus(); }catch(e){}
 }
 
+/* ══════════════════════════════════════
+   매일 오전 8시 서버 자동발행 글 — 브라우저 열면 이미지 자동 생성
+══════════════════════════════════════ */
+async function checkTodaysAutoWrittenPosts(){
+  try{
+    var res = await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent('작성글'));
+    var text = await res.text();
+    var json = JSON.parse(text.replace(/^[^{]*/, '').replace(/\);?\s*$/, ''));
+    var rows = json.table.rows || [];
+    var todayStr = new Date().toLocaleDateString('ko-KR');
+
+    var doneKey = 'biv_imaged_rows';
+    var doneRows = JSON.parse(localStorage.getItem(doneKey) || '[]');
+
+    var candidates = rows.map(function(r){ return r.c.map(function(c){ return c?c.v:null; }); })
+      .filter(function(v){
+        var rowDate = v[1];
+        return rowDate === todayStr && doneRows.indexOf(v[0]) === -1 && v[8] && String(v[8]).length > 30;
+      });
+
+    if(!candidates.length) return;
+
+    var banner = document.getElementById('autoWrittenBanner');
+    if(!banner) return;
+    banner.style.display = 'block';
+    banner.innerHTML = '<div class="card" style="padding:16px;border:1.5px solid #93C5FD;background:#EFF6FF">'
+      +'<div style="font-weight:800;font-size:13px;margin-bottom:6px">⏰ 오늘 서버가 자동으로 쓴 글 '+candidates.length+'개를 발견했어요!</div>'
+      +'<div style="font-size:11px;color:var(--tx2);margin-bottom:10px">이미지를 자동으로 만들고 있어요...</div>'
+      +'<div id="autoWrittenProgress" style="font-size:11px;color:var(--tx2)"></div>'
+      +'</div>';
+
+    await ensureFontLoaded();
+    if(typeof window._batchImages === 'undefined') window._batchImages = [];
+    var newlyDone = [];
+
+    for(var i=0;i<candidates.length;i++){
+      var v = candidates[i];
+      var progEl = document.getElementById('autoWrittenProgress');
+      if(progEl) progEl.textContent = (i+1)+'/'+candidates.length+' 이미지 생성 중... — '+v[7];
+      try{
+        var region = (v[2]||'')+' '+(v[3]||'');
+        var industry = v[4]||'';
+        var type = v[5]||'';
+        var kw = v[6]||'';
+        var title = v[7]||'';
+        var body = v[8]||'';
+
+        var priceData = null;
+        try{ priceData = await fetchRealtimePrice(industry); }catch(e){}
+
+        var c1 = generateTitleCardImage(title, region, industry, type);
+        var customPointTips = extractPointSubtitlesFromBody(body);
+        var c2 = generatePointCardImage(type, region, industry, customPointTips);
+        var c3 = generateClosingCardImage(title, region, industry, kw);
+        var priceDataForImg = priceData;
+        if(priceData && priceData.prices && priceData.prices.length){
+          var kwItems = priceData.prices.filter(function(p){ return kw.indexOf((p.name||'').split('/')[0]) > -1; });
+          if(kwItems.length){
+            var rest = priceData.prices.filter(function(p){ return kwItems.indexOf(p)===-1; });
+            priceDataForImg = {prices: kwItems.concat(rest)};
+          }
+        }
+        var c4 = generatePriceHighlightImage(priceDataForImg, region, industry);
+        var customChecklist = extractChecklistFromBody(body, 5);
+        var c5 = generateChecklistCardImage(type, region, industry, customChecklist);
+        var c6 = generateBrandIntroImage(region, industry, kw);
+
+        window._batchImages.push({
+          title:title, region:region, industry:industry, type:type,
+          dataUrl:c1.toDataURL('image/png'), dataUrl2:c2.toDataURL('image/png'), dataUrl3:c3.toDataURL('image/png'),
+          dataUrl4:c4.toDataURL('image/png'), dataUrl5:c5.toDataURL('image/png'), dataUrl6:c6.toDataURL('image/png')
+        });
+        newlyDone.push(v[0]);
+      }catch(e){ console.warn('자동 이미지 생성 실패:', v[7], e.message); }
+    }
+
+    localStorage.setItem(doneKey, JSON.stringify(doneRows.concat(newlyDone)));
+
+    banner.innerHTML = '<div class="card" style="padding:16px;border:1.5px solid #93C5FD;background:#EFF6FF">'
+      +'<div style="font-weight:800;font-size:13px;margin-bottom:6px">✅ 오늘 자동 작성된 글 '+newlyDone.length+'개 — 이미지까지 준비됐어요!</div>'
+      +'<div style="font-size:11px;color:var(--tx2);margin-bottom:10px">"내 글 관리"에서 본문을 확인하고, 아래에서 이미지를 받아가세요.</div>'
+      +'<button onclick="downloadBatchImagesZip()" style="width:100%;padding:10px;border:none;border-radius:8px;background:linear-gradient(135deg,#1E40AF,#2563EB);color:#fff;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-download"></i> 이미지 전체 다운로드 (ZIP, '+(newlyDone.length*6)+'장)</button>'
+      + IMAGE_PLACEMENT_GUIDE_HTML
+      +'</div>';
+  }catch(e){ console.warn('오늘 자동작성글 확인 실패:', e.message); }
+}
+
 async function initApp(){
   try{ await loadAppSnapshot(); }catch(e){ console.warn('snapshot 실패:', e); }
   // 로컬 저장 글 복원 (snapshot보다 우선)
@@ -2236,6 +2326,7 @@ async function initApp(){
   try{ renderProjects(); }catch(e){}
   try{ renderKeywords(); }catch(e){}
   try{ initAutoConfigDropdowns(); loadAutoConfigFromSheet(); }catch(e){ console.warn('autoConfig 초기화 실패:', e); }
+  checkTodaysAutoWrittenPosts().catch(function(e){ console.warn('오늘 자동작성글 체크 실패:', e); }); // 논블로킹 — 백그라운드 확인
   try{
     var kb = document.getElementById('kwTotalBadge');
     if(kb) kb.textContent = kwData.length+'개';
