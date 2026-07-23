@@ -509,26 +509,17 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     <div id="issueStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
   </div>
 
-  <!-- 매일 오전 8시 자동 발행 설정 -->
+  <!-- 매일 오전 8시 자동 발행 (랜덤 지역/업종) -->
   <div class="card" style="margin-top:14px;padding:18px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
       <div style="font-size:14px;font-weight:800">⏰ 매일 오전 8시 자동 발행</div>
-      <span style="background:#DBEAFE;color:#1E40AF;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">서버 자동화</span>
+      <span style="background:#DBEAFE;color:#1E40AF;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">서버 자동화 · 활성화됨</span>
     </div>
-    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">등록해둔 지역/업종을 매일 하나씩 돌려가며, 오늘의 이슈 글 1개 + 일반 키워드 글 1개, 총 2개를 서버가 자동으로 써서 시트에 저장해요. 이미지는 저장 안 되니, 사이트를 열면 자동으로 만들어져요.</div>
-
-    <div id="autoConfigList" style="margin-bottom:10px;display:flex;flex-direction:column;gap:6px"></div>
-
-    <div style="display:flex;gap:6px;margin-bottom:10px">
-      <input id="autoConfigRegionInput" placeholder="예: 서울 강동구" style="flex:1;padding:6px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
-      <select id="autoConfigIndSel" style="flex:1;padding:6px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px"></select>
-      <button onclick="addAutoConfigEntry()" class="btn btn-outline" style="padding:6px 12px;font-size:12px">+ 추가</button>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:14px">
+      매일 서울·경기·인천·부산 등 전국 106개 구/시 × 10개 업종 중에서 <b>랜덤으로</b> 선택해서, 오늘의 이슈 글 1개 + 일반 키워드 글 1개, 총 2개를 서버가 자동으로 써서 시트에 저장해요.
+      중복 글은 자동으로 걸러지고, 완료되면 메일로 알림이 와요. 이미지는 사이트에 접속하면 자동으로 만들어져요.
     </div>
-
-    <button onclick="saveAutoConfigToSheet()" style="width:100%;padding:12px;background:linear-gradient(135deg,#1E40AF,#2563EB);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">
-      ⏰ 이 목록으로 매일 8시 자동 발행 설정하기
-    </button>
-    <div id="autoConfigStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
+    <div style="font-size:11px;color:#1E40AF;background:#EFF6FF;padding:10px 12px;border-radius:8px">✅ 매일 오전 8시 트리거가 이미 설치되어 있어요. 별도로 하실 일은 없어요.</div>
   </div>
 </div>
 
@@ -852,7 +843,7 @@ const IMAGE_PLACEMENT_GUIDE_HTML =
   +'</div>';
 const BLOG  = 'https://blog.naver.com/yeong44';
 const SHEET_ID = '1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU';
-const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxGCMuj6QVLLqWLGoZVPtGLOA3HOp42gyJD67t3tgARc_ZSrE5hgA26SG2TPs9isy7q/exec';
+const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyH278o75ht2-naXOk1uTF_1OA023ylAPuR7QKpC0r9VSInjEm7HO0XBAzOClA5Itm4/exec';
 
 /* ══════════════════════════════════════
    데이터
