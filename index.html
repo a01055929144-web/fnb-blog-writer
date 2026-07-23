@@ -516,10 +516,23 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <span style="background:#DBEAFE;color:#1E40AF;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">서버 자동화 · 활성화됨</span>
     </div>
     <div style="font-size:11px;color:var(--gray);margin-bottom:14px">
-      매일 서울·경기·인천·부산 등 전국 106개 구/시 × 10개 업종 중에서 <b>랜덤으로</b> 선택해서, 오늘의 이슈 글 1개 + 일반 키워드 글 1개, 총 2개를 서버가 자동으로 써서 시트에 저장해요.
+      아래 등록한 지역(없으면 기본값: 서울 전체·인천 전체·남양주시·하남시·수원시) × 업종 10개 전체 중에서 <b>랜덤으로</b> 선택해서, 오늘의 이슈 글 1개 + 일반 키워드 글 1개, 총 2개를 서버가 자동으로 써서 시트에 저장해요.
       중복 글은 자동으로 걸러지고, 완료되면 메일로 알림이 와요. 이미지는 사이트에 접속하면 자동으로 만들어져요.
     </div>
-    <div style="font-size:11px;color:#1E40AF;background:#EFF6FF;padding:10px 12px;border-radius:8px">✅ 매일 오전 8시 트리거가 이미 설치되어 있어요. 별도로 하실 일은 없어요.</div>
+    <div style="font-size:11px;color:#1E40AF;background:#EFF6FF;padding:10px 12px;border-radius:8px;margin-bottom:14px">✅ 매일 오전 8시 트리거가 이미 설치되어 있어요.</div>
+
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px">📍 허용 지역 관리 (확장 시 여기에 추가)</div>
+    <div id="regionConfigList" style="margin-bottom:10px;display:flex;flex-direction:column;gap:6px"></div>
+
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <input id="regionConfigInput" placeholder="예: 서울 강동구, 경기 성남시 분당구" style="flex:1;padding:6px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
+      <button onclick="addRegionConfigEntry()" class="btn btn-outline" style="padding:6px 12px;font-size:12px">+ 추가</button>
+    </div>
+
+    <button onclick="saveRegionConfigToSheet()" style="width:100%;padding:12px;background:linear-gradient(135deg,#1E40AF,#2563EB);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">
+      이 목록으로 지역 범위 저장하기
+    </button>
+    <div id="regionConfigStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
   </div>
 </div>
 
@@ -2318,6 +2331,7 @@ async function initApp(){
   try{ renderKeywords(); }catch(e){}
   try{ initAutoConfigDropdowns(); loadAutoConfigFromSheet(); }catch(e){ console.warn('autoConfig 초기화 실패:', e); }
   checkTodaysAutoWrittenPosts().catch(function(e){ console.warn('오늘 자동작성글 체크 실패:', e); }); // 논블로킹 — 백그라운드 확인
+  try{ loadRegionConfigFromSheet(); }catch(e){ console.warn('지역설정 로드 실패:', e); }
   try{
     var kb = document.getElementById('kwTotalBadge');
     if(kb) kb.textContent = kwData.length+'개';
@@ -3522,6 +3536,77 @@ async function loadAutoConfigFromSheet(){
       renderAutoConfigList();
     }
   }catch(e){ console.warn('자동화 설정 불러오기 실패:', e.message); }
+}
+
+/* ══════════════════════════════════════
+   매일 자동화용 허용 지역 관리 (등록하면 그 안에서, 없으면 서버 기본값에서 랜덤)
+══════════════════════════════════════ */
+window._regionConfigList = [];
+
+function renderRegionConfigList(){
+  var el = document.getElementById('regionConfigList');
+  if(!el) return;
+  if(!window._regionConfigList.length){
+    el.innerHTML = '<div style="font-size:11px;color:#94A3B8;padding:8px 0">등록된 지역이 없어요 — 기본값(서울 전체·인천 전체·남양주시·하남시·수원시)이 사용돼요.</div>';
+    return;
+  }
+  el.innerHTML = window._regionConfigList.map(function(r, i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border-radius:6px;font-size:12px">'
+      +'<span style="color:#94A3B8;font-weight:700">'+(i+1)+'</span>'
+      +'<span style="flex:1">'+r+'</span>'
+      +'<button onclick="removeRegionConfigEntry('+i+')" style="border:none;background:none;color:#DC2626;cursor:pointer;font-size:14px">×</button>'
+      +'</div>';
+  }).join('');
+}
+
+function addRegionConfigEntry(){
+  var input = document.getElementById('regionConfigInput');
+  var region = input.value.trim();
+  if(!region){ showToast('지역을 입력해주세요'); return; }
+  window._regionConfigList.push(region);
+  input.value = '';
+  renderRegionConfigList();
+}
+
+function removeRegionConfigEntry(i){
+  window._regionConfigList.splice(i,1);
+  renderRegionConfigList();
+}
+
+async function saveRegionConfigToSheet(){
+  var statusEl = document.getElementById('regionConfigStatus');
+  statusEl.textContent = '⏳ 저장 중...';
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'saveRegionConfig', list: window._regionConfigList})
+    });
+    var d = await res.json();
+    if(d.success){
+      statusEl.textContent = window._regionConfigList.length
+        ? '✅ 저장 완료! 이제 이 '+window._regionConfigList.length+'개 지역 중에서만 랜덤 선택돼요.'
+        : '✅ 저장 완료! 목록이 비어있어서 기본값(서울·인천·남양주·하남·수원)이 사용돼요.';
+      showToast('📍 지역 범위 저장 완료');
+    } else {
+      statusEl.textContent = '❌ 저장 실패: '+(d.message||'');
+    }
+  }catch(e){
+    statusEl.textContent = '❌ 오류: '+e.message;
+  }
+}
+
+async function loadRegionConfigFromSheet(){
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'getRegionConfig'})
+    });
+    var d = await res.json();
+    if(d.success && d.list){
+      window._regionConfigList = d.list;
+      renderRegionConfigList();
+    }
+  }catch(e){ console.warn('지역 설정 불러오기 실패:', e.message); }
 }
 
 async function startIssueBatch(){
