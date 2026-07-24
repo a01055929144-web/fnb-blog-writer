@@ -4196,7 +4196,13 @@ async function generateImagesForHistPost(el){
     window['_histPostImages'+i] = images;
 
     areaEl.style.display = 'block';
-    areaEl.innerHTML = '<button onclick="downloadHistPostImagesZip('+i+', \''+esc(title).replace(/'/g,"\\'")+'\')" style="width:100%;padding:8px;border:1.5px solid #C4B5FD;border-radius:6px;background:#F5F3FF;color:#6D28D9;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px"><i class="ti ti-download"></i> 이미지 6장 ZIP 다운로드</button>'
+    var previewHtml = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">'
+      + images.map(function(im){
+          return '<img src="'+im.dataUrl+'" style="width:100%;aspect-ratio:1/0.625;object-fit:cover;border-radius:6px;border:1px solid var(--bd);cursor:pointer" onclick="window.open(this.src)">';
+        }).join('')
+      + '</div>';
+    areaEl.innerHTML = previewHtml
+      + '<button onclick="downloadHistPostImagesZip('+i+', \''+esc(title).replace(/'/g,"\\'")+'\')" style="width:100%;padding:8px;border:1.5px solid #C4B5FD;border-radius:6px;background:#F5F3FF;color:#6D28D9;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px"><i class="ti ti-download"></i> 이미지 6장 ZIP 다운로드</button>'
       + IMAGE_PLACEMENT_GUIDE_HTML;
 
     btnEl.disabled = false;
@@ -4212,7 +4218,7 @@ async function downloadHistPostImagesZip(i, title){
   var images = window['_histPostImages'+i];
   if(!images) return;
   var safeTitle = (title||'글').replace(/[\\/:*?"<>|]/g,'').slice(0,30);
-  await downloadAllAsZip(images.map(function(im){ return {name: safeTitle+'_'+im.name, dataUrl: im.dataUrl}; }));
+  await downloadAllAsZip(images.map(function(im){ return {name: safeTitle+'_'+im.name, dataUrl: im.dataUrl}; }), safeTitle+'.zip');
 }
 
 /* 원클릭 발행용 복사 — 제목+본문+해시태그 클립보드 (서식 포함) */
@@ -5367,7 +5373,10 @@ function downloadBatchImagesZip(){
       if(map[n]) files.push({name:(i+1)+'_'+safeTitle+'_'+n+'.png', dataUrl:map[n]});
     });
   });
-  downloadAllAsZip(files, 'BIV_썸네일이미지_'+files.length+'장.zip');
+  var zipName = imgs.length === 1
+    ? (imgs[0].title||'BIV_이미지').replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'.zip'
+    : 'BIV_썸네일이미지_'+files.length+'장.zip';
+  downloadAllAsZip(files, zipName);
 }
 
 /* 발행 시 곁들일 사진 검색 키워드 추천 (텍스트만, 실제 검색은 사용자가 수행) */
