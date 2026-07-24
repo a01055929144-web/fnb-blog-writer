@@ -2346,6 +2346,10 @@ async function initApp(){
   try{ renderKeywords(); }catch(e){}
   try{ initAutoConfigDropdowns(); loadAutoConfigFromSheet(); }catch(e){ console.warn('autoConfig 초기화 실패:', e); }
   checkTodaysAutoWrittenPosts().catch(function(e){ console.warn('오늘 자동작성글 체크 실패:', e); }); // 논블로킹 — 백그라운드 확인
+  // 시트에서 최신 글 목록 동기화 — 서버(매일 8시 자동화)가 쓴 글도 "내 글 관리"에 바로 보이도록
+  syncHistoryFromSheet().then(function(ok){
+    if(ok){ try{ filterHistory(); updateDashboard(); }catch(e){} }
+  }).catch(function(e){ console.warn('글 목록 동기화 실패:', e); });
   try{ loadRegionConfigFromSheet(); }catch(e){ console.warn('지역설정 로드 실패:', e); }
   try{
     var kb = document.getElementById('kwTotalBadge');
