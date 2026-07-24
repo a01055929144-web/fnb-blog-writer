@@ -2544,7 +2544,7 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
     +'[절대 규칙]\n'
     +'① 이모지 완전 금지 — 제목 포함 글 전체에 이모지 없음. BIV는 전문 브랜드.\n'
     +'② 마크다운 사용: #/## 제목, **볼드**는 적극 사용. 단 표(|)는 모바일 화면에서 좁게 눌려 보여서 절대 사용하지 말 것 — 대부분의 독자가 모바일로 읽는다는 점을 최우선으로 고려. 가격 정보와 체크리스트는 모두 "· " 로 시작하는 줄로 나열할 것 (위 [공통 배경 정보]의 목록 형식 그대로).\n'
-    +'③ 문장은 짧게 끊고, 한 줄에 2~4단어 정도로 자주 줄바꿈할 것 (모바일 가독성용 스크립트체). 한 문단은 2~3줄을 넘기지 않음.\n'
+    +'③ 문장은 짧게 끊고, 한 줄에 2~4단어 정도로 자주 줄바꿈할 것 (모바일 가독성용 스크립트체). 한 문단은 2~3줄을 넘기지 않음. ⭐매우 중요: 문단과 문단 사이에는 반드시 빈 줄을 하나씩 넣어서 눈에 띄게 구분할 것 — 그냥 다음 줄로 넘어가지 말고 한 줄 띄우고 쓸 것. 모바일에서 문단 구분이 안 되면 벽처럼 보여서 가독성이 크게 떨어짐. 도입/본문/FAQ답변 등 프롬프트 전체에서 예외 없이 지킬 것.\n'
     +'④ 글 맨 앞에 짧은 인사말 1줄로 시작할 것 (예: "안녕하세요, BIV입니다." 또는 이와 비슷한 간결한 인사). 길게 자기소개하지 말고 딱 1줄만.\n'
     +'⑤ 절대 지어내지 말 것: "한 예비 창업자가 있었어요" 같은 특정 인물·날짜·구체적 스토리는 금지. 대신 "이런 상황이 흔해요"처럼 일반화된 패턴으로만 서술.\n'
     +'⑤-1 퍼센트·수치 규칙: 위에 제공된 목록의 실제 가격 두 개를 직접 비교해서 계산한 퍼센트는 사용 가능하고 오히려 권장함. 하지만 "배송비는 발주액의 5~10%", "여유분 20~30%를 더해서 발주", "월 O% 절감 가능"처럼 목록에 없는 일반적인 업계 통계·경험칙·효과 예측 수치는 절대 지어내지 말 것.\n'
@@ -4127,16 +4127,92 @@ function filterHistory(filter, region, industry, search){
       +'<i class="ti ti-device-mobile"></i> 📱 모바일용</button>'
       // ② 편집
       +'<button data-ai="'+i+'" onclick="openEdit(this)" '
-      +'style="padding:6px 12px;border:1px solid var(--bd);border-radius:6px;background:#fff;font-size:11px;cursor:pointer;font-weight:600">'
+      +'style=\"padding:6px 12px;border:1px solid var(--bd);border-radius:6px;background:#fff;font-size:11px;cursor:pointer;font-weight:600\">'
       +'<i class="ti ti-pencil"></i> 편집</button>'
-      // ③ 삭제
+      // ③-이미지 만들기/다운로드
+      +'<button data-ai="'+i+'" id="imgBtn'+i+'" onclick="generateImagesForHistPost(this)" '
+      +'style="padding:6px 12px;border:1px solid #C4B5FD;border-radius:6px;background:#F5F3FF;color:#6D28D9;font-size:11px;cursor:pointer;font-weight:600">'
+      +'<i class="ti ti-photo"></i> 이미지</button>'
+      // ④ 삭제
       +'<button data-ai="'+i+'" onclick="deletePost(this)" '
       +'style="padding:6px 12px;border:1px solid #FCA5A5;border-radius:6px;background:#FEF2F2;font-size:11px;cursor:pointer;font-weight:600;color:#DC2626;margin-left:auto">'
       +'<i class="ti ti-trash"></i> 삭제</button>'
       +'</div>'
+      +'<div id="imgArea'+i+'" style="display:none;margin-top:10px"></div>'
       +'</div>';
   }).join('');
   updateBulkDeleteUI();
+}
+
+/* "내 글 관리"의 개별 글에서 이미지 6장 생성 + 다운로드 + 삽입 위치 가이드 표시 */
+async function generateImagesForHistPost(el){
+  var i = parseInt(el.getAttribute('data-ai'));
+  var h = window._anaList && window._anaList[i];
+  if(!h) return;
+  var areaEl = document.getElementById('imgArea'+i);
+  var btnEl = document.getElementById('imgBtn'+i);
+  if(!areaEl || !btnEl) return;
+
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<i class="ti ti-loader-2"></i> 생성 중...';
+
+  try{
+    await ensureFontLoaded();
+    var region = h.region || '';
+    var industry = h.industry || '';
+    var type = h.type || '정보글';
+    var kw = h.kw || '';
+    var title = h.title || '';
+    var body = h.body || '';
+
+    var priceData = null;
+    try{ priceData = await fetchRealtimePrice(industry); }catch(e){}
+
+    var c1 = generateTitleCardImage(title, region, industry, type);
+    var customPointTips = extractPointSubtitlesFromBody(body);
+    var c2 = generatePointCardImage(type, region, industry, customPointTips);
+    var c3 = generateClosingCardImage(title, region, industry, kw);
+    var priceDataForImg = priceData;
+    if(priceData && priceData.prices && priceData.prices.length){
+      var kwItems = priceData.prices.filter(function(p){ return kw.indexOf((p.name||'').split('/')[0]) > -1; });
+      if(kwItems.length){
+        var rest = priceData.prices.filter(function(p){ return kwItems.indexOf(p)===-1; });
+        priceDataForImg = {prices: kwItems.concat(rest)};
+      }
+    }
+    var c4 = generatePriceHighlightImage(priceDataForImg, region, industry);
+    var customChecklist = extractChecklistFromBody(body, 5);
+    var c5 = generateChecklistCardImage(type, region, industry, customChecklist);
+    var c6 = generateBrandIntroImage(region, industry, kw);
+
+    var images = [
+      {name:'01_타이틀.png', dataUrl: c1.toDataURL('image/png')},
+      {name:'02_포인트.png', dataUrl: c2.toDataURL('image/png')},
+      {name:'03_클로징.png', dataUrl: c3.toDataURL('image/png')},
+      {name:'04_가격하이라이트.png', dataUrl: c4.toDataURL('image/png')},
+      {name:'05_체크리스트.png', dataUrl: c5.toDataURL('image/png')},
+      {name:'06_BIV소개.png', dataUrl: c6.toDataURL('image/png')}
+    ];
+    window['_histPostImages'+i] = images;
+
+    areaEl.style.display = 'block';
+    areaEl.innerHTML = '<button onclick="downloadHistPostImagesZip('+i+', \''+esc(title).replace(/'/g,"\\'")+'\')" style="width:100%;padding:8px;border:1.5px solid #C4B5FD;border-radius:6px;background:#F5F3FF;color:#6D28D9;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px"><i class="ti ti-download"></i> 이미지 6장 ZIP 다운로드</button>'
+      + IMAGE_PLACEMENT_GUIDE_HTML;
+
+    btnEl.disabled = false;
+    btnEl.innerHTML = '<i class="ti ti-check"></i> 이미지 준비됨';
+  }catch(e){
+    btnEl.disabled = false;
+    btnEl.innerHTML = '<i class="ti ti-photo"></i> 이미지';
+    showToast('❌ 이미지 생성 실패: '+e.message);
+  }
+}
+
+async function downloadHistPostImagesZip(i, title){
+  var images = window['_histPostImages'+i];
+  if(!images) return;
+  var safeTitle = (title||'글').replace(/[\\/:*?"<>|]/g,'').slice(0,30);
+  await downloadAllAsZip(images.map(function(im){ return {name: safeTitle+'_'+im.name, dataUrl: im.dataUrl}; }));
 }
 
 /* 원클릭 발행용 복사 — 제목+본문+해시태그 클립보드 (서식 포함) */
