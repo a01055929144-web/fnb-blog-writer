@@ -2564,7 +2564,7 @@ function buildPostSystemPrompt(industry, intent, priceData, priceStats){
     +'# (사용자 메시지의 제목형식 그대로, 30~35자 이내)\n\n'
 
     +'## (2줄로 나눈 도입 소제목, 예: "{지역} {업종} 창업," / "거래처부터 정해야 해요")\n'
-    +'(검색의도 기준 — 이 사람이 지금 어떤 상황인지 공감하며 시작. 3~5문단, 각 2~3줄. 핵심키워드 볼드로 1회 포함.)\n\n'
+    +'(사용자 메시지에 지정된 "도입 스타일"에 맞춰 시작할 것 — 검색의도 기준으로 이 사람이 지금 어떤 상황인지 다루되, 그 스타일 방식 그대로. 3~5문단, 각 2~3줄. 핵심키워드 볼드로 1회 포함.)\n\n'
 
     +(hasPrice ? ('---\n\n## '+todayLabel+' 기준 식자재 참고 공급가\n(위 [공통 배경 정보]의 공급가 목록 그대로, "· " 줄글 형식 유지 — 표 사용 금지)\n※ 위 가격은 KAMIS 공공데이터 기준 참고용이며, 조회 시점과 시장 상황·규격에 따라 실제 납품가는 달라질 수 있습니다.\n목록에 없는 품목은 별도 견적이 필요하다고 짧게 언급.\n\n') : '')
     +(hasStats ? ('---\n\n## '+periodLabel+' 단가 동향 (KAMIS 공공데이터 기준)\n(위 [공통 배경 정보]의 단가 통계 목록 그대로, "· " 줄글 형식 유지 — 표 사용 금지)\n\n') : '')
@@ -2678,6 +2678,15 @@ function buildPostUserPrompt(kw, region, type, industry){
   };
   var typeDesc = typeFormats[type]||typeFormats['정보글'];
 
+  // 도입부 스타일을 매번 랜덤으로 지정 — 항상 "공감형"으로만 시작하면 패턴이 반복되어 AI스럽게 느껴짐
+  var openingStyles = [
+    '공감형 — 독자가 지금 겪고 있을 법한 고민이나 상황에 먼저 공감하며 시작',
+    '질문형 — 독자에게 직접 질문을 던지며 시작 (예: "~때문에 고민이신가요?")',
+    '시의성형 — 지금 이 시기(계절·트렌드)가 왜 중요한지 사실로 먼저 짚으며 시작',
+    '직설형 — 핵심 결론이나 조언을 먼저 한 줄로 던지고, 그 이유를 풀어가는 방식으로 시작'
+  ];
+  var openingStyle = openingStyles[Math.floor(Math.random()*openingStyles.length)];
+
   var month = new Date().getMonth()+1;
   var mn = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   var today = new Date().getFullYear()+'년 '+mn[month];
@@ -2687,7 +2696,8 @@ function buildPostUserPrompt(kw, region, type, industry){
     +'지역: '+region+'\n'
     +'핵심키워드: "'+kw+'"\n'
     +'글 타입: '+type+' — '+typeDesc+'\n'
-    +'제목형식: '+titleTemplate+'\n\n'
+    +'제목형식: '+titleTemplate+'\n'
+    +'도입 스타일(이번 글은 반드시 이 방식으로 시작): '+openingStyle+'\n\n'
     +'위 system 지시사항(공통 배경 정보/절대 규칙/출력 형식)에 따라 이 입력값으로 글을 작성하세요.\n'
     +'다시 한번: 전부 해요체로 쓰세요. "~습니다/합니다/입니다/됩니다"는 절대 쓰지 마세요.';
 }
