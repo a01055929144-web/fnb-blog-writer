@@ -4086,7 +4086,7 @@ function filterHistory(filter, region, industry, search){
     return;
   }
 
-  el.innerHTML = list.map(function(h, i){
+  var cardHtmls = list.map(function(h, i){
     var isDone = h.uploadStatus === 'done';
     var rowId  = h.rowId || '';
     var pKey   = rowId || h.title || '';
@@ -4140,8 +4140,21 @@ function filterHistory(filter, region, industry, search){
       +'</div>'
       +'<div id="imgArea'+i+'" style="display:none;margin-top:10px"></div>'
       +'</div>';
-  }).join('');
+  });
+
+  var pageSize = 20;
+  var visibleCount = window._anaVisibleCount || pageSize;
+  var visibleHtmls = cardHtmls.slice(0, visibleCount);
+  el.innerHTML = visibleHtmls.join('')
+    + (cardHtmls.length > visibleCount
+        ? '<button onclick="loadMoreHistory()" style="width:100%;padding:12px;margin-top:8px;border:1.5px dashed var(--bd);border-radius:8px;background:var(--bg);color:var(--tx2);font-size:12px;font-weight:700;cursor:pointer">더 보기 ('+(cardHtmls.length-visibleCount)+'개 더 있어요)</button>'
+        : '');
   updateBulkDeleteUI();
+}
+
+function loadMoreHistory(){
+  window._anaVisibleCount = (window._anaVisibleCount || 20) + 20;
+  filterHistory();
 }
 
 /* "내 글 관리"의 개별 글에서 이미지 6장 생성 + 다운로드 + 삽입 위치 가이드 표시 */
