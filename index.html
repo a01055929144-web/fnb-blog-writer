@@ -4323,7 +4323,7 @@ function sheetUpdateStatus(h){
         sheetId: SHEET_ID,
         rowId: h.rowId || null,
         title: h.title,
-        uploadStatus: h.uploadStatus==='done'?'done':'pending'
+        uploadStatus: h.uploadStatus==='done'?'발행완료':'미발행'
       })
     }).then(function(r){ return r.json(); })
     .then(function(d){
@@ -4613,7 +4613,7 @@ function toggleUpload(el){
   try{
     fetch(SHEET_ENDPOINT,{
       method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'updateStatus',sheetId:SHEET_ID,title:h.title,uploadStatus:h.uploadStatus})
+      body:JSON.stringify({action:'updateStatus',sheetId:SHEET_ID,title:h.title,uploadStatus:(h.uploadStatus==='done'?'발행완료':'미발행')})
     });
   }catch(e){}
   saveApp();
