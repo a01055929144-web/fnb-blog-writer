@@ -3345,10 +3345,10 @@ async function syncHistoryFromSheet(){
     var text = await res.text();
     var json = JSON.parse(text.replace(/^[^{]*/, '').replace(/\);?\s*$/, ''));
     var rows = json.table.rows||[];
-    var fresh = rows.map(function(r){
+    var fresh = rows.map(function(r, idx){
       var v = r.c.map(function(c){ return c?c.v:null; });
       return {
-        rowId: v[0], date: v[1], region: (v[2]||'')+((v[3]?' '+v[3]:'')), industry: v[4], type: v[5],
+        rowId: v[0], sheetRow: idx+2, date: v[1], region: (v[2]||'')+((v[3]?' '+v[3]:'')), industry: v[4], type: v[5],
         kw: v[6], title: v[7], body: v[8], tags: (v[9]||'').split(/\s+/).filter(Boolean),
         chars: v[10]||0, uploadStatus: (v[11]==='발행완료')?'done':'pending'
       };
@@ -4322,6 +4322,7 @@ function sheetUpdateStatus(h){
         action:'updateStatus',
         sheetId: SHEET_ID,
         rowId: h.rowId || null,
+        sheetRow: h.sheetRow || null,
         title: h.title,
         uploadStatus: h.uploadStatus==='done'?'발행완료':'미발행'
       })
@@ -4613,7 +4614,7 @@ function toggleUpload(el){
   try{
     fetch(SHEET_ENDPOINT,{
       method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'updateStatus',sheetId:SHEET_ID,title:h.title,uploadStatus:(h.uploadStatus==='done'?'발행완료':'미발행')})
+      body:JSON.stringify({action:'updateStatus',sheetId:SHEET_ID,title:h.title,sheetRow:h.sheetRow||null,uploadStatus:(h.uploadStatus==='done'?'발행완료':'미발행')})
     });
   }catch(e){}
   saveApp();
