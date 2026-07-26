@@ -3483,7 +3483,7 @@ function generateZeroCostPost(region, industry, kw, priceData){
   var title = (kw.indexOf(locWord)>-1 ? kw : locWord+' '+industry+' '+kw)+' 확인하기';
   title = title.replace(/\s{2,}/g,' ').trim();
 
-  var body = '## '+title+'\n\n'
+  var body = '# '+title+'\n\n'
     +'안녕하세요, BIV예요.\n\n'
     +introFn(region, industry, kw, seasonNote)+'\n\n';
 
