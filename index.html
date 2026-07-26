@@ -3468,7 +3468,7 @@ var ZC_FAQ = [
   {q:'견적 비교할 때 가장 먼저 봐야 할 건 뭔가요?', a:'단가만 보지 말고 배송 조건과 최소 주문량을 함께 봐야 해요.\n같은 조건에서 비교해야 정확한 판단이 가능해요.'}
 ];
 
-function generateZeroCostPost(region, industry, kw, priceData){
+function generateZeroCostPost(region, industry, kw, priceData, itemName){
   var gKey = industryToGeneralKey(industry);
   var gData = (typeof GENERAL_DATA !== 'undefined' && GENERAL_DATA[gKey]) ? GENERAL_DATA[gKey] : {};
   var thisMonth = String(new Date().getMonth()+1);
@@ -3509,7 +3509,14 @@ function generateZeroCostPost(region, industry, kw, priceData){
 
   body += '---\n\n## 마무리\n\n'+closingFn(kw)+'\n\n';
 
-  var tags = ('#'+kw.replace(/\s+/g,'')+' #'+industry+'식자재 #'+locWord+industry+' '
+  // 실제 검색될 법한 짧은 조합 위주로 해시태그 구성 (전체 키워드를 그대로 붙이지 않음)
+  var item = itemName || '';
+  var seoTags = [];
+  if(item){
+    seoTags.push('#'+item+'납품', '#'+item+'도매', '#'+item+'시세', '#'+locWord+item);
+  }
+  seoTags.push('#'+locWord+industry, '#'+industry+'식자재', '#'+industry+'창업', '#'+locWord+'식자재');
+  var tags = (seoTags.join(' ') + ' '
     + '#식자재납품 #식재료도매 #식당창업 #식자재원가 #납품업체 #식재료공급 #창업준비 #외식업창업 #식자재유통 #BIV').trim();
 
   return {title:title, body:body, tags:tags};
@@ -3584,7 +3591,7 @@ async function startZeroCostBatch(){
 
     if(isDuplicatePost(region, industry, kw)){ dup++; continue; }
 
-    var post = generateZeroCostPost(region, industry, kw, priceData);
+    var post = generateZeroCostPost(region, industry, kw, priceData, kwPool[i]);
     try{
       var res = await fetch(SHEET_ENDPOINT, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
         body: JSON.stringify({
