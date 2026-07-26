@@ -4310,6 +4310,9 @@ function filterHistory(filter, region, industry, search){
       +esc((h.body||'').substring(0,300))
       +'</div>'
 
+      // ── 해시태그 미리보기 ──
+      +((h.tags && h.tags.length) ? '<div style="font-size:10px;color:#94A3B8;margin-bottom:10px;line-height:1.6">'+esc(h.tags.slice(0,8).join(' '))+(h.tags.length>8?' 외 '+(h.tags.length-8)+'개':'')+'</div>' : '')
+
       // ── 액션 버튼 ──
       +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
       // ① 발행용 복사 (원클릭 발행, PC)
@@ -4368,7 +4371,8 @@ async function generateImagesForHistPost(el){
     await ensureFontLoaded();
     var region = h.region || '';
     var industry = h.industry || '';
-    var type = h.type || '정보글';
+    var typeDisplayMap = {'무료자동화':'정보글', '오늘시세속보':'오늘단가'};
+    var type = typeDisplayMap[h.type] || h.type || '정보글';
     var kw = h.kw || '';
     var title = h.title || '';
     var body = h.body || '';
