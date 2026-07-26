@@ -5662,7 +5662,12 @@ async function writeFreshwayPost(){
       return;
     }
 
-    var tags = (typeof BIV_FIXED_TAGS!=='undefined'?BIV_FIXED_TAGS:'').match(/#[\w가-힣]+/g)||[];
+    var locWord2 = region.split(' ').pop();
+    var topItemName = (fwParsedItems[0] && fwParsedItems[0].name) ? fwParsedItems[0].name.replace(/\(.+?\)/,'').trim() : '';
+    var seoTags2 = [];
+    if(topItemName) seoTags2.push('#'+topItemName+'납품', '#'+topItemName+'도매');
+    seoTags2.push('#'+locWord2+industry, '#'+industry+'식자재', '#'+locWord2+'식자재도매');
+    var tags = seoTags2.concat((typeof BIV_FIXED_TAGS!=='undefined'?BIV_FIXED_TAGS:'').match(/#[\w가-힣]+/g)||[]);
 
     var res = await fetch(SHEET_ENDPOINT, {
       method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
