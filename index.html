@@ -3381,26 +3381,26 @@ function _josa(word, withBatchim, withoutBatchim){
 function generateFlashPricePost(item, kw, region, industry){
   var eunNeun = _josa(kw, '은', '는');
   var eulReul = _josa(kw, '을', '를');
-  var trendText = item.trend==='▲' ? kw+eunNeun+' 전일 대비 상승세를 보이고 있습니다.'
-    : item.trend==='▼' ? kw+eunNeun+' 전일 대비 하락세를 보이고 있습니다.'
-    : kw+eunNeun+' 전일과 비슷한 수준을 유지하고 있습니다.';
+  var trendText = item.trend==='▲' ? kw+eunNeun+' 전일 대비 상승세를 보이고 있어요.'
+    : item.trend==='▼' ? kw+eunNeun+' 전일 대비 하락세를 보이고 있어요.'
+    : kw+eunNeun+' 전일과 비슷한 수준을 유지하고 있어요.';
   var today = new Date();
   var dateStr = (today.getMonth()+1)+'월 '+today.getDate()+'일';
   var title = kw+' 도매가 오늘 '+dateStr+' 시세';
 
   var body = '## '+kw+' 오늘 도매가\n\n'
-    + kw+' 오늘 도매가는 '+item.wholesale+'원('+item.unit+' 기준)입니다.\n'
+    + kw+' 오늘 도매가는 '+item.wholesale+'원('+item.unit+' 기준)이에요.\n'
     + trendText+'\n\n'
-    + '식당을 운영하거나 창업을 준비 중이라면, '+kw+' 시세를 매일 확인하는 것이 원가 관리의 시작입니다.\n\n'
+    + '식당을 운영하거나 창업을 준비 중이라면, '+kw+' 시세를 매일 확인하는 게 원가 관리의 시작이에요.\n\n'
 
     + '---\n\n## 참고 시세\n'
     + item.name+' — 도매가 '+item.wholesale+'원 / 소매가 '+item.retail+'원 ('+item.unit+')\n\n'
-    + '※ 위 가격은 KAMIS 공공 시세 기준이며, 실제 납품가는 업체와 물량, 규격에 따라 달라질 수 있습니다.\n\n'
+    + '※ 위 가격은 KAMIS 공공 시세 기준이며, 실제 납품가는 업체와 물량, 규격에 따라 달라질 수 있어요.\n\n'
 
     + '---\n\n## 시세는 왜 매일 확인해야 할까\n'
-    + '식자재 가격은 계절과 수급 상황에 따라 하루에도 변동될 수 있습니다.\n'
-    + '오늘 시세를 기준으로 발주 시점을 정하면, 불필요한 원가 부담을 줄일 수 있습니다.\n'
-    + '특히 '+industry+' 업종은 '+kw+' 같은 신선 식재료 비중이 커서, 시세 변동에 더 민감하게 반응하는 것이 좋습니다.\n\n'
+    + '식자재 가격은 계절과 수급 상황에 따라 하루에도 변동될 수 있어요.\n'
+    + '오늘 시세를 기준으로 발주 시점을 정하면, 불필요한 원가 부담을 줄일 수 있어요.\n'
+    + '특히 '+industry+' 업종은 '+kw+' 같은 신선 식재료 비중이 커서, 시세 변동에 더 민감하게 반응하는 게 좋아요.\n\n'
 
     + '---\n\n## 마무리\n'
     + kw+eulReul+' 비롯한 신선 식재료가 필요하시면, 지금 아래에서 편하게 상담받아보세요.\n\n';
