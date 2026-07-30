@@ -502,7 +502,12 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <input id="zeroCostLimit" type="number" min="1" max="20" value="5" style="width:60px;padding:5px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px;text-align:center">
     </div>
     <button onclick="startZeroCostBatch()" style="width:100%;padding:12px;background:linear-gradient(135deg,#166534,#15803D);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">
-      🆓 무료 자동화 생성
+      🆓 무료 자동화 생성 (현재 선택된 지역·업종)
+    </button>
+    <div style="text-align:center;color:var(--gray);font-size:11px;margin:10px 0">— 또는 —</div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:8px">9개 업종 전체를 한 번에 훑어서, 업종마다 다른 지역으로 1개씩 총 9개를 자동으로 만들어요. 매일 눌러도 완전 무료예요.</div>
+    <button onclick="startZeroCostAllIndustriesBatch()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0F172A,#1E293B);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">
+      🆓 9개 업종 전체 자동 생성 (하루 9글)
     </button>
     <div id="zeroCostStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
     </div>
@@ -3597,6 +3602,53 @@ function popularityScore(kw){
   if(idx > -1) return 1000 - idx; // 목록에 있으면 순서대로 높은 점수
   // 목록에 없어도 짧고 흔한 이름(가공/세부규격 표기 없는 것)이면 약간의 가점
   return kw.length <= 4 ? 10 : 0;
+}
+
+async function startZeroCostAllIndustriesBatch(){
+  var statusEl = document.getElementById('zeroCostStatus');
+  await syncHistoryFromSheet();
+
+  var sidos = Object.keys(AREA_DATA);
+  var ok=0, dup=0, fail=0;
+
+  for(var idx=0; idx<INDUSTRIES.length; idx++){
+    var ind = INDUSTRIES[idx].name;
+    statusEl.textContent = '⏳ ('+(idx+1)+'/'+INDUSTRIES.length+') '+ind+' 처리 중 (저장 '+ok+' · 중복제외 '+dup+' · 실패 '+fail+')...';
+
+    var sido = sidos[Math.floor(Math.random()*sidos.length)];
+    var districts = Object.keys(AREA_DATA[sido]);
+    var district = districts[Math.floor(Math.random()*districts.length)];
+    var region = sido+' '+district;
+
+    try{
+      var priceData = await fetchRealtimePrice(ind);
+      if(!priceData || !priceData.prices || !priceData.prices.length){ fail++; continue; }
+      var item = priceData.prices[Math.floor(Math.random()*priceData.prices.length)];
+      var itemName = item.name.split('/')[0].trim();
+      var kw = district+' '+ind+' '+itemName+' 납품업체';
+
+      if(isDuplicatePost(region, ind, kw)){ dup++; continue; }
+
+      var post = generateZeroCostPost(region, ind, kw, priceData, itemName);
+      var res = await fetch(SHEET_ENDPOINT, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({
+          sheetId: SHEET_ID, date: new Date().toLocaleDateString('ko-KR'),
+          region: region, sido: sido, gugun: district,
+          industry: ind, type: '무료자동화', keyword: kw,
+          title: post.title, body: post.body, hashtags: post.tags, chars: post.body.length, status:'미발행'
+        })
+      });
+      var d = await res.json();
+      if(d && (d.row || d.success)){
+        ok++;
+        history.push({title:post.title, kw:kw, region:region, industry:ind, type:'무료자동화', body:post.body});
+      } else fail++;
+    }catch(e){ fail++; }
+  }
+
+  statusEl.innerHTML = '✅ <strong>'+ok+'개 저장 완료!</strong> (업종 '+INDUSTRIES.length+'개 중 중복제외 '+dup+'개'+(fail?', 실패 '+fail+'개':'')+') · AI 비용 0원';
+  showToast('🆓 9개 업종 무료 자동화 '+ok+'개 완료');
+  try{ filterHistory(); updateDashboard(); }catch(e){}
 }
 
 async function startZeroCostBatch(){
