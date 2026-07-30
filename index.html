@@ -507,7 +507,12 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     <div style="text-align:center;color:var(--gray);font-size:11px;margin:10px 0">— 또는 —</div>
     <div style="font-size:11px;color:var(--gray);margin-bottom:8px">9개 업종 전체를 한 번에 훑어서, 업종마다 다른 지역으로 1개씩 총 9개를 자동으로 만들어요. 매일 눌러도 완전 무료예요.</div>
     <button onclick="startZeroCostAllIndustriesBatch()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0F172A,#1E293B);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">
-      🆓 9개 업종 전체 자동 생성 (하루 9글)
+      🆓 9개 업종 전체 자동 생성 (KAMIS 시세, 하루 9글)
+    </button>
+    <div style="text-align:center;color:var(--gray);font-size:11px;margin:10px 0">— 또는 —</div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:8px">🛒 프레시웨이 탭에서 엑셀 업로드 후 "구글시트에 저장"을 눌러두면, 실제 ERP 단가로 9개 업종을 한 번에 만들어요 (더 정확한 실제 판매가 반영).</div>
+    <button onclick="startZeroCostFreshwayAllIndustriesBatch()" style="width:100%;padding:12px;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">
+      🛒 9개 업종 전체 자동 생성 (프레시웨이 실단가)
     </button>
     <div id="zeroCostStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
     </div>
@@ -915,7 +920,7 @@ const IMAGE_PLACEMENT_GUIDE_HTML =
   +'</div>';
 const BLOG  = 'https://blog.naver.com/yeong44';
 const SHEET_ID = '1l0eaRkz-XmA5QpjT4LN5c1q5kdbZqKBRS6iAu8TpHBU';
-const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwDomCVZIKY-hE7y3P1AZyM3Rhgghpev73j_Zd-Ihe9fZ0mNzSlpXjw6wiitSb-7tvI/exec';
+const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyLputGUUpFaVvXTgHjC4w_wa1n6xOaI_mJWK8zMb9K_fStvZZRLpZTF-R8G6tBaqI/exec';
 
 /* ══════════════════════════════════════
    데이터
@@ -3602,6 +3607,73 @@ function popularityScore(kw){
   if(idx > -1) return 1000 - idx; // 목록에 있으면 순서대로 높은 점수
   // 목록에 없어도 짧고 흔한 이름(가공/세부규격 표기 없는 것)이면 약간의 가점
   return kw.length <= 4 ? 10 : 0;
+}
+
+async function startZeroCostFreshwayAllIndustriesBatch(){
+  var statusEl = document.getElementById('zeroCostStatus');
+  statusEl.textContent = '⏳ 프레시웨이 저장 데이터 조회 중...';
+
+  var res, d;
+  try{
+    res = await fetch(SHEET_ENDPOINT, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'getPreshwayPrice', sheetId: SHEET_ID})});
+    d = await res.json();
+  }catch(e){ statusEl.textContent = '❌ 조회 실패: '+e.message; return; }
+
+  if(!d.success || !d.items || !d.items.length){
+    statusEl.textContent = '❌ 저장된 프레시웨이 단가 데이터가 없어요. 위에서 엑셀 업로드 후 "구글시트에 저장"을 먼저 눌러주세요.';
+    return;
+  }
+  var allItems = d.items;
+  statusEl.textContent = '✅ 프레시웨이 데이터 '+allItems.length+'개 품목(기준일 '+(d.date||'-')+') 불러옴, 업종별 매칭 시작...';
+
+  await syncHistoryFromSheet();
+  var sidos = Object.keys(AREA_DATA);
+  var ok=0, dup=0, fail=0, skip=0;
+
+  for(var idx=0; idx<INDUSTRIES.length; idx++){
+    var ind = INDUSTRIES[idx].name;
+    statusEl.textContent = '⏳ ('+(idx+1)+'/'+INDUSTRIES.length+') '+ind+' 처리 중 (저장 '+ok+' · 중복 '+dup+' · 매칭없음 '+skip+' · 실패 '+fail+')...';
+
+    var keywords = FW_INDUSTRY_CATEGORY_KEYWORDS[ind] || [];
+    var matched = allItems.filter(function(it){
+      return keywords.some(function(k){ return (it.remark||'').indexOf(k) > -1 || (it.name||'').indexOf(k) > -1; });
+    });
+    if(!matched.length){ skip++; continue; }
+
+    var sido = sidos[Math.floor(Math.random()*sidos.length)];
+    var districts = Object.keys(AREA_DATA[sido]);
+    var district = districts[Math.floor(Math.random()*districts.length)];
+    var region = sido+' '+district;
+
+    var chosen = matched.slice().sort(function(){ return Math.random()-0.5; }).slice(0,15);
+    var priceData = {prices: chosen.map(function(it){ return {name: it.name, wholesale: it.supplyPrice, unit: it.unit}; })};
+    var itemName = (chosen[0].name||'').replace(/\(.+?\)/,'').trim();
+    var kw = district+' '+ind+' '+itemName+' 납품업체';
+
+    if(isDuplicatePost(region, ind, kw)){ dup++; continue; }
+
+    try{
+      var post = generateZeroCostPost(region, ind, kw, priceData, itemName);
+      var res2 = await fetch(SHEET_ENDPOINT, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({
+          sheetId: SHEET_ID, date: new Date().toLocaleDateString('ko-KR'),
+          region: region, sido: sido, gugun: district,
+          industry: ind, type: '무료자동화', keyword: kw,
+          title: post.title, body: post.body, hashtags: post.tags, chars: post.body.length, status:'미발행'
+        })
+      });
+      var d2 = await res2.json();
+      if(d2 && (d2.row || d2.success)){
+        ok++;
+        history.push({title:post.title, kw:kw, region:region, industry:ind, type:'무료자동화', body:post.body});
+      } else fail++;
+    }catch(e){ fail++; }
+  }
+
+  statusEl.innerHTML = '✅ <strong>'+ok+'개 저장 완료!</strong> (매칭없음 '+skip+', 중복제외 '+dup+(fail?', 실패 '+fail+'개':'')+') · 프레시웨이 실단가 기반 · AI 비용 0원';
+  showToast('🆓 프레시웨이 기반 무료 자동화 '+ok+'개 완료');
+  try{ filterHistory(); updateDashboard(); }catch(e){}
 }
 
 async function startZeroCostAllIndustriesBatch(){
