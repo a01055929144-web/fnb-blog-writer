@@ -841,7 +841,25 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 <div class="page" id="page-freshway">
   <div class="card" style="max-width:900px;margin:20px auto;padding:24px">
     <h2 style="margin:0 0 6px;font-size:18px">🛒 프레시웨이 ERP 단가 붙여넣기</h2>
-    <p style="margin:0 0 16px;color:var(--tx2);font-size:13px">ERP 상품 목록 페이지를 전체 선택(Ctrl+A) → 복사(Ctrl+C) 해서 아래에 그대로 붙여넣으세요.</p>
+    <p style="margin:0 0 16px;color:var(--tx2);font-size:13px">ERP에서 내려받은 <b>엑셀 파일(.xlsx)</b>을 바로 올리거나, 상품 목록 페이지를 전체 선택(Ctrl+A) → 복사(Ctrl+C) 해서 아래에 붙여넣으세요.</p>
+
+    <div style="border:1.5px dashed var(--bd);border-radius:8px;padding:16px;margin-bottom:14px;background:var(--bg)">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">📊 엑셀 파일 업로드 (단가조회 등)</div>
+      <input type="file" id="fwExcelFile" accept=".xlsx,.xls" onchange="handleFreshwayExcelUpload(event)" style="font-size:12px">
+      <div id="fwExcelStatus" style="margin-top:8px;font-size:12px;color:var(--tx2)"></div>
+      <div id="fwExcelFilterArea" style="display:none;margin-top:10px">
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+          <select id="fwExcelCategory" onchange="filterFreshwayExcelItems()" style="padding:6px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px"></select>
+          <input id="fwExcelSearch" placeholder="상품명 검색 (예: 삼겹살)" oninput="filterFreshwayExcelItems()" style="flex:1;padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px;min-width:150px">
+        </div>
+        <div id="fwExcelResultCount" style="font-size:11px;color:var(--gray);margin-bottom:6px"></div>
+        <div id="fwExcelList" style="max-height:280px;overflow-y:auto;border:1px solid var(--bd);border-radius:8px;padding:8px"></div>
+        <button onclick="useSelectedExcelItems()" style="width:100%;margin-top:10px;padding:10px;background:var(--g);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">✅ 선택한 품목 사용하기</button>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:var(--gray);font-size:12px;margin:14px 0">— 또는 —</div>
+
     <textarea id="fwRaw" placeholder="여기에 ERP에서 복사한 텍스트를 붙여넣으세요..." style="width:100%;height:220px;padding:12px;border:1.5px solid var(--bd);border-radius:8px;font-family:monospace;font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn" onclick="parseFreshwayText()" style="flex:1"><i class="ti ti-wand"></i> 파싱하기</button>
@@ -865,6 +883,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 
 /* marked.js: 한 줄 줄바꿈도 실제 <br>로 렌더링 (짧게 끊어쓰는 본문 스타일 유지용) */
@@ -5299,6 +5318,97 @@ function selIntent(el){
    프레시웨이 ERP 단가 파싱
 ══════════════════════════════════════ */
 var fwParsedItems = [];
+
+/* ══════════════════════════════════════
+   프레시웨이 엑셀(ERP 단가조회) 업로드
+══════════════════════════════════════ */
+window._fwExcelAll = [];
+
+function handleFreshwayExcelUpload(evt){
+  var file = evt.target.files[0];
+  var statusEl = document.getElementById('fwExcelStatus');
+  if(!file) return;
+  if(typeof XLSX === 'undefined'){ statusEl.textContent = '❌ 엑셀 파싱 라이브러리 로드 실패, 새로고침 후 다시 시도해주세요.'; return; }
+
+  statusEl.textContent = '⏳ 엑셀 파일 읽는 중...';
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, {type:'array'});
+      var sheet = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+
+      var items = rows.map(function(r){
+        var supplyPrice = Number(r['판매단가'] || r['단가'] || r['원가'] || 0);
+        var taxType = (r['과/면세']||'').trim() || '과세';
+        var vat = taxType === '과세' ? Math.round(supplyPrice*0.1) : 0;
+        var remark = [];
+        if(r['상세분류']) remark.push(r['상세분류']);
+        if(r['공급상태'] && r['공급상태'] !== '가능') remark.push('품절');
+        return {
+          code: r['상품코드']!==undefined ? String(r['상품코드']) : '',
+          name: (r['상품명']||'').toString().trim(),
+          origin: (r['원산지']||'').toString().trim(),
+          storage: (r['온도조건']||'').toString().trim(),
+          taxType: taxType,
+          gPrice: r['단가(g당)']!==undefined ? String(r['단가(g당)']) : '',
+          vat: String(vat),
+          priceWithVat: String(supplyPrice + vat),
+          supplyPrice: String(supplyPrice),
+          unit: (r['판매단위']||r['단위']||'').toString().trim(),
+          remark: remark.join('/'),
+          category: (r['상세분류']||'').toString().trim()
+        };
+      }).filter(function(it){ return it.name; });
+
+      window._fwExcelAll = items;
+      statusEl.textContent = '✅ '+items.length+'개 품목을 불러왔어요. 아래에서 카테고리/검색으로 좁혀서 선택하세요.';
+
+      var categories = Array.from(new Set(items.map(function(it){ return it.category; }).filter(Boolean))).sort();
+      var catSel = document.getElementById('fwExcelCategory');
+      catSel.innerHTML = '<option value="">전체 카테고리 ('+categories.length+'개)</option>'
+        + categories.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('');
+
+      document.getElementById('fwExcelFilterArea').style.display = 'block';
+      filterFreshwayExcelItems();
+    }catch(err){
+      statusEl.textContent = '❌ 엑셀 파싱 실패: '+err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function filterFreshwayExcelItems(){
+  var cat = document.getElementById('fwExcelCategory').value;
+  var q = (document.getElementById('fwExcelSearch').value||'').trim().toLowerCase();
+  var filtered = window._fwExcelAll.filter(function(it){
+    if(cat && it.category !== cat) return false;
+    if(q && it.name.toLowerCase().indexOf(q) === -1) return false;
+    return true;
+  });
+
+  document.getElementById('fwExcelResultCount').textContent = filtered.length+'개 검색됨'+(filtered.length>150?' (상위 150개만 표시)':'');
+  var showList = filtered.slice(0, 150);
+
+  document.getElementById('fwExcelList').innerHTML = showList.map(function(it, i){
+    return '<label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12px;border-bottom:1px solid #F1F5F9;cursor:pointer">'
+      +'<input type="checkbox" class="fwExcelCheck" data-idx="'+window._fwExcelAll.indexOf(it)+'">'
+      +'<span style="flex:1">'+esc(it.name)+'</span>'
+      +'<span style="color:var(--gray)">'+Number(it.supplyPrice||0).toLocaleString()+'원/'+esc(it.unit)+'</span>'
+      +'</label>';
+  }).join('') || '<div style="font-size:12px;color:#94A3B8;padding:8px">검색 결과가 없어요.</div>';
+}
+
+function useSelectedExcelItems(){
+  var checks = document.querySelectorAll('.fwExcelCheck:checked');
+  var statusEl = document.getElementById('fwExcelStatus');
+  if(!checks.length){ statusEl.textContent = '❌ 최소 1개 품목을 체크해주세요.'; return; }
+  var items = Array.from(checks).map(function(c){ return window._fwExcelAll[parseInt(c.getAttribute('data-idx'))]; }).filter(Boolean);
+  renderFreshwayPreview(items, document.getElementById('fwStatus'), document.getElementById('fwPreview'));
+  statusEl.textContent = '✅ '+items.length+'개 품목을 아래 미리보기에 반영했어요. 스크롤해서 확인하세요.';
+  document.getElementById('fwPreview').scrollIntoView({behavior:'smooth', block:'start'});
+}
 
 function parseFreshwayText(){
   var raw = (document.getElementById('fwRaw').value||'').trim();
