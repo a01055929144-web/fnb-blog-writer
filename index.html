@@ -889,6 +889,18 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     </div>
     <button class="btn" onclick="writeFreshwayPost()" id="fwWriteBtn" style="width:100%"><i class="ti ti-pencil"></i> 프레시웨이 판매가 글 작성</button>
     <div id="fwWriteStatus" style="margin-top:10px;font-size:13px;color:var(--tx2)"></div>
+    <div id="fwWriteResult" style="display:none;margin-top:16px;border-top:1px solid var(--bd);padding-top:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--gray);margin-bottom:4px">제목</div>
+      <input id="fwResultTitle" style="width:100%;padding:8px 12px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px;font-weight:700;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--gray);margin-bottom:4px">본문 (여기서 바로 수정 가능해요)</div>
+      <textarea id="fwResultBody" style="width:100%;min-height:320px;padding:10px 12px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px;line-height:1.7;resize:vertical;font-family:inherit"></textarea>
+      <div style="font-size:11px;font-weight:700;color:var(--gray);margin:10px 0 4px">해시태그</div>
+      <input id="fwResultTags" style="width:100%;padding:8px 12px;border:1.5px solid var(--bd);border-radius:6px;font-size:11px;margin-bottom:10px">
+      <div style="display:flex;gap:8px">
+        <button onclick="saveFwResultEdit()" style="flex:1;padding:9px;border:none;border-radius:6px;background:var(--g);color:#fff;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-device-floppy"></i> 수정사항 저장</button>
+        <button onclick="copyFwResult()" style="flex:1;padding:9px;border:1.5px solid var(--bd);border-radius:6px;background:#fff;font-size:12px;font-weight:600;cursor:pointer"><i class="ti ti-copy"></i> 전체 복사</button>
+      </div>
+    </div>
     <div id="fwImageArea" style="margin-top:12px"></div>
   </div>
 </div>
@@ -5895,6 +5907,46 @@ function suggestImageKeywords(region, industry, items){
   return kws;
 }
 
+async function saveFwResultEdit(){
+  var title = document.getElementById('fwResultTitle').value.trim();
+  var body = document.getElementById('fwResultBody').value;
+  var tags = document.getElementById('fwResultTags').value;
+  var statusEl = document.getElementById('fwWriteStatus');
+  if(!title || !body){ statusEl.textContent = '❌ 제목/본문을 채워주세요.'; return; }
+  statusEl.textContent = '⏳ 수정사항 저장 중...';
+  try{
+    var res = await fetch(SHEET_ENDPOINT, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({
+        action:'updatePost', sheetId: SHEET_ID,
+        oldTitle: window._fwLastSavedTitle || title,
+        title: title, body: body, hashtags: tags
+      })
+    });
+    var d = await res.json();
+    if(d && d.success){
+      statusEl.textContent = '✅ 수정사항 저장 완료!';
+      window._fwLastSavedTitle = title;
+      showToast('✅ 프레시웨이 글 수정 저장 완료');
+    } else {
+      statusEl.textContent = '⚠️ 저장 응답을 확인해주세요: '+(d&&d.message||'');
+    }
+  }catch(e){
+    statusEl.textContent = '❌ 저장 실패: '+e.message;
+  }
+}
+
+function copyFwResult(){
+  var title = document.getElementById('fwResultTitle').value;
+  var body = document.getElementById('fwResultBody').value;
+  var tags = document.getElementById('fwResultTags').value;
+  var text = '# '+title+'\n\n'+body+'\n\n'+tags;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){ showToast('✅ 전체 복사 완료'); });
+  } else {
+    showToast('❌ 클립보드 복사를 지원하지 않는 환경이에요');
+  }
+}
+
 async function writeFreshwayPost(){
   if(!fwParsedItems.length){
     document.getElementById('fwWriteStatus').textContent = '먼저 위에서 품목을 파싱해주세요.';
@@ -5972,8 +6024,15 @@ async function writeFreshwayPost(){
     });
     var d = await res.json();
     if(d && (d.row || d.success)){
-      statusEl.textContent = '✅ "'+title+'" 저장 완료! (내 글 관리에서 확인)';
+      statusEl.textContent = '✅ "'+title+'" 저장 완료! 아래에서 바로 확인·수정할 수 있어요.';
       showToast('✅ 프레시웨이 판매가 글 작성 완료');
+
+      window._fwLastRow = d.row || null;
+      window._fwLastSavedTitle = title;
+      document.getElementById('fwResultTitle').value = title;
+      document.getElementById('fwResultBody').value = body;
+      document.getElementById('fwResultTags').value = tags.join(' ');
+      document.getElementById('fwWriteResult').style.display = 'block';
 
       await ensureFontLoaded();
       var imgCanvas = generateFreshwayPriceImage(special, regular, region, industry);
