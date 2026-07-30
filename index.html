@@ -848,6 +848,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
       <input type="file" id="fwExcelFile" accept=".xlsx,.xls" onchange="handleFreshwayExcelUpload(event)" style="font-size:12px">
       <div id="fwExcelStatus" style="margin-top:8px;font-size:12px;color:var(--tx2)"></div>
       <div id="fwExcelFilterArea" style="display:none;margin-top:10px">
+        <div id="fwCategorySuggestions" style="margin-bottom:10px"></div>
         <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
           <select id="fwExcelCategory" onchange="filterFreshwayExcelItems()" style="padding:6px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px"></select>
           <input id="fwExcelSearch" placeholder="상품명 검색 (예: 삼겹살)" oninput="filterFreshwayExcelItems()" style="flex:1;padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px;min-width:150px">
@@ -874,7 +875,7 @@ body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(
     <p style="margin:0 0 16px;color:var(--tx2);font-size:13px">위에서 파싱한(또는 방금 저장한) 품목들로 오늘의 판매가/행사가를 소개하는 글을 바로 만들어요.</p>
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <input id="fwRegion" placeholder="지역 (예: 서울 강남구)" value="서울" style="flex:1;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px">
-      <input id="fwIndustry" placeholder="업종 (예: 한식)" value="한식" style="flex:1;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px">
+      <input id="fwIndustry" placeholder="업종 (예: 한식)" value="한식" oninput="suggestFreshwayCategories()" style="flex:1;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px">
     </div>
     <button class="btn" onclick="writeFreshwayPost()" id="fwWriteBtn" style="width:100%"><i class="ti ti-pencil"></i> 프레시웨이 판매가 글 작성</button>
     <div id="fwWriteStatus" style="margin-top:10px;font-size:13px;color:var(--tx2)"></div>
@@ -5371,12 +5372,51 @@ function handleFreshwayExcelUpload(evt){
         + categories.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('');
 
       document.getElementById('fwExcelFilterArea').style.display = 'block';
+      suggestFreshwayCategories();
       filterFreshwayExcelItems();
     }catch(err){
       statusEl.textContent = '❌ 엑셀 파싱 실패: '+err.message;
     }
   };
   reader.readAsArrayBuffer(file);
+}
+
+/* 업종별 관련 키워드 — 595개 카테고리 중 이 업종과 관련된 것들을 골라 추천 */
+var FW_INDUSTRY_CATEGORY_KEYWORDS = {
+  '한식':       ['돈육','돈삼겹','우육','계육','닭','배추','고추','된장','고추장','김치','두부','어묵','국','탕','나물','젓갈','장류'],
+  '양식':       ['파스타','치즈','올리브','스테이크','우육','버터','크림','베이컨','토마토','피자','소스류'],
+  '일식':       ['수산','생선','회','초밥','새우','오징어','문어','다시마','장어','우동','가쓰오','와사비'],
+  '중식':       ['면류','만두','춘장','전분','돈육','새우','굴소스','짜장','짬뽕','중화'],
+  '샐러드':     ['채소','과일','드레싱','올리브','견과','샐러드'],
+  '축산':       ['돈육','돈삼겹','우육','계육','삼겹','갈비','등심','안심','닭','정육'],
+  '수산':       ['수산','생선','회','조개','새우','오징어','문어','멸치','어묵','건어물'],
+  '카페베이커리': ['커피','원두','시럽','제과','크림','초콜릿','밀가루','버터','빵','베이커리'],
+  '공산품':     ['소스','조미료','가공','캔','통조림','즉석','조리']
+};
+
+function suggestFreshwayCategories(){
+  var area = document.getElementById('fwCategorySuggestions');
+  if(!area) return;
+  var industry = (document.getElementById('fwIndustry').value||'').trim();
+  var keywords = FW_INDUSTRY_CATEGORY_KEYWORDS[industry];
+  if(!keywords || !window._fwExcelAll || !window._fwExcelAll.length){ area.innerHTML=''; return; }
+
+  var allCats = Array.from(new Set(window._fwExcelAll.map(function(it){ return it.category; }).filter(Boolean)));
+  var matched = allCats.filter(function(c){ return keywords.some(function(k){ return c.indexOf(k) > -1; }); });
+
+  if(!matched.length){ area.innerHTML=''; return; }
+  area.innerHTML = '<div style="font-size:11px;color:var(--gray);margin-bottom:6px">💡 <b>'+esc(industry)+'</b> 관련 추천 카테고리 ('+matched.length+'개)</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px">'
+    + matched.slice(0,20).map(function(c){
+        return '<button onclick="pickSuggestedCategory(\''+esc(c).replace(/'/g,"\\'")+'\')" style="padding:4px 10px;border:1.5px solid var(--g3);border-radius:14px;background:var(--g2);color:var(--g4);font-size:11px;cursor:pointer;font-weight:600">'+esc(c)+'</button>';
+      }).join('')
+    + '</div>';
+}
+
+function pickSuggestedCategory(cat){
+  var sel = document.getElementById('fwExcelCategory');
+  sel.value = cat;
+  filterFreshwayExcelItems();
 }
 
 function filterFreshwayExcelItems(){
