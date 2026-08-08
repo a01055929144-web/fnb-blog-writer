@@ -4470,6 +4470,7 @@ function filterHistory(filter, region, industry, search){
       +'<div style="font-size:13px;font-weight:800;line-height:1.4;margin-bottom:2px">'+esc(h.title||h.kw||'제목없음')+'</div>'
       +'<div style="font-size:10px;color:var(--gray)">'+esc(h.date||'')+' · '+esc(h.region||'')+' · '+esc(h.industry||'')+'<span style="margin-left:6px;background:#F1F5F9;padding:1px 6px;border-radius:4px">'+(h.chars||0)+'자</span>'
       +((h.body||'').includes('[[실제 사례 입력]]')?'<span style="margin-left:6px;background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;font-weight:700">⚠️ 사례 미입력</span>':'')
+      +((h.body||'').includes('원/')?'<span style="margin-left:6px;background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-weight:700">💰 시세 포함</span>':'<span style="margin-left:6px;background:#FEE2E2;color:#991B1B;padding:1px 6px;border-radius:4px;font-weight:700">⚠️ 시세 없음</span>')
       +'</div>'
       +'</div>'
       // 발행 토글 버튼
