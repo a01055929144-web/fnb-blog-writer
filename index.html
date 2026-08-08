@@ -4750,7 +4750,7 @@ async function deleteSelectedPosts(){
     try{
       await fetch(SHEET_ENDPOINT,{
         method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify({ action:'deletePost', sheetId: SHEET_ID, rowId: t.rowId, title: t.title })
+        body:JSON.stringify({ action:'deletePost', sheetId: SHEET_ID, rowId: t.rowId, sheetRow: t.sheetRow, title: t.title })
       });
     }catch(e){}
   }
@@ -4782,6 +4782,7 @@ async function deletePost(el){
         action:'deletePost',
         sheetId: SHEET_ID,
         rowId: h.rowId,
+        sheetRow: h.sheetRow,
         title: h.title
       })
     });
