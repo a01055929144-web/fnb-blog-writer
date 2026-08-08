@@ -3244,6 +3244,11 @@ async function writeOnePost(item, idx, total, priceData, priceStats){
   var region = item.region||(selDistricts[0]?selDistricts[0].region+' '+selDistricts[0].district:'수도권');
   var type   = item.type||'정보성 SEO';
 
+  if(!priceData || !priceData.prices || !priceData.prices.length){
+    console.warn('⚠️ 가격 데이터 없이 글쓰기 진행 — 이 글에는 "오늘 공급가" 섹션이 빠질 수 있어요:', kw);
+    try{ showToast('⚠️ "'+kw+'" — 시세 조회 실패, 가격 없이 작성됩니다'); }catch(e){}
+  }
+
   // 글 작성 (Haiku) — v3: 마크다운 유지, 훨씬 긴 12섹션 포맷이라 토큰 상향
   var _sysPrompt = buildPostSystemPrompt(industry, currentIntent||'업체찾기', priceData||null, priceStats||null);
   var _userPrompt = buildPostUserPrompt(kw, region, type, industry);
@@ -5097,7 +5102,7 @@ async function fetchKeywordCompetition(keyword){
   }catch(e){ return null; }
 }
 
-async function fetchRealtimePrice(ind){
+async function fetchRealtimePrice(ind, _isRetry){
   try{
     // 5초 타임아웃 — 응답 없으면 건너뜀
     var controller = new AbortController();
@@ -5110,8 +5115,20 @@ async function fetchRealtimePrice(ind){
     });
     clearTimeout(tid);
     var d = await res.json();
+    if((!d || !d.prices || !d.prices.length) && !_isRetry){
+      console.warn('가격 조회 결과가 비어있어 재시도합니다:', ind);
+      return await fetchRealtimePrice(ind, true);
+    }
+    if(!d || !d.prices || !d.prices.length){
+      console.warn('⚠️ 가격 조회 재시도까지 실패 — 이번 글에는 시세 섹션이 빠질 수 있어요:', ind);
+    }
     return d;
   }catch(e){
+    if(!_isRetry){
+      console.warn('가격 조회 실패, 재시도합니다:', ind, e.message);
+      return await fetchRealtimePrice(ind, true);
+    }
+    console.warn('⚠️ 가격 조회 재시도까지 실패 — 이번 글에는 시세 섹션이 빠질 수 있어요:', ind, e.message);
     return {prices:[], summary:''};
   }
 }
